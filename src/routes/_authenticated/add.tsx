@@ -1,15 +1,34 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { recogniseLabel, type RecognitionData } from "@/lib/recognise.functions";
 import { compressImage } from "@/lib/image-compress";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
+import { getSignedPhotoUrl } from "@/lib/wine-photo";
+import {
+  findBestMatch,
+  fillEmptyWineFields,
+  logAlias,
+  logDecision,
+  type WineCandidate,
+  type WineDraft,
+} from "@/lib/wine-match";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { StarRating } from "@/components/StarRating";
 import { toast } from "sonner";
 import { ArrowLeft, Camera, X, Loader2, Info } from "lucide-react";
@@ -41,7 +60,7 @@ function AddPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoDisplayUrl, setPhotoDisplayUrl] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [recognising, setRecognising] = useState(false);
   const [bottle, setBottle] = useState<BottleForm>(emptyBottle);
@@ -56,6 +75,10 @@ function AddPage() {
   const [notes, setNotes] = useState("");
   const [grapeInput, setGrapeInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [mergePrompt, setMergePrompt] = useState<{
+    candidate: WineCandidate;
+    draft: WineDraft;
+  } | null>(null);
 
   const bottleFieldsFilled = [
     bottle.name, bottle.producer, bottle.appellation, bottle.region, bottle.country,
@@ -74,8 +97,7 @@ function AddPage() {
       });
       if (up.error) throw up.error;
       setPhotoPath(path);
-      const { data: signed } = await supabase.storage.from("wine-photos").createSignedUrl(path, 60 * 60 * 24 * 365);
-      setPhotoUrl(signed?.signedUrl ?? null);
+      setPhotoDisplayUrl(await getSignedPhotoUrl(path));
 
       const result = await recognise({ data: { photoPath: path } });
       if (result.recognition_id) setRecognitionId(result.recognition_id);
@@ -112,6 +134,109 @@ function AddPage() {
     setGrapeInput("");
   }
 
+  function buildDraft(): WineDraft {
+    return {
+      name: bottle.name.trim(),
+      producer: bottle.producer.trim() || null,
+      appellation: bottle.appellation.trim() || null,
+      region: bottle.region.trim() || null,
+      country: bottle.country.trim() || null,
+      vintage: bottle.vintage ? Number(bottle.vintage) : null,
+      wine_type: bottle.wine_type || null,
+      grapes: bottle.grapes,
+      alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
+      label_image_url: photoPath, // storage path, not signed URL
+      data_source: dataSource,
+    };
+  }
+
+  async function insertNewWine(draft: WineDraft, uid: string): Promise<string> {
+    const { data: wine, error } = await supabase
+      .from("wines")
+      .insert({
+        name: draft.name,
+        producer: draft.producer,
+        appellation: draft.appellation,
+        region: draft.region,
+        country: draft.country,
+        vintage: draft.vintage,
+        wine_type: draft.wine_type as never,
+        grapes: draft.grapes,
+        alcohol_percent: draft.alcohol_percent,
+        label_image_url: draft.label_image_url,
+        data_source: draft.data_source as never,
+        created_by: uid,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    return wine.id;
+  }
+
+  async function finalizeSave(
+    wineId: string,
+    draft: WineDraft,
+    uid: string,
+    decision: "auto_merge" | "user_merge" | "user_rejected" | "auto_new",
+    candidate: WineCandidate | null,
+  ) {
+    // Alias log (every save)
+    await logAlias(wineId, draft.name, draft.producer, draft.data_source, uid);
+    // Decision log
+    await logDecision(
+      uid,
+      draft.name,
+      draft.producer,
+      draft.vintage,
+      { id: candidate?.id ?? null, score: candidate?.score ?? null },
+      decision,
+    );
+
+    // Create entry
+    const { data: entry, error: entryErr } = await supabase.from("entries").insert({
+      user_id: uid,
+      wine_id: wineId,
+      photo_url: photoPath, // storage path
+      rating: rating || null,
+      tasted_on: tastedOn,
+      place: place.trim() || null,
+      company: company.trim() || null,
+      notes: notes.trim() || null,
+    }).select("id").single();
+    if (entryErr) throw entryErr;
+
+    if (recognitionId && modelData) {
+      const diffs: Record<string, { model: unknown; user: unknown }> = {};
+      const compare: Array<[keyof RecognitionData, unknown]> = [
+        ["name", draft.name],
+        ["producer", draft.producer],
+        ["appellation", draft.appellation],
+        ["region", draft.region],
+        ["country", draft.country],
+        ["vintage", draft.vintage],
+        ["wine_type", draft.wine_type],
+        ["grapes", draft.grapes],
+        ["alcohol_percent", draft.alcohol_percent],
+      ];
+      for (const [k, userVal] of compare) {
+        const modelVal = (modelData as unknown as Record<string, unknown>)[k];
+        if (JSON.stringify(modelVal ?? null) !== JSON.stringify(userVal ?? null)) {
+          diffs[k as string] = { model: modelVal ?? null, user: userVal ?? null };
+        }
+      }
+      await supabase.from("recognitions")
+        .update({
+          entry_id: entry.id,
+          corrected_fields: (Object.keys(diffs).length ? diffs : null) as never,
+        })
+        .eq("id", recognitionId);
+    }
+
+    await recomputeTasteProfile(uid);
+    toast.success("Saved to your diary.");
+    navigate({ to: "/entry/$id", params: { id: entry.id } });
+  }
+
   async function onSave() {
     if (!bottle.name.trim()) {
       toast.error("A name is needed, even a rough one.");
@@ -121,70 +246,45 @@ function AddPage() {
     try {
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user!.id;
+      const draft = buildDraft();
 
-      const wineInsert = {
-        name: bottle.name.trim(),
-        producer: bottle.producer.trim() || null,
-        appellation: bottle.appellation.trim() || null,
-        region: bottle.region.trim() || null,
-        country: bottle.country.trim() || null,
-        vintage: bottle.vintage ? Number(bottle.vintage) : null,
-        wine_type: (bottle.wine_type || null) as never,
-        grapes: bottle.grapes,
-        alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
-        label_image_url: photoUrl,
-        data_source: dataSource as never,
-        created_by: uid,
-      };
-      const { data: wine, error: wineErr } = await supabase
-        .from("wines").insert(wineInsert).select("id").single();
-      if (wineErr) throw wineErr;
+      const candidate = await findBestMatch(draft.name, draft.producer, draft.vintage);
 
-      const { data: entry, error: entryErr } = await supabase.from("entries").insert({
-        user_id: uid,
-        wine_id: wine.id,
-        photo_url: photoUrl,
-        rating: rating || null,
-        tasted_on: tastedOn,
-        place: place.trim() || null,
-        company: company.trim() || null,
-        notes: notes.trim() || null,
-      }).select("id").single();
-      if (entryErr) throw entryErr;
-
-      if (recognitionId && modelData) {
-        const diffs: Record<string, { model: unknown; user: unknown }> = {};
-        const compare: Array<[keyof RecognitionData, unknown]> = [
-          ["name", wineInsert.name],
-          ["producer", wineInsert.producer],
-          ["appellation", wineInsert.appellation],
-          ["region", wineInsert.region],
-          ["country", wineInsert.country],
-          ["vintage", wineInsert.vintage],
-          ["wine_type", wineInsert.wine_type],
-          ["grapes", wineInsert.grapes],
-          ["alcohol_percent", wineInsert.alcohol_percent],
-        ];
-        for (const [k, userVal] of compare) {
-          const modelVal = (modelData as unknown as Record<string, unknown>)[k];
-          if (JSON.stringify(modelVal ?? null) !== JSON.stringify(userVal ?? null)) {
-            diffs[k as string] = { model: modelVal ?? null, user: userVal ?? null };
-          }
-        }
-        await supabase.from("recognitions")
-          .update({
-            entry_id: entry.id,
-            corrected_fields: (Object.keys(diffs).length ? diffs : null) as never,
-          })
-          .eq("id", recognitionId);
+      if (candidate && candidate.score >= 0.85) {
+        await fillEmptyWineFields(candidate.id, draft);
+        await finalizeSave(candidate.id, draft, uid, "auto_merge", candidate);
+        return;
       }
-
-      await recomputeTasteProfile(uid);
-      toast.success("Saved to your diary.");
-      navigate({ to: "/entry/$id", params: { id: entry.id } });
+      if (candidate && candidate.score >= 0.6) {
+        // Ask the user; keep saving state until they decide
+        setMergePrompt({ candidate, draft });
+        return;
+      }
+      // Below 0.6 or no candidate → new row
+      const wineId = await insertNewWine(draft, uid);
+      await finalizeSave(wineId, draft, uid, "auto_new", candidate);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
-    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmMerge(sameWine: boolean) {
+    if (!mergePrompt) return;
+    const { candidate, draft } = mergePrompt;
+    setMergePrompt(null);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user!.id;
+      if (sameWine) {
+        await fillEmptyWineFields(candidate.id, draft);
+        await finalizeSave(candidate.id, draft, uid, "user_merge", candidate);
+      } else {
+        const wineId = await insertNewWine(draft, uid);
+        await finalizeSave(wineId, draft, uid, "user_rejected", candidate);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
       setSaving(false);
     }
   }
@@ -200,11 +300,11 @@ function AddPage() {
       </div>
 
       <div className="rounded-2xl bg-card p-4 shadow-notebook border border-border mb-5">
-        {photoUrl ? (
+        {photoDisplayUrl ? (
           <div className="relative">
-            <img src={photoUrl} alt="label" className="w-full h-56 object-cover rounded-lg" />
+            <img src={photoDisplayUrl} alt="label" className="w-full h-56 object-cover rounded-lg" />
             <button
-              onClick={() => { setPhotoUrl(null); setPhotoPath(null); }}
+              onClick={() => { setPhotoDisplayUrl(null); setPhotoPath(null); }}
               className="absolute top-2 right-2 bg-background/90 rounded-full p-1"
             >
               <X size={18} />
@@ -312,6 +412,45 @@ function AddPage() {
       <Button onClick={onSave} disabled={saving} className="w-full mt-8 h-12 text-base">
         {saving ? "Saving…" : "Save to my diary"}
       </Button>
+
+      <AlertDialog open={!!mergePrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Is this the same wine?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p className="text-muted-foreground">
+                  We already have a wine that looks very close. Should we log this bottle against
+                  the existing one, or is it actually different?
+                </p>
+                {mergePrompt && (
+                  <div className="rounded-lg border border-border bg-parchment p-3 space-y-0.5">
+                    <p className="font-serif text-base text-foreground">
+                      {mergePrompt.candidate.name}
+                      {mergePrompt.candidate.vintage ? ` · ${mergePrompt.candidate.vintage}` : ""}
+                    </p>
+                    {mergePrompt.candidate.producer && (
+                      <p className="text-muted-foreground">{mergePrompt.candidate.producer}</p>
+                    )}
+                    {(mergePrompt.candidate.region || mergePrompt.candidate.country) && (
+                      <p className="text-xs text-muted-foreground">
+                        {[mergePrompt.candidate.region, mergePrompt.candidate.country].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground pt-1">
+                      Match confidence {(mergePrompt.candidate.score * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => confirmMerge(false)}>No, different wine</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmMerge(true)}>Yes, same wine</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -324,3 +463,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+// silence unused-import warning if effect not used
+void useEffect;
