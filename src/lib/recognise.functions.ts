@@ -4,27 +4,23 @@ import { z } from "zod";
 
 const Input = z.object({ photoPath: z.string().min(1) });
 
-export type RecognitionResult = {
-  ok: true;
-  data: {
-    name: string | null;
-    producer: string | null;
-    appellation: string | null;
-    region: string | null;
-    country: string | null;
-    vintage: number | null;
-    wine_type: string | null;
-    grapes: string[];
-    alcohol_percent: number | null;
-    confidence: number;
-    inferred_fields: string[];
-  };
-  recognition_id: string;
-} | {
-  ok: false;
-  error: string;
-  recognition_id?: string;
+export type RecognitionData = {
+  name: string | null;
+  producer: string | null;
+  appellation: string | null;
+  region: string | null;
+  country: string | null;
+  vintage: number | null;
+  wine_type: string | null;
+  grapes: string[];
+  alcohol_percent: number | null;
+  confidence: number;
+  inferred_fields: string[];
 };
+
+export type RecognitionResult =
+  | { ok: true; data: RecognitionData; recognition_id: string }
+  | { ok: false; error: string; recognition_id?: string };
 
 export const recogniseLabel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -64,7 +60,7 @@ Fields:
 Rules. If something is not legible on the label, return null instead of guessing. Many European labels never print the colour or the grape, so you may infer those from the appellation, but you must list every field you inferred in inferred_fields. Set confidence low when the photo is blurred, badly lit, cropped, or the label is at a steep angle.`;
 
     let raw: unknown = null;
-    let parsed: RecognitionResult["data"] | null = null;
+    let parsed: RecognitionData | null = null;
     let errText: string | null = null;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
