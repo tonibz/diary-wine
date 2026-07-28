@@ -47,6 +47,7 @@ function EntryDetail() {
   const { id } = useParams({ from: "/_authenticated/entry/$id" });
   const navigate = useNavigate();
   const [entry, setEntry] = useState<Entry | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [editingTasting, setEditingTasting] = useState(false);
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
@@ -64,6 +65,8 @@ function EntryDetail() {
       setNotes(data.notes ?? "");
       setPlace(data.place ?? "");
       setCompany(data.company ?? "");
+      const ref = data.photo_url ?? data.wine?.label_image_url ?? null;
+      setPhotoUrl(await getSignedPhotoUrl(ref));
     }
   }
   useEffect(() => { load(); }, [id]);
