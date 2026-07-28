@@ -14,7 +14,199 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      entries: {
+        Row: {
+          company: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          photo_url: string | null
+          place: string | null
+          rating: number | null
+          tasted_on: string
+          user_id: string
+          wine_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          photo_url?: string | null
+          place?: string | null
+          rating?: number | null
+          tasted_on?: string
+          user_id: string
+          wine_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          photo_url?: string | null
+          place?: string | null
+          rating?: number | null
+          tasted_on?: string
+          user_id?: string
+          wine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entries_wine_id_fkey"
+            columns: ["wine_id"]
+            isOneToOne: false
+            referencedRelation: "wines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      recognitions: {
+        Row: {
+          confidence: number | null
+          corrected_fields: Json | null
+          created_at: string
+          entry_id: string | null
+          id: string
+          model_name: string | null
+          photo_path: string
+          raw_response: Json | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          corrected_fields?: Json | null
+          created_at?: string
+          entry_id?: string | null
+          id?: string
+          model_name?: string | null
+          photo_path: string
+          raw_response?: Json | null
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          corrected_fields?: Json | null
+          created_at?: string
+          entry_id?: string | null
+          id?: string
+          model_name?: string | null
+          photo_path?: string
+          raw_response?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recognitions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      taste_profiles: {
+        Row: {
+          avg_alcohol: number | null
+          avg_vintage_age: number | null
+          entry_count: number
+          top_countries: Json | null
+          top_grapes: Json | null
+          type_split: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_alcohol?: number | null
+          avg_vintage_age?: number | null
+          entry_count?: number
+          top_countries?: Json | null
+          top_grapes?: Json | null
+          type_split?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_alcohol?: number | null
+          avg_vintage_age?: number | null
+          entry_count?: number
+          top_countries?: Json | null
+          top_grapes?: Json | null
+          type_split?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wines: {
+        Row: {
+          alcohol_percent: number | null
+          appellation: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          data_source: Database["public"]["Enums"]["wine_data_source"]
+          grapes: string[] | null
+          id: string
+          label_image_url: string | null
+          name: string
+          producer: string | null
+          region: string | null
+          vintage: number | null
+          wine_type: Database["public"]["Enums"]["wine_type"] | null
+        }
+        Insert: {
+          alcohol_percent?: number | null
+          appellation?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: Database["public"]["Enums"]["wine_data_source"]
+          grapes?: string[] | null
+          id?: string
+          label_image_url?: string | null
+          name: string
+          producer?: string | null
+          region?: string | null
+          vintage?: number | null
+          wine_type?: Database["public"]["Enums"]["wine_type"] | null
+        }
+        Update: {
+          alcohol_percent?: number | null
+          appellation?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: Database["public"]["Enums"]["wine_data_source"]
+          grapes?: string[] | null
+          id?: string
+          label_image_url?: string | null
+          name?: string
+          producer?: string | null
+          region?: string | null
+          vintage?: number | null
+          wine_type?: Database["public"]["Enums"]["wine_type"] | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +215,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      wine_data_source: "label" | "inferred" | "user"
+      wine_type:
+        | "red"
+        | "white"
+        | "rose"
+        | "sparkling"
+        | "dessert"
+        | "fortified"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +349,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      wine_data_source: ["label", "inferred", "user"],
+      wine_type: ["red", "white", "rose", "sparkling", "dessert", "fortified"],
+    },
   },
 } as const
