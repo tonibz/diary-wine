@@ -463,6 +463,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
-
-// silence unused-import warning if effect not used
-void useEffect;
