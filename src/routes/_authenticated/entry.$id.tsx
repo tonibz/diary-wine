@@ -86,7 +86,7 @@ function EntryDetail() {
     payload[key] = key === "vintage" ? (value ? Number(value) : null)
       : key === "alcohol_percent" ? (value ? Number(value) : null)
       : value.trim() || null;
-    const { error } = await supabase.from("wines").update(payload).eq("id", entry.wine.id);
+    const { error } = await supabase.from("wines").update(payload as never).eq("id", entry.wine.id);
     if (error) return toast.error(error.message);
     load();
     const { data } = await supabase.auth.getUser();

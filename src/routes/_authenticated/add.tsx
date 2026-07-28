@@ -172,7 +172,10 @@ function AddPage() {
           }
         }
         await supabase.from("recognitions")
-          .update({ entry_id: entry.id, corrected_fields: Object.keys(diffs).length ? diffs : null })
+          .update({
+            entry_id: entry.id,
+            corrected_fields: (Object.keys(diffs).length ? diffs : null) as never,
+          })
           .eq("id", recognitionId);
       }
 
