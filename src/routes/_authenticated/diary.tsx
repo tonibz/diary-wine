@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StarRating } from "@/components/StarRating";
@@ -22,6 +23,7 @@ type Entry = {
     wine_type: string | null;
     label_image_url: string | null;
   } | null;
+  display_photo: string | null;
 };
 
 export const Route = createFileRoute("/_authenticated/diary")({
@@ -43,11 +45,17 @@ function DiaryPage() {
   const [minRating, setMinRating] = useState<string>("0");
 
   useEffect(() => {
-    supabase
-      .from("entries")
-      .select("id, photo_url, rating, tasted_on, place, company, wine:wines(id, name, producer, vintage, wine_type, label_image_url)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setEntries((data ?? []) as unknown as Entry[]));
+    (async () => {
+      const { data } = await supabase
+        .from("entries")
+        .select("id, photo_url, rating, tasted_on, place, company, wine:wines(id, name, producer, vintage, wine_type, label_image_url)")
+        .order("created_at", { ascending: false });
+      const rows = (data ?? []) as unknown as Entry[];
+      const refs = rows.map((e) => e.photo_url ?? e.wine?.label_image_url ?? null);
+      const signed = await getSignedPhotoUrls(refs);
+      rows.forEach((e, i) => { e.display_photo = signed[i]; });
+      setEntries(rows);
+    })();
   }, []);
 
   const filtered = useMemo(() => {
@@ -121,9 +129,9 @@ function DiaryPage() {
               >
                 <div className="flex gap-3">
                   <div className="h-20 w-16 flex-shrink-0 rounded-lg bg-parchment overflow-hidden flex items-center justify-center">
-                    {e.photo_url || e.wine?.label_image_url ? (
+                    {e.display_photo ? (
                       <img
-                        src={e.photo_url ?? e.wine?.label_image_url ?? ""}
+                        src={e.display_photo}
                         alt={e.wine?.name ?? "wine"}
                         className="h-full w-full object-cover"
                       />

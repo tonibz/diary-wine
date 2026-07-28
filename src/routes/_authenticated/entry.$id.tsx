@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSignedPhotoUrl } from "@/lib/wine-photo";
 import { StarRating } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ function EntryDetail() {
   const { id } = useParams({ from: "/_authenticated/entry/$id" });
   const navigate = useNavigate();
   const [entry, setEntry] = useState<Entry | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [editingTasting, setEditingTasting] = useState(false);
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
@@ -63,6 +65,8 @@ function EntryDetail() {
       setNotes(data.notes ?? "");
       setPlace(data.place ?? "");
       setCompany(data.company ?? "");
+      const ref = data.photo_url ?? data.wine?.label_image_url ?? null;
+      setPhotoUrl(await getSignedPhotoUrl(ref));
     }
   }
   useEffect(() => { load(); }, [id]);
@@ -109,8 +113,9 @@ function EntryDetail() {
   return (
     <div className="pb-12">
       <div className="relative">
-        {entry.photo_url || w?.label_image_url ? (
-          <img src={entry.photo_url ?? w?.label_image_url ?? ""} alt={w?.name ?? "wine"} className="w-full h-64 object-cover" />
+        {photoUrl ? (
+          <img src={photoUrl} alt={w?.name ?? "wine"} className="w-full h-64 object-cover" />
+
         ) : (
           <div className="w-full h-40 bg-parchment flex items-center justify-center">
             <Wine className="text-primary/30" size={48} />

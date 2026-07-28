@@ -48,7 +48,16 @@ function AuthPage() {
       }
       navigate({ to: "/diary" });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const raw = err instanceof Error ? err.message : "Something went wrong";
+      const lower = raw.toLowerCase();
+      let msg = raw;
+      if (lower.includes("email not confirmed")) {
+        msg = "Please confirm your email first — check your inbox for the link we sent you.";
+      } else if (lower.includes("invalid login credentials")) {
+        msg = "That email and password don't match. Try again, or create an account.";
+      } else if (lower.includes("user already registered")) {
+        msg = "An account with this email already exists. Try signing in instead.";
+      }
       toast.error(msg);
     } finally {
       setBusy(false);
