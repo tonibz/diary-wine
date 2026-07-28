@@ -113,8 +113,9 @@ function EntryDetail() {
   return (
     <div className="pb-12">
       <div className="relative">
-        {entry.photo_url || w?.label_image_url ? (
-          <img src={entry.photo_url ?? w?.label_image_url ?? ""} alt={w?.name ?? "wine"} className="w-full h-64 object-cover" />
+        {photoUrl ? (
+          <img src={photoUrl} alt={w?.name ?? "wine"} className="w-full h-64 object-cover" />
+
         ) : (
           <div className="w-full h-40 bg-parchment flex items-center justify-center">
             <Wine className="text-primary/30" size={48} />
