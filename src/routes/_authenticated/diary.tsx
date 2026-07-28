@@ -129,9 +129,9 @@ function DiaryPage() {
               >
                 <div className="flex gap-3">
                   <div className="h-20 w-16 flex-shrink-0 rounded-lg bg-parchment overflow-hidden flex items-center justify-center">
-                    {e.photo_url || e.wine?.label_image_url ? (
+                    {e.display_photo ? (
                       <img
-                        src={e.photo_url ?? e.wine?.label_image_url ?? ""}
+                        src={e.display_photo}
                         alt={e.wine?.name ?? "wine"}
                         className="h-full w-full object-cover"
                       />
