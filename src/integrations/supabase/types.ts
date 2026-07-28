@@ -61,6 +61,50 @@ export type Database = {
           },
         ]
       }
+      match_decisions: {
+        Row: {
+          candidate_wine_id: string | null
+          created_at: string
+          decision: Database["public"]["Enums"]["match_decision_kind"]
+          id: string
+          new_name: string
+          new_producer: string | null
+          new_vintage: number | null
+          similarity_score: number | null
+          user_id: string
+        }
+        Insert: {
+          candidate_wine_id?: string | null
+          created_at?: string
+          decision: Database["public"]["Enums"]["match_decision_kind"]
+          id?: string
+          new_name: string
+          new_producer?: string | null
+          new_vintage?: number | null
+          similarity_score?: number | null
+          user_id: string
+        }
+        Update: {
+          candidate_wine_id?: string | null
+          created_at?: string
+          decision?: Database["public"]["Enums"]["match_decision_kind"]
+          id?: string
+          new_name?: string
+          new_producer?: string | null
+          new_vintage?: number | null
+          similarity_score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_decisions_candidate_wine_id_fkey"
+            columns: ["candidate_wine_id"]
+            isOneToOne: false
+            referencedRelation: "wines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -156,6 +200,44 @@ export type Database = {
         }
         Relationships: []
       }
+      wine_aliases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          raw_name: string
+          raw_producer: string | null
+          source: Database["public"]["Enums"]["wine_data_source"]
+          wine_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          raw_name: string
+          raw_producer?: string | null
+          source?: Database["public"]["Enums"]["wine_data_source"]
+          wine_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          raw_name?: string
+          raw_producer?: string | null
+          source?: Database["public"]["Enums"]["wine_data_source"]
+          wine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wine_aliases_wine_id_fkey"
+            columns: ["wine_id"]
+            isOneToOne: false
+            referencedRelation: "wines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wines: {
         Row: {
           alcohol_percent: number | null
@@ -168,6 +250,8 @@ export type Database = {
           id: string
           label_image_url: string | null
           name: string
+          norm_name: string | null
+          norm_producer: string | null
           producer: string | null
           region: string | null
           vintage: number | null
@@ -184,6 +268,8 @@ export type Database = {
           id?: string
           label_image_url?: string | null
           name: string
+          norm_name?: string | null
+          norm_producer?: string | null
           producer?: string | null
           region?: string | null
           vintage?: number | null
@@ -200,6 +286,8 @@ export type Database = {
           id?: string
           label_image_url?: string | null
           name?: string
+          norm_name?: string | null
+          norm_producer?: string | null
           producer?: string | null
           region?: string | null
           vintage?: number | null
@@ -212,9 +300,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      find_wine_match: {
+        Args: { _name: string; _producer: string; _vintage: number }
+        Returns: {
+          country: string
+          id: string
+          name: string
+          producer: string
+          region: string
+          score: number
+          vintage: number
+        }[]
+      }
+      normalize_wine_text: { Args: { t: string }; Returns: string }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
+      match_decision_kind:
+        | "auto_merge"
+        | "user_merge"
+        | "user_rejected"
+        | "auto_new"
       wine_data_source: "label" | "inferred" | "user"
       wine_type:
         | "red"
@@ -350,6 +458,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      match_decision_kind: [
+        "auto_merge",
+        "user_merge",
+        "user_rejected",
+        "auto_new",
+      ],
       wine_data_source: ["label", "inferred", "user"],
       wine_type: ["red", "white", "rose", "sparkling", "dessert", "fortified"],
     },
