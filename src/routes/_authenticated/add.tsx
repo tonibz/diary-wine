@@ -409,6 +409,41 @@ function AddPage() {
           className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); }}
         />
+
+        {/* Back label — optional, does not block saving */}
+        <div className="mt-3">
+          {backPhotoDisplayUrl ? (
+            <div className="relative">
+              <img src={backPhotoDisplayUrl} alt="back label" className="w-full h-36 object-cover rounded-lg" />
+              <button
+                onClick={() => { setBackPhotoDisplayUrl(null); setBackPhotoPath(null); }}
+                className="absolute top-2 right-2 bg-background/90 rounded-full p-1"
+              >
+                <X size={16} />
+              </button>
+              <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wide bg-background/90 rounded px-1.5 py-0.5 text-muted-foreground">
+                Back label
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={() => backFileRef.current?.click()}
+              className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary"
+            >
+              <ImagePlus size={16} />
+              Add back label (optional — helps with alcohol % and grapes)
+            </button>
+          )}
+          <input
+            ref={backFileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); }}
+          />
+        </div>
+
         {recognising && (
           <p className="mt-3 flex items-center gap-2 text-sm text-primary">
             <Loader2 size={16} className="animate-spin" /> Reading the label…
@@ -424,6 +459,7 @@ function AddPage() {
           </p>
         )}
       </div>
+
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
