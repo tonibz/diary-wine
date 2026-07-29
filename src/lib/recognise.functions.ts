@@ -2,7 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const Input = z.object({ photoPath: z.string().min(1) });
+const Input = z.object({
+  photoPath: z.string().min(1),
+  backPhotoPath: z.string().min(1).optional().nullable(),
+});
 
 export type RecognitionData = {
   name: string | null;
@@ -41,8 +44,20 @@ export const recogniseLabel = createServerFn({ method: "POST" })
     const b64 = Buffer.from(arrayBuf).toString("base64");
     const mediaType = dl.data.type || "image/jpeg";
 
+    let backB64: string | null = null;
+    let backMedia = "image/jpeg";
+    if (data.backPhotoPath) {
+      const dlBack = await supabase.storage.from("wine-photos").download(data.backPhotoPath);
+      if (!dlBack.error && dlBack.data) {
+        backB64 = Buffer.from(await dlBack.data.arrayBuffer()).toString("base64");
+        backMedia = dlBack.data.type || "image/jpeg";
+      }
+    }
+
     const modelName = "claude-sonnet-5";
     const prompt = `You are reading a photograph of a wine bottle label. Return ONLY a JSON object, with no prose and no markdown code fences.
+
+You may be given two photographs: the front label and the back label. Read both. Back labels often carry the alcohol percentage, the grape varieties, and importer or bottling details that the front label omits. Combine what you find. If the two disagree, prefer the back label for technical details such as alcohol percentage and grape varieties, and the front label for the wine name and producer.
 
 Fields:
 - name: the wine's name as printed
@@ -59,6 +74,14 @@ Fields:
 
 Rules. If something is not legible on the label, return null instead of guessing. Many European labels never print the colour or the grape, so you may infer those from the appellation, but you must list every field you inferred in inferred_fields. Set confidence low when the photo is blurred, badly lit, cropped, or the label is at a steep angle.`;
 
+    const content: Array<Record<string, unknown>> = [
+      { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
+    ];
+    if (backB64) {
+      content.push({ type: "image", source: { type: "base64", media_type: backMedia, data: backB64 } });
+    }
+    content.push({ type: "text", text: prompt });
+
     let raw: unknown = null;
     let parsed: RecognitionData | null = null;
     let errText: string | null = null;
@@ -73,15 +96,7 @@ Rules. If something is not legible on the label, return null instead of guessing
         body: JSON.stringify({
           model: modelName,
           max_tokens: 1000,
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
-                { type: "text", text: prompt },
-              ],
-            },
-          ],
+          messages: [{ role: "user", content }],
         }),
       });
       raw = await res.json();

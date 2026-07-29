@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
+  const [gpsLookup, setGpsLookup] = useState(false);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
@@ -22,8 +24,9 @@ function SettingsPage() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
       setEmail(data.user.email ?? "");
-      const { data: p } = await supabase.from("profiles").select("display_name").eq("id", data.user.id).maybeSingle();
+      const { data: p } = await supabase.from("profiles").select("display_name, gps_lookup_enabled").eq("id", data.user.id).maybeSingle();
       setDisplayName(p?.display_name ?? "");
+      setGpsLookup(!!p?.gps_lookup_enabled);
     });
   }, []);
 
@@ -31,7 +34,11 @@ function SettingsPage() {
     setSaving(true);
     const { data } = await supabase.auth.getUser();
     if (!data.user) return;
-    const { error } = await supabase.from("profiles").upsert({ id: data.user.id, display_name: displayName || null });
+    const { error } = await supabase.from("profiles").upsert({
+      id: data.user.id,
+      display_name: displayName || null,
+      gps_lookup_enabled: gpsLookup,
+    });
     setSaving(false);
     if (error) toast.error(error.message);
     else toast.success("Saved");
@@ -54,6 +61,15 @@ function SettingsPage() {
         <div className="space-y-1.5">
           <Label>Email</Label>
           <Input value={email} disabled />
+        </div>
+        <div className="flex items-start justify-between gap-4 pt-2 border-t border-border">
+          <div className="space-y-1">
+            <Label>Use photo location</Label>
+            <p className="text-xs text-muted-foreground">
+              When on, we look up the place name from your photo's GPS so we can prefill where you tasted it. Off by default.
+            </p>
+          </div>
+          <Switch checked={gpsLookup} onCheckedChange={setGpsLookup} />
         </div>
         <Button onClick={save} disabled={saving}>{saving ? "…" : "Save"}</Button>
       </section>

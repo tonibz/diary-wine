@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { recogniseLabel, type RecognitionData } from "@/lib/recognise.functions";
 import { compressImage } from "@/lib/image-compress";
+import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { getSignedPhotoUrl } from "@/lib/wine-photo";
 import {
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { StarRating } from "@/components/StarRating";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, X, Loader2, Info } from "lucide-react";
+import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/add")({
@@ -60,8 +61,11 @@ function AddPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
   const fileRef = useRef<HTMLInputElement>(null);
+  const backFileRef = useRef<HTMLInputElement>(null);
   const [photoDisplayUrl, setPhotoDisplayUrl] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [backPhotoDisplayUrl, setBackPhotoDisplayUrl] = useState<string | null>(null);
+  const [backPhotoPath, setBackPhotoPath] = useState<string | null>(null);
   const [recognising, setRecognising] = useState(false);
   const [bottle, setBottle] = useState<BottleForm>(emptyBottle);
   const [dataSource, setDataSource] = useState<"label" | "inferred" | "user">("user");
@@ -70,7 +74,9 @@ function AddPage() {
   const [modelData, setModelData] = useState<RecognitionData | null>(null);
   const [rating, setRating] = useState(0);
   const [tastedOn, setTastedOn] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [tastedFromPhoto, setTastedFromPhoto] = useState(false);
   const [place, setPlace] = useState("");
+  const [placeFromPhoto, setPlaceFromPhoto] = useState(false);
   const [company, setCompany] = useState("");
   const [notes, setNotes] = useState("");
   const [grapeInput, setGrapeInput] = useState("");
@@ -85,9 +91,39 @@ function AddPage() {
     bottle.vintage, bottle.wine_type, bottle.grapes.length ? "g" : "", bottle.alcohol_percent,
   ].filter(Boolean).length;
 
+  async function prefillFromMeta(file: File) {
+    // CRITICAL: read EXIF from the ORIGINAL file, before compression re-encodes it.
+    const meta = await readPhotoMeta(file);
+    if (meta.takenAt) {
+      setTastedOn(format(meta.takenAt, "yyyy-MM-dd"));
+      setTastedFromPhoto(true);
+    }
+    if (meta.gps) {
+      // Only reverse-geocode if the user opted in.
+      const { data: userRes } = await supabase.auth.getUser();
+      if (userRes.user) {
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("gps_lookup_enabled")
+          .eq("id", userRes.user.id)
+          .maybeSingle();
+        if (p?.gps_lookup_enabled) {
+          const name = await reverseGeocode(meta.gps.lat, meta.gps.lon);
+          if (name) {
+            setPlace(name);
+            setPlaceFromPhoto(true);
+          }
+        }
+      }
+    }
+  }
+
   async function onPhoto(file: File) {
     try {
       setRecognising(true);
+      // 1. EXIF first, on the original file
+      prefillFromMeta(file).catch(() => {});
+      // 2. Then compress + upload
       const compressed = await compressImage(file);
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user!.id;
@@ -99,7 +135,7 @@ function AddPage() {
       setPhotoPath(path);
       setPhotoDisplayUrl(await getSignedPhotoUrl(path));
 
-      const result = await recognise({ data: { photoPath: path } });
+      const result = await recognise({ data: { photoPath: path, backPhotoPath: backPhotoPath } });
       if (result.recognition_id) setRecognitionId(result.recognition_id);
       if (result.ok && result.data.confidence >= 0.6) {
         setModelData(result.data);
@@ -126,6 +162,51 @@ function AddPage() {
       setRecognising(false);
     }
   }
+
+  async function onBackPhoto(file: File) {
+    try {
+      setRecognising(true);
+      const compressed = await compressImage(file);
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user!.id;
+      const path = `${uid}/${crypto.randomUUID()}.jpg`;
+      const up = await supabase.storage.from("wine-photos").upload(path, compressed, {
+        contentType: "image/jpeg",
+      });
+      if (up.error) throw up.error;
+      setBackPhotoPath(path);
+      setBackPhotoDisplayUrl(await getSignedPhotoUrl(path));
+
+      // If we already have a front photo, re-run recognition with both.
+      if (photoPath) {
+        const result = await recognise({ data: { photoPath, backPhotoPath: path } });
+        if (result.recognition_id) setRecognitionId(result.recognition_id);
+        if (result.ok && result.data.confidence >= 0.6) {
+          setModelData(result.data);
+          setBottle((b) => ({
+            name: b.name || result.data.name || "",
+            producer: b.producer || result.data.producer || "",
+            appellation: b.appellation || result.data.appellation || "",
+            region: b.region || result.data.region || "",
+            country: b.country || result.data.country || "",
+            vintage: b.vintage || (result.data.vintage ? String(result.data.vintage) : ""),
+            wine_type: b.wine_type || result.data.wine_type || "",
+            grapes: b.grapes.length ? b.grapes : (result.data.grapes ?? []),
+            alcohol_percent:
+              b.alcohol_percent ||
+              (result.data.alcohol_percent ? String(result.data.alcohol_percent) : ""),
+          }));
+          setInferredFields(result.data.inferred_fields ?? []);
+          setDataSource(result.data.inferred_fields?.length ? "inferred" : "label");
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setRecognising(false);
+    }
+  }
+
 
   function addGrape() {
     const g = grapeInput.trim();
@@ -197,6 +278,7 @@ function AddPage() {
       user_id: uid,
       wine_id: wineId,
       photo_url: photoPath, // storage path
+      back_photo_url: backPhotoPath,
       rating: rating || null,
       tasted_on: tastedOn,
       place: place.trim() || null,
@@ -327,6 +409,41 @@ function AddPage() {
           className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); }}
         />
+
+        {/* Back label — optional, does not block saving */}
+        <div className="mt-3">
+          {backPhotoDisplayUrl ? (
+            <div className="relative">
+              <img src={backPhotoDisplayUrl} alt="back label" className="w-full h-36 object-cover rounded-lg" />
+              <button
+                onClick={() => { setBackPhotoDisplayUrl(null); setBackPhotoPath(null); }}
+                className="absolute top-2 right-2 bg-background/90 rounded-full p-1"
+              >
+                <X size={16} />
+              </button>
+              <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wide bg-background/90 rounded px-1.5 py-0.5 text-muted-foreground">
+                Back label
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={() => backFileRef.current?.click()}
+              className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary"
+            >
+              <ImagePlus size={16} />
+              Add back label (optional — helps with alcohol % and grapes)
+            </button>
+          )}
+          <input
+            ref={backFileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); }}
+          />
+        </div>
+
         {recognising && (
           <p className="mt-3 flex items-center gap-2 text-sm text-primary">
             <Loader2 size={16} className="animate-spin" /> Reading the label…
@@ -342,6 +459,7 @@ function AddPage() {
           </p>
         )}
       </div>
+
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -402,11 +520,16 @@ function AddPage() {
           <StarRating value={rating} onChange={setRating} size={28} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date"><Input type="date" value={tastedOn} onChange={(e) => setTastedOn(e.target.value)} /></Field>
-          <Field label="Place"><Input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Restaurant, home…" /></Field>
+          <Field label="Date" hint={tastedFromPhoto ? "From photo" : undefined}>
+            <Input type="date" value={tastedOn} onChange={(e) => { setTastedOn(e.target.value); setTastedFromPhoto(false); }} />
+          </Field>
+          <Field label="Place" hint={placeFromPhoto ? "From photo" : undefined}>
+            <Input value={place} onChange={(e) => { setPlace(e.target.value); setPlaceFromPhoto(false); }} placeholder="Restaurant, home…" />
+          </Field>
         </div>
         <Field label="With whom"><Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Optional" /></Field>
         <Field label="Notes"><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How did it taste? What did it remind you of?" /></Field>
+
       </section>
 
       <Button onClick={onSave} disabled={saving} className="w-full mt-8 h-12 text-base">
@@ -455,11 +578,15 @@ function AddPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm text-muted-foreground">{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm text-muted-foreground">{label}</Label>
+        {hint && <span className="text-[10px] uppercase tracking-wide text-primary/70">{hint}</span>}
+      </div>
       {children}
     </div>
   );
 }
+

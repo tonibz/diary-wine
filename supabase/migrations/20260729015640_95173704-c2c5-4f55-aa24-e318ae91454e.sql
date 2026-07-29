@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.wines_log_edits() FROM PUBLIC, anon, authenticated;

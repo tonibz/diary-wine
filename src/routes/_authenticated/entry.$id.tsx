@@ -34,14 +34,16 @@ type Entry = {
   } | null;
 };
 
-const bottleFields: Array<{ key: keyof NonNullable<Entry["wine"]>; label: string; type?: string }> = [
+const bottleFields: Array<{ key: keyof NonNullable<Entry["wine"]>; label: string; type?: string; options?: string[] }> = [
   { key: "producer", label: "Producer" },
   { key: "appellation", label: "Appellation" },
   { key: "region", label: "Region" },
   { key: "country", label: "Country" },
   { key: "vintage", label: "Vintage", type: "number" },
+  { key: "wine_type", label: "Type", options: ["red", "white", "rose", "sparkling", "dessert", "fortified"] },
   { key: "alcohol_percent", label: "Alcohol %", type: "number" },
 ];
+
 
 function EntryDetail() {
   const { id } = useParams({ from: "/_authenticated/entry/$id" });
@@ -140,7 +142,7 @@ function EntryDetail() {
             {bottleFields.map((f) => {
               const val = (w?.[f.key] ?? null) as string | number | null;
               return (
-                <FieldRow key={f.key} label={f.label} value={val} type={f.type} onSave={(v) => saveWineField(f.key, v)} />
+                <FieldRow key={f.key} label={f.label} value={val} type={f.type} options={f.options} onSave={(v) => saveWineField(f.key, v)} />
               );
             })}
             <FieldRow
@@ -200,17 +202,34 @@ function Row({ label, value }: { label: string; value: string | null | undefined
 }
 
 function FieldRow({
-  label, value, type, onSave,
+  label, value, type, options, onSave,
 }: {
   label: string;
   value: string | number | null;
   type?: string;
+  options?: string[];
   onSave: (v: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value != null ? String(value) : "");
   useEffect(() => { setV(value != null ? String(value) : ""); }, [value]);
   if (editing) {
+    if (options) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground w-24 shrink-0">{label}</span>
+          <select
+            className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+            value={v}
+            autoFocus
+            onChange={(e) => { setV(e.target.value); onSave(e.target.value); setEditing(false); }}
+          >
+            <option value="">—</option>
+            {options.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+      );
+    }
     return (
       <div className="flex items-center gap-2">
         <span className="text-muted-foreground w-24 shrink-0">{label}</span>
@@ -234,3 +253,4 @@ function FieldRow({
     </button>
   );
 }
+

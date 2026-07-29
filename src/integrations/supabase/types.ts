@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       entries: {
         Row: {
+          back_photo_url: string | null
           company: string | null
           created_at: string
           id: string
@@ -28,6 +29,7 @@ export type Database = {
           wine_id: string
         }
         Insert: {
+          back_photo_url?: string | null
           company?: string | null
           created_at?: string
           id?: string
@@ -40,6 +42,7 @@ export type Database = {
           wine_id: string
         }
         Update: {
+          back_photo_url?: string | null
           company?: string | null
           created_at?: string
           id?: string
@@ -109,16 +112,19 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
+          gps_lookup_enabled: boolean
           id: string
         }
         Insert: {
           created_at?: string
           display_name?: string | null
+          gps_lookup_enabled?: boolean
           id: string
         }
         Update: {
           created_at?: string
           display_name?: string | null
+          gps_lookup_enabled?: boolean
           id?: string
         }
         Relationships: []
@@ -231,6 +237,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "wine_aliases_wine_id_fkey"
+            columns: ["wine_id"]
+            isOneToOne: false
+            referencedRelation: "wines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wine_edits: {
+        Row: {
+          created_at: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          user_id: string
+          wine_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id: string
+          wine_id: string
+        }
+        Update: {
+          created_at?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string
+          wine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wine_edits_wine_id_fkey"
             columns: ["wine_id"]
             isOneToOne: false
             referencedRelation: "wines"
