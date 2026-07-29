@@ -142,7 +142,7 @@ function EntryDetail() {
             {bottleFields.map((f) => {
               const val = (w?.[f.key] ?? null) as string | number | null;
               return (
-                <FieldRow key={f.key} label={f.label} value={val} type={f.type} onSave={(v) => saveWineField(f.key, v)} />
+                <FieldRow key={f.key} label={f.label} value={val} type={f.type} options={f.options} onSave={(v) => saveWineField(f.key, v)} />
               );
             })}
             <FieldRow
