@@ -520,11 +520,16 @@ function AddPage() {
           <StarRating value={rating} onChange={setRating} size={28} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date"><Input type="date" value={tastedOn} onChange={(e) => setTastedOn(e.target.value)} /></Field>
-          <Field label="Place"><Input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Restaurant, home…" /></Field>
+          <Field label="Date" hint={tastedFromPhoto ? "From photo" : undefined}>
+            <Input type="date" value={tastedOn} onChange={(e) => { setTastedOn(e.target.value); setTastedFromPhoto(false); }} />
+          </Field>
+          <Field label="Place" hint={placeFromPhoto ? "From photo" : undefined}>
+            <Input value={place} onChange={(e) => { setPlace(e.target.value); setPlaceFromPhoto(false); }} placeholder="Restaurant, home…" />
+          </Field>
         </div>
         <Field label="With whom"><Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Optional" /></Field>
         <Field label="Notes"><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How did it taste? What did it remind you of?" /></Field>
+
       </section>
 
       <Button onClick={onSave} disabled={saving} className="w-full mt-8 h-12 text-base">
