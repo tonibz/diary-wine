@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { recogniseLabel, type RecognitionData } from "@/lib/recognise.functions";
 import { compressImage } from "@/lib/image-compress";
+import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { getSignedPhotoUrl } from "@/lib/wine-photo";
 import {
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { StarRating } from "@/components/StarRating";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, X, Loader2, Info } from "lucide-react";
+import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/add")({
