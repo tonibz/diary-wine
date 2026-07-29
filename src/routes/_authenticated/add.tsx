@@ -278,6 +278,7 @@ function AddPage() {
       user_id: uid,
       wine_id: wineId,
       photo_url: photoPath, // storage path
+      back_photo_url: backPhotoPath,
       rating: rating || null,
       tasted_on: tastedOn,
       place: place.trim() || null,
