@@ -145,7 +145,7 @@ function AddPage() {
       wine_type: bottle.wine_type || null,
       grapes: bottle.grapes,
       alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
-      label_image_url: photoPath, // storage path, not signed URL
+      label_image_url: null, // privacy: never contribute personal photos to shared catalogue
       data_source: dataSource,
     };
   }
