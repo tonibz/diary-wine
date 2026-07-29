@@ -2,7 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const Input = z.object({ photoPath: z.string().min(1) });
+const Input = z.object({
+  photoPath: z.string().min(1),
+  backPhotoPath: z.string().min(1).optional().nullable(),
+});
 
 export type RecognitionData = {
   name: string | null;
