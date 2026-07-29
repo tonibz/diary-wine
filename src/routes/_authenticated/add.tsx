@@ -61,8 +61,11 @@ function AddPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
   const fileRef = useRef<HTMLInputElement>(null);
+  const backFileRef = useRef<HTMLInputElement>(null);
   const [photoDisplayUrl, setPhotoDisplayUrl] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [backPhotoDisplayUrl, setBackPhotoDisplayUrl] = useState<string | null>(null);
+  const [backPhotoPath, setBackPhotoPath] = useState<string | null>(null);
   const [recognising, setRecognising] = useState(false);
   const [bottle, setBottle] = useState<BottleForm>(emptyBottle);
   const [dataSource, setDataSource] = useState<"label" | "inferred" | "user">("user");
@@ -71,7 +74,9 @@ function AddPage() {
   const [modelData, setModelData] = useState<RecognitionData | null>(null);
   const [rating, setRating] = useState(0);
   const [tastedOn, setTastedOn] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [tastedFromPhoto, setTastedFromPhoto] = useState(false);
   const [place, setPlace] = useState("");
+  const [placeFromPhoto, setPlaceFromPhoto] = useState(false);
   const [company, setCompany] = useState("");
   const [notes, setNotes] = useState("");
   const [grapeInput, setGrapeInput] = useState("");
@@ -86,9 +91,39 @@ function AddPage() {
     bottle.vintage, bottle.wine_type, bottle.grapes.length ? "g" : "", bottle.alcohol_percent,
   ].filter(Boolean).length;
 
+  async function prefillFromMeta(file: File) {
+    // CRITICAL: read EXIF from the ORIGINAL file, before compression re-encodes it.
+    const meta = await readPhotoMeta(file);
+    if (meta.takenAt) {
+      setTastedOn(format(meta.takenAt, "yyyy-MM-dd"));
+      setTastedFromPhoto(true);
+    }
+    if (meta.gps) {
+      // Only reverse-geocode if the user opted in.
+      const { data: userRes } = await supabase.auth.getUser();
+      if (userRes.user) {
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("gps_lookup_enabled")
+          .eq("id", userRes.user.id)
+          .maybeSingle();
+        if (p?.gps_lookup_enabled) {
+          const name = await reverseGeocode(meta.gps.lat, meta.gps.lon);
+          if (name) {
+            setPlace(name);
+            setPlaceFromPhoto(true);
+          }
+        }
+      }
+    }
+  }
+
   async function onPhoto(file: File) {
     try {
       setRecognising(true);
+      // 1. EXIF first, on the original file
+      prefillFromMeta(file).catch(() => {});
+      // 2. Then compress + upload
       const compressed = await compressImage(file);
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user!.id;
@@ -100,7 +135,7 @@ function AddPage() {
       setPhotoPath(path);
       setPhotoDisplayUrl(await getSignedPhotoUrl(path));
 
-      const result = await recognise({ data: { photoPath: path } });
+      const result = await recognise({ data: { photoPath: path, backPhotoPath: backPhotoPath } });
       if (result.recognition_id) setRecognitionId(result.recognition_id);
       if (result.ok && result.data.confidence >= 0.6) {
         setModelData(result.data);
@@ -127,6 +162,51 @@ function AddPage() {
       setRecognising(false);
     }
   }
+
+  async function onBackPhoto(file: File) {
+    try {
+      setRecognising(true);
+      const compressed = await compressImage(file);
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user!.id;
+      const path = `${uid}/${crypto.randomUUID()}.jpg`;
+      const up = await supabase.storage.from("wine-photos").upload(path, compressed, {
+        contentType: "image/jpeg",
+      });
+      if (up.error) throw up.error;
+      setBackPhotoPath(path);
+      setBackPhotoDisplayUrl(await getSignedPhotoUrl(path));
+
+      // If we already have a front photo, re-run recognition with both.
+      if (photoPath) {
+        const result = await recognise({ data: { photoPath, backPhotoPath: path } });
+        if (result.recognition_id) setRecognitionId(result.recognition_id);
+        if (result.ok && result.data.confidence >= 0.6) {
+          setModelData(result.data);
+          setBottle((b) => ({
+            name: b.name || result.data.name || "",
+            producer: b.producer || result.data.producer || "",
+            appellation: b.appellation || result.data.appellation || "",
+            region: b.region || result.data.region || "",
+            country: b.country || result.data.country || "",
+            vintage: b.vintage || (result.data.vintage ? String(result.data.vintage) : ""),
+            wine_type: b.wine_type || result.data.wine_type || "",
+            grapes: b.grapes.length ? b.grapes : (result.data.grapes ?? []),
+            alcohol_percent:
+              b.alcohol_percent ||
+              (result.data.alcohol_percent ? String(result.data.alcohol_percent) : ""),
+          }));
+          setInferredFields(result.data.inferred_fields ?? []);
+          setDataSource(result.data.inferred_fields?.length ? "inferred" : "label");
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setRecognising(false);
+    }
+  }
+
 
   function addGrape() {
     const g = grapeInput.trim();
