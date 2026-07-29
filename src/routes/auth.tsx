@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,17 +20,47 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function humanizeAuthError(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes("email not confirmed")) {
+    return "Please confirm your email first — check your inbox for the link we sent you.";
+  }
+  if (lower.includes("invalid login credentials")) {
+    return "That email and password don't match. Try again, or create an account.";
+  }
+  if (lower.includes("user already registered")) {
+    return "An account with this email already exists. Try signing in instead.";
+  }
+  return raw;
+}
+
 function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<null | "google" | "apple" | "password" | "magic">(null);
   const navigate = useNavigate();
+
+  async function withProvider(provider: "google" | "apple") {
+    setBusy(provider);
+    try {
+      const result = await lovable.auth.signInWithOAuth(provider, {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
+      if (result.redirected) return;
+      navigate({ to: "/diary" });
+    } catch (err) {
+      toast.error(humanizeAuthError(err instanceof Error ? err.message : "Sign-in failed"));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
+    setBusy("password");
     try {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
@@ -48,19 +79,29 @@ function AuthPage() {
       }
       navigate({ to: "/diary" });
     } catch (err) {
-      const raw = err instanceof Error ? err.message : "Something went wrong";
-      const lower = raw.toLowerCase();
-      let msg = raw;
-      if (lower.includes("email not confirmed")) {
-        msg = "Please confirm your email first — check your inbox for the link we sent you.";
-      } else if (lower.includes("invalid login credentials")) {
-        msg = "That email and password don't match. Try again, or create an account.";
-      } else if (lower.includes("user already registered")) {
-        msg = "An account with this email already exists. Try signing in instead.";
-      }
-      toast.error(msg);
+      toast.error(humanizeAuthError(err instanceof Error ? err.message : "Something went wrong"));
     } finally {
-      setBusy(false);
+      setBusy(null);
+    }
+  }
+
+  async function sendMagicLink() {
+    if (!email) {
+      toast.error("Enter your email first.");
+      return;
+    }
+    setBusy("magic");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) throw error;
+      toast.success("Check your inbox for a sign-in link.");
+    } catch (err) {
+      toast.error(humanizeAuthError(err instanceof Error ? err.message : "Could not send link"));
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -77,55 +118,87 @@ function AuthPage() {
           </p>
         </div>
 
-        <form
-          onSubmit={onSubmit}
-          className="rounded-2xl bg-card p-6 shadow-notebook border border-border space-y-4"
-        >
-          {mode === "signup" && (
+        <div className="rounded-2xl bg-card p-6 shadow-notebook border border-border space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={busy !== null}
+            onClick={() => withProvider("google")}
+          >
+            {busy === "google" ? "…" : "Continue with Google"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={busy !== null}
+            onClick={() => withProvider("apple")}
+          >
+            {busy === "apple" ? "…" : "Continue with Apple"}
+          </Button>
+
+          <div className="flex items-center gap-3 py-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground font-serif">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <form onSubmit={onSubmit} className="space-y-4">
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="dn">Your name</Label>
+                <Input
+                  id="dn"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="How should we call you?"
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
-              <Label htmlFor="dn">Your name</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="dn"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="How should we call you?"
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="pw">Password</Label>
-            <Input
-              id="pw"
-              type="password"
-              required
-              minLength={6}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={busy} className="w-full">
-            {busy ? "…" : mode === "signin" ? "Sign in" : "Create account"}
-          </Button>
-          <button
-            type="button"
-            className="w-full text-sm text-muted-foreground hover:text-foreground"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          >
-            {mode === "signin" ? "New here? Create an account" : "Already have one? Sign in"}
-          </button>
-        </form>
+            <div className="space-y-1.5">
+              <Label htmlFor="pw">Password</Label>
+              <Input
+                id="pw"
+                type="password"
+                required
+                minLength={6}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={busy !== null} className="w-full">
+              {busy === "password" ? "…" : mode === "signin" ? "Sign in" : "Create account"}
+            </Button>
+            <button
+              type="button"
+              onClick={sendMagicLink}
+              disabled={busy !== null}
+              className="w-full text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
+            >
+              {busy === "magic" ? "Sending link…" : "Email me a magic link instead"}
+            </button>
+            <button
+              type="button"
+              className="w-full text-sm text-muted-foreground hover:text-foreground"
+              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+            >
+              {mode === "signin" ? "New here? Create an account" : "Already have one? Sign in"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
