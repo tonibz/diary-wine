@@ -34,14 +34,16 @@ type Entry = {
   } | null;
 };
 
-const bottleFields: Array<{ key: keyof NonNullable<Entry["wine"]>; label: string; type?: string }> = [
+const bottleFields: Array<{ key: keyof NonNullable<Entry["wine"]>; label: string; type?: string; options?: string[] }> = [
   { key: "producer", label: "Producer" },
   { key: "appellation", label: "Appellation" },
   { key: "region", label: "Region" },
   { key: "country", label: "Country" },
   { key: "vintage", label: "Vintage", type: "number" },
+  { key: "wine_type", label: "Type", options: ["red", "white", "rose", "sparkling", "dessert", "fortified"] },
   { key: "alcohol_percent", label: "Alcohol %", type: "number" },
 ];
+
 
 function EntryDetail() {
   const { id } = useParams({ from: "/_authenticated/entry/$id" });
