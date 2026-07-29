@@ -578,11 +578,15 @@ function AddPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm text-muted-foreground">{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm text-muted-foreground">{label}</Label>
+        {hint && <span className="text-[10px] uppercase tracking-wide text-primary/70">{hint}</span>}
+      </div>
       {children}
     </div>
   );
 }
+
