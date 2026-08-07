@@ -1,12 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BookHeart, Sparkles, Settings, Plus } from "lucide-react";
+import { BookHeart, Sparkles, Settings, Plus, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { to: "/", label: "Diary", icon: BookHeart },
+  { to: "/wishlist", label: "Wishlist", icon: Bookmark },
   { to: "/taste", label: "My Taste", icon: Sparkles },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
+
 
 export function BottomTabs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
