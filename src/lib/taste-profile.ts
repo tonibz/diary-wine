@@ -2,20 +2,26 @@ import { supabase } from "@/integrations/supabase/client";
 
 type EntryRow = {
   rating: number | null;
-  wine: {
-    wine_type: string | null;
-    country: string | null;
-    grapes: string[] | null;
+  vintage_row: {
     vintage: number | null;
     alcohol_percent: number | null;
+    wine: {
+      wine_type: string | null;
+      country: string | null;
+      grapes: string[] | null;
+    } | null;
   } | null;
 };
 
 export async function recomputeTasteProfile(userId: string) {
+  // Only wines the user actually tasted feed the profile — wishlist items never do.
   const { data, error } = await supabase
     .from("entries")
-    .select("rating, wine:wines(wine_type, country, grapes, vintage, alcohol_percent)")
-    .eq("user_id", userId);
+    .select(
+      "rating, vintage_row:wine_vintages(vintage, alcohol_percent, wine:wines(wine_type, country, grapes))",
+    )
+    .eq("user_id", userId)
+    .eq("status", "tasted");
   if (error) throw error;
   const rows = (data ?? []) as unknown as EntryRow[];
   const total = rows.length;
@@ -26,14 +32,15 @@ export async function recomputeTasteProfile(userId: string) {
   const thisYear = new Date().getFullYear();
   const statTypes = new Set(["red", "white"]);
   for (const r of rows) {
-    const w = r.wine;
+    const v = r.vintage_row;
+    const w = v?.wine;
     if (!w) continue;
     if (w.wine_type) typeSplit[w.wine_type] = (typeSplit[w.wine_type] ?? 0) + 1;
     if (!w.wine_type || !statTypes.has(w.wine_type)) continue;
     if (w.country) countries[w.country] = (countries[w.country] ?? 0) + 1;
     for (const g of w.grapes ?? []) grapes[g] = (grapes[g] ?? 0) + 1;
-    if (w.vintage) { ageSum += thisYear - w.vintage; ageCount++; }
-    if (w.alcohol_percent) { alcSum += Number(w.alcohol_percent); alcCount++; }
+    if (v?.vintage) { ageSum += thisYear - v.vintage; ageCount++; }
+    if (v?.alcohol_percent) { alcSum += Number(v.alcohol_percent); alcCount++; }
   }
   const top = (o: Record<string, number>, n: number) =>
     Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => ({ key: k, count: v }));

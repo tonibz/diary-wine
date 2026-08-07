@@ -15,16 +15,20 @@ type Entry = {
   tasted_on: string;
   place: string | null;
   company: string | null;
-  wine: {
+  vintage_row: {
     id: string;
-    name: string;
-    producer: string | null;
     vintage: number | null;
-    wine_type: string | null;
-    label_image_url: string | null;
+    wine: {
+      id: string;
+      name: string;
+      producer: string | null;
+      wine_type: string | null;
+      label_image_url: string | null;
+    } | null;
   } | null;
   display_photo: string | null;
 };
+
 
 export const Route = createFileRoute("/_authenticated/diary")({
   head: () => ({
@@ -46,26 +50,31 @@ function DiaryPage() {
 
   useEffect(() => {
     (async () => {
+      // Wishlist items (status 'interested') never appear in the diary.
       const { data } = await supabase
         .from("entries")
-        .select("id, photo_url, rating, tasted_on, place, company, wine:wines(id, name, producer, vintage, wine_type, label_image_url)")
+        .select(
+          "id, photo_url, rating, tasted_on, place, company, vintage_row:wine_vintages(id, vintage, wine:wines(id, name, producer, wine_type, label_image_url))",
+        )
+        .eq("status", "tasted")
         .order("created_at", { ascending: false });
       const rows = (data ?? []) as unknown as Entry[];
-      const refs = rows.map((e) => e.photo_url ?? e.wine?.label_image_url ?? null);
+      const refs = rows.map((e) => e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null);
       const signed = await getSignedPhotoUrls(refs);
       rows.forEach((e, i) => { e.display_photo = signed[i]; });
       setEntries(rows);
     })();
   }, []);
 
+
   const filtered = useMemo(() => {
     if (!entries) return null;
     const ql = q.trim().toLowerCase();
     return entries.filter((e) => {
-      if (typeFilter !== "all" && e.wine?.wine_type !== typeFilter) return false;
+      if (typeFilter !== "all" && e.vintage_row?.wine?.wine_type !== typeFilter) return false;
       if (Number(minRating) > 0 && (e.rating ?? 0) < Number(minRating)) return false;
       if (ql) {
-        const hay = `${e.wine?.name ?? ""} ${e.wine?.producer ?? ""} ${e.place ?? ""}`.toLowerCase();
+        const hay = `${e.vintage_row?.wine?.name ?? ""} ${e.vintage_row?.wine?.producer ?? ""} ${e.place ?? ""}`.toLowerCase();
         if (!hay.includes(ql)) return false;
       }
       return true;
@@ -132,7 +141,7 @@ function DiaryPage() {
                     {e.display_photo ? (
                       <img
                         src={e.display_photo}
-                        alt={e.wine?.name ?? "wine"}
+                        alt={e.vintage_row?.wine?.name ?? "wine"}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -141,13 +150,14 @@ function DiaryPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-serif text-lg leading-tight text-foreground truncate">
-                      {e.wine?.name ?? "Untitled"}{" "}
-                      {e.wine?.vintage && (
-                        <span className="text-muted-foreground text-sm font-sans">· {e.wine.vintage}</span>
+                      {e.vintage_row?.wine?.name ?? "Untitled"}{" "}
+                      {e.vintage_row?.vintage && (
+                        <span className="text-muted-foreground text-sm font-sans">· {e.vintage_row.vintage}</span>
                       )}
+
                     </h3>
-                    {e.wine?.producer && (
-                      <p className="text-sm text-muted-foreground truncate">{e.wine.producer}</p>
+                    {e.vintage_row?.wine?.producer && (
+                      <p className="text-sm text-muted-foreground truncate">{e.vintage_row.wine.producer}</p>
                     )}
                     <div className="mt-1.5">
                       <StarRating value={e.rating ?? 0} size={14} />

@@ -23,10 +23,16 @@ export type Database = {
           notes: string | null
           photo_url: string | null
           place: string | null
+          price_context:
+            | Database["public"]["Enums"]["price_context_kind"]
+            | null
+          price_currency: string | null
+          price_paid: number | null
           rating: number | null
+          status: Database["public"]["Enums"]["entry_status"]
           tasted_on: string
           user_id: string
-          wine_id: string
+          wine_vintage_id: string
         }
         Insert: {
           back_photo_url?: string | null
@@ -36,10 +42,16 @@ export type Database = {
           notes?: string | null
           photo_url?: string | null
           place?: string | null
+          price_context?:
+            | Database["public"]["Enums"]["price_context_kind"]
+            | null
+          price_currency?: string | null
+          price_paid?: number | null
           rating?: number | null
+          status?: Database["public"]["Enums"]["entry_status"]
           tasted_on?: string
           user_id: string
-          wine_id: string
+          wine_vintage_id: string
         }
         Update: {
           back_photo_url?: string | null
@@ -49,17 +61,23 @@ export type Database = {
           notes?: string | null
           photo_url?: string | null
           place?: string | null
+          price_context?:
+            | Database["public"]["Enums"]["price_context_kind"]
+            | null
+          price_currency?: string | null
+          price_paid?: number | null
           rating?: number | null
+          status?: Database["public"]["Enums"]["entry_status"]
           tasted_on?: string
           user_id?: string
-          wine_id?: string
+          wine_vintage_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "entries_wine_id_fkey"
-            columns: ["wine_id"]
+            foreignKeyName: "entries_wine_vintage_id_fkey"
+            columns: ["wine_vintage_id"]
             isOneToOne: false
-            referencedRelation: "wines"
+            referencedRelation: "wine_vintages"
             referencedColumns: ["id"]
           },
         ]
@@ -282,9 +300,40 @@ export type Database = {
           },
         ]
       }
-      wines: {
+      wine_vintages: {
         Row: {
           alcohol_percent: number | null
+          created_at: string
+          id: string
+          vintage: number | null
+          wine_id: string
+        }
+        Insert: {
+          alcohol_percent?: number | null
+          created_at?: string
+          id?: string
+          vintage?: number | null
+          wine_id: string
+        }
+        Update: {
+          alcohol_percent?: number | null
+          created_at?: string
+          id?: string
+          vintage?: number | null
+          wine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wine_vintages_wine_id_fkey"
+            columns: ["wine_id"]
+            isOneToOne: false
+            referencedRelation: "wines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wines: {
+        Row: {
           appellation: string | null
           country: string | null
           created_at: string
@@ -298,11 +347,9 @@ export type Database = {
           norm_producer: string | null
           producer: string | null
           region: string | null
-          vintage: number | null
           wine_type: Database["public"]["Enums"]["wine_type"] | null
         }
         Insert: {
-          alcohol_percent?: number | null
           appellation?: string | null
           country?: string | null
           created_at?: string
@@ -316,11 +363,9 @@ export type Database = {
           norm_producer?: string | null
           producer?: string | null
           region?: string | null
-          vintage?: number | null
           wine_type?: Database["public"]["Enums"]["wine_type"] | null
         }
         Update: {
-          alcohol_percent?: number | null
           appellation?: string | null
           country?: string | null
           created_at?: string
@@ -334,7 +379,6 @@ export type Database = {
           norm_producer?: string | null
           producer?: string | null
           region?: string | null
-          vintage?: number | null
           wine_type?: Database["public"]["Enums"]["wine_type"] | null
         }
         Relationships: []
@@ -345,7 +389,7 @@ export type Database = {
     }
     Functions: {
       find_wine_match: {
-        Args: { _name: string; _producer: string; _vintage: number }
+        Args: { _name: string; _producer: string }
         Returns: {
           country: string
           id: string
@@ -353,7 +397,6 @@ export type Database = {
           producer: string
           region: string
           score: number
-          vintage: number
         }[]
       }
       normalize_wine_text: { Args: { t: string }; Returns: string }
@@ -362,11 +405,13 @@ export type Database = {
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
+      entry_status: "tasted" | "interested"
       match_decision_kind:
         | "auto_merge"
         | "user_merge"
         | "user_rejected"
         | "auto_new"
+      price_context_kind: "restaurant" | "shop" | "online" | "other"
       wine_data_source: "label" | "inferred" | "user"
       wine_type:
         | "red"
@@ -502,12 +547,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      entry_status: ["tasted", "interested"],
       match_decision_kind: [
         "auto_merge",
         "user_merge",
         "user_rejected",
         "auto_new",
       ],
+      price_context_kind: ["restaurant", "shop", "online", "other"],
       wine_data_source: ["label", "inferred", "user"],
       wine_type: ["red", "white", "rose", "sparkling", "dessert", "fortified"],
     },

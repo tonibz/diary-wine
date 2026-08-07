@@ -1,12 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BookHeart, Sparkles, Settings, Plus } from "lucide-react";
+import { BookHeart, Sparkles, Settings, Plus, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { to: "/", label: "Diary", icon: BookHeart },
+  { to: "/wishlist", label: "Wishlist", icon: Bookmark },
   { to: "/taste", label: "My Taste", icon: Sparkles },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
+
 
 export function BottomTabs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -29,7 +31,7 @@ export function BottomTabs() {
                 <Link
                   to={t.to}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-lg px-4 py-1.5 text-xs transition-colors",
+                    "flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-xs transition-colors",
                     active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
