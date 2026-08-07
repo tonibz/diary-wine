@@ -31,7 +31,7 @@ export function BottomTabs() {
                 <Link
                   to={t.to}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-lg px-4 py-1.5 text-xs transition-colors",
+                    "flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-xs transition-colors",
                     active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
