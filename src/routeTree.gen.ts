@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedWishlistRouteImport } from './routes/_authenticated/wishlist'
 import { Route as AuthenticatedTasteRouteImport } from './routes/_authenticated/taste'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
@@ -31,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedWishlistRoute = AuthenticatedWishlistRouteImport.update({
+  id: '/wishlist',
+  path: '/wishlist',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTasteRoute = AuthenticatedTasteRouteImport.update({
   id: '/taste',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/diary': typeof AuthenticatedDiaryRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/taste': typeof AuthenticatedTasteRoute
+  '/wishlist': typeof AuthenticatedWishlistRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/diary': typeof AuthenticatedDiaryRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/taste': typeof AuthenticatedTasteRoute
+  '/wishlist': typeof AuthenticatedWishlistRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
 }
 export interface FileRoutesById {
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_authenticated/diary': typeof AuthenticatedDiaryRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/taste': typeof AuthenticatedTasteRoute
+  '/_authenticated/wishlist': typeof AuthenticatedWishlistRoute
   '/_authenticated/entry/$id': typeof AuthenticatedEntryIdRoute
 }
 export interface FileRouteTypes {
@@ -96,9 +105,18 @@ export interface FileRouteTypes {
     | '/diary'
     | '/settings'
     | '/taste'
+    | '/wishlist'
     | '/entry/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/add' | '/diary' | '/settings' | '/taste' | '/entry/$id'
+  to:
+    | '/'
+    | '/auth'
+    | '/add'
+    | '/diary'
+    | '/settings'
+    | '/taste'
+    | '/wishlist'
+    | '/entry/$id'
   id:
     | '__root__'
     | '/'
@@ -108,6 +126,7 @@ export interface FileRouteTypes {
     | '/_authenticated/diary'
     | '/_authenticated/settings'
     | '/_authenticated/taste'
+    | '/_authenticated/wishlist'
     | '/_authenticated/entry/$id'
   fileRoutesById: FileRoutesById
 }
@@ -139,6 +158,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/wishlist': {
+      id: '/_authenticated/wishlist'
+      path: '/wishlist'
+      fullPath: '/wishlist'
+      preLoaderRoute: typeof AuthenticatedWishlistRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/taste': {
       id: '/_authenticated/taste'
@@ -183,6 +209,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTasteRoute: typeof AuthenticatedTasteRoute
+  AuthenticatedWishlistRoute: typeof AuthenticatedWishlistRoute
   AuthenticatedEntryIdRoute: typeof AuthenticatedEntryIdRoute
 }
 
@@ -191,6 +218,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTasteRoute: AuthenticatedTasteRoute,
+  AuthenticatedWishlistRoute: AuthenticatedWishlistRoute,
   AuthenticatedEntryIdRoute: AuthenticatedEntryIdRoute,
 }
 

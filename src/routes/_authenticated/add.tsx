@@ -7,8 +7,10 @@ import { compressImage } from "@/lib/image-compress";
 import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { getSignedPhotoUrl } from "@/lib/wine-photo";
+import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import {
   findBestMatch,
+  findOrCreateVintage,
   fillEmptyWineFields,
   logAlias,
   logDecision,
@@ -34,6 +36,7 @@ import { StarRating } from "@/components/StarRating";
 import { toast } from "sonner";
 import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/add")({
   head: () => ({ meta: [{ title: "Add a wine — Wine Diary" }, { name: "description", content: "Log a new bottle." }] }),
@@ -72,6 +75,7 @@ function AddPage() {
   const [inferredFields, setInferredFields] = useState<string[]>([]);
   const [recognitionId, setRecognitionId] = useState<string | null>(null);
   const [modelData, setModelData] = useState<RecognitionData | null>(null);
+  const [status, setStatus] = useState<"tasted" | "interested">("tasted");
   const [rating, setRating] = useState(0);
   const [tastedOn, setTastedOn] = useState(format(new Date(), "yyyy-MM-dd"));
   const [tastedFromPhoto, setTastedFromPhoto] = useState(false);
@@ -79,12 +83,17 @@ function AddPage() {
   const [placeFromPhoto, setPlaceFromPhoto] = useState(false);
   const [company, setCompany] = useState("");
   const [notes, setNotes] = useState("");
+  const [pricePaid, setPricePaid] = useState("");
+  const [priceCurrency, setPriceCurrency] = useState(localeCurrency());
+  const [priceContext, setPriceContext] = useState("");
   const [grapeInput, setGrapeInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [mergePrompt, setMergePrompt] = useState<{
     candidate: WineCandidate;
     draft: WineDraft;
   } | null>(null);
+
+  const tasted = status === "tasted";
 
   const bottleFieldsFilled = [
     bottle.name, bottle.producer, bottle.appellation, bottle.region, bottle.country,
@@ -222,12 +231,12 @@ function AddPage() {
       appellation: bottle.appellation.trim() || null,
       region: bottle.region.trim() || null,
       country: bottle.country.trim() || null,
-      vintage: bottle.vintage ? Number(bottle.vintage) : null,
       wine_type: bottle.wine_type || null,
       grapes: bottle.grapes,
-      alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
       label_image_url: null, // privacy: never contribute personal photos to shared catalogue
       data_source: dataSource,
+      vintage: bottle.vintage ? Number(bottle.vintage) : null,
+      alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
     };
   }
 
@@ -240,10 +249,8 @@ function AddPage() {
         appellation: draft.appellation,
         region: draft.region,
         country: draft.country,
-        vintage: draft.vintage,
         wine_type: draft.wine_type as never,
         grapes: draft.grapes,
-        alcohol_percent: draft.alcohol_percent,
         label_image_url: draft.label_image_url,
         data_source: draft.data_source as never,
         created_by: uid,
@@ -273,17 +280,24 @@ function AddPage() {
       decision,
     );
 
+    // Find or create the vintage row underneath the wine
+    const vintageId = await findOrCreateVintage(wineId, draft.vintage, draft.alcohol_percent);
+
     // Create entry
     const { data: entry, error: entryErr } = await supabase.from("entries").insert({
       user_id: uid,
-      wine_id: wineId,
+      wine_vintage_id: vintageId,
+      status,
       photo_url: photoPath, // storage path
       back_photo_url: backPhotoPath,
-      rating: rating || null,
-      tasted_on: tastedOn,
-      place: place.trim() || null,
-      company: company.trim() || null,
+      rating: tasted ? rating || null : null,
+      tasted_on: tasted ? tastedOn : format(new Date(), "yyyy-MM-dd"),
+      place: tasted ? place.trim() || null : null,
+      company: tasted ? company.trim() || null : null,
       notes: notes.trim() || null,
+      price_paid: pricePaid ? Number(pricePaid) : null,
+      price_currency: pricePaid ? priceCurrency : null,
+      price_context: (priceContext || null) as never,
     }).select("id").single();
     if (entryErr) throw entryErr;
 
@@ -314,8 +328,8 @@ function AddPage() {
         .eq("id", recognitionId);
     }
 
-    await recomputeTasteProfile(uid);
-    toast.success("Saved to your diary.");
+    if (tasted) await recomputeTasteProfile(uid);
+    toast.success(tasted ? "Saved to your diary." : "Added to your wishlist.");
     navigate({ to: "/entry/$id", params: { id: entry.id } });
   }
 
@@ -330,7 +344,8 @@ function AddPage() {
       const uid = userRes.user!.id;
       const draft = buildDraft();
 
-      const candidate = await findBestMatch(draft.name, draft.producer, draft.vintage);
+      // Matching is wine-level now: the year no longer splits a wine in two.
+      const candidate = await findBestMatch(draft.name, draft.producer);
 
       if (candidate && candidate.score >= 0.85) {
         await fillEmptyWineFields(candidate.id, draft);
@@ -379,6 +394,30 @@ function AddPage() {
         </button>
         <h1 className="text-2xl font-serif text-primary">Add a wine</h1>
         <span className="w-8" />
+      </div>
+
+      {/* Tasted or just curious? */}
+      <div className="mb-5 rounded-2xl bg-card p-2 border border-border shadow-notebook">
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            ["tasted", "I tasted this"],
+            ["interested", "Haven't tried it yet"],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setStatus(value)}
+              className={cn(
+                "rounded-xl py-2.5 text-sm transition-colors",
+                status === value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-2xl bg-card p-4 shadow-notebook border border-border mb-5">
@@ -514,26 +553,44 @@ function AddPage() {
         <Field label="Alcohol %"><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
       </section>
 
-      <section className="space-y-4 mt-8">
-        <h2 className="text-lg font-serif text-foreground">My tasting</h2>
-        <Field label="Rating">
-          <StarRating value={rating} onChange={setRating} size={28} />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Date" hint={tastedFromPhoto ? "From photo" : undefined}>
-            <Input type="date" value={tastedOn} onChange={(e) => { setTastedOn(e.target.value); setTastedFromPhoto(false); }} />
+      {tasted ? (
+        <section className="space-y-4 mt-8">
+          <h2 className="text-lg font-serif text-foreground">My tasting</h2>
+          <Field label="Rating">
+            <StarRating value={rating} onChange={setRating} size={28} />
           </Field>
-          <Field label="Place" hint={placeFromPhoto ? "From photo" : undefined}>
-            <Input value={place} onChange={(e) => { setPlace(e.target.value); setPlaceFromPhoto(false); }} placeholder="Restaurant, home…" />
-          </Field>
-        </div>
-        <Field label="With whom"><Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Optional" /></Field>
-        <Field label="Notes"><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How did it taste? What did it remind you of?" /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date" hint={tastedFromPhoto ? "From photo" : undefined}>
+              <Input type="date" value={tastedOn} onChange={(e) => { setTastedOn(e.target.value); setTastedFromPhoto(false); }} />
+            </Field>
+            <Field label="Place" hint={placeFromPhoto ? "From photo" : undefined}>
+              <Input value={place} onChange={(e) => { setPlace(e.target.value); setPlaceFromPhoto(false); }} placeholder="Restaurant, home…" />
+            </Field>
+          </div>
+          <Field label="With whom"><Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Optional" /></Field>
+          <Field label="Notes"><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How did it taste? What did it remind you of?" /></Field>
+        </section>
+      ) : (
+        <section className="space-y-4 mt-8">
+          <h2 className="text-lg font-serif text-foreground">A note to yourself</h2>
+          <p className="text-xs text-muted-foreground">
+            Saw it somewhere and want to remember it? Jot down where, and we'll keep it on your wishlist.
+          </p>
+          <Field label="Note"><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Spotted at the corner shop, my friend swears by it…" /></Field>
+        </section>
+      )}
 
-      </section>
+      <PriceSection
+        pricePaid={pricePaid}
+        setPricePaid={setPricePaid}
+        priceCurrency={priceCurrency}
+        setPriceCurrency={setPriceCurrency}
+        priceContext={priceContext}
+        setPriceContext={setPriceContext}
+      />
 
       <Button onClick={onSave} disabled={saving} className="w-full mt-8 h-12 text-base">
-        {saving ? "Saving…" : "Save to my diary"}
+        {saving ? "Saving…" : tasted ? "Save to my diary" : "Add to my wishlist"}
       </Button>
 
       <AlertDialog open={!!mergePrompt}>
@@ -544,14 +601,12 @@ function AddPage() {
               <div className="space-y-3 text-sm">
                 <p className="text-muted-foreground">
                   We already have a wine that looks very close. Should we log this bottle against
-                  the existing one, or is it actually different?
+                  the existing one, or is it actually different? Different years of the same wine
+                  belong together.
                 </p>
                 {mergePrompt && (
                   <div className="rounded-lg border border-border bg-parchment p-3 space-y-0.5">
-                    <p className="font-serif text-base text-foreground">
-                      {mergePrompt.candidate.name}
-                      {mergePrompt.candidate.vintage ? ` · ${mergePrompt.candidate.vintage}` : ""}
-                    </p>
+                    <p className="font-serif text-base text-foreground">{mergePrompt.candidate.name}</p>
                     {mergePrompt.candidate.producer && (
                       <p className="text-muted-foreground">{mergePrompt.candidate.producer}</p>
                     )}
@@ -578,6 +633,57 @@ function AddPage() {
   );
 }
 
+export function PriceSection({
+  pricePaid, setPricePaid, priceCurrency, setPriceCurrency, priceContext, setPriceContext,
+}: {
+  pricePaid: string;
+  setPricePaid: (v: string) => void;
+  priceCurrency: string;
+  setPriceCurrency: (v: string) => void;
+  priceContext: string;
+  setPriceContext: (v: string) => void;
+}) {
+  return (
+    <section className="mt-8 rounded-2xl bg-card p-4 border border-border shadow-notebook space-y-3">
+      <div>
+        <h2 className="text-lg font-serif text-foreground">What it cost</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Entirely optional — skip it if you'd rather.</p>
+      </div>
+      <div className="grid grid-cols-[1fr_auto] gap-3">
+        <Field label="Price">
+          <Input
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={pricePaid}
+            onChange={(e) => setPricePaid(e.target.value)}
+            placeholder="Optional"
+          />
+        </Field>
+        <Field label="Currency">
+          <Select value={priceCurrency} onValueChange={setPriceCurrency}>
+            <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CURRENCY_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+      <Field label="Where">
+        <Select value={priceContext} onValueChange={setPriceContext}>
+          <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="restaurant">Restaurant</SelectItem>
+            <SelectItem value="shop">Shop</SelectItem>
+            <SelectItem value="online">Online</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+    </section>
+  );
+}
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -589,4 +695,3 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </div>
   );
 }
-
