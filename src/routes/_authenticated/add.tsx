@@ -499,6 +499,21 @@ function AddPage() {
         )}
       </div>
 
+      {/* Got a backlog on your phone? */}
+      <button
+        onClick={() => navigate({ to: "/bulk" })}
+        className="mb-5 flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook hover:border-primary/40"
+      >
+        <Images size={20} className="text-primary shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-sm font-medium">Import several photos</span>
+          <span className="block text-xs text-muted-foreground">
+            Read a whole gallery of labels at once, review before saving.
+          </span>
+        </span>
+      </button>
+
+
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
