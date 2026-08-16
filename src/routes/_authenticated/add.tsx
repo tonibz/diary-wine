@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { StarRating } from "@/components/StarRating";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus } from "lucide-react";
+import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus, Images } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
