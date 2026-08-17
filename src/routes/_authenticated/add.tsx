@@ -513,6 +513,20 @@ function AddPage() {
         </span>
       </button>
 
+      {/* Handed a wine list? */}
+      <button
+        onClick={() => navigate({ to: "/menu" })}
+        className="mb-5 flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook hover:border-primary/40"
+      >
+        <ScrollText size={20} className="text-primary shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-sm font-medium">Scan a menu</span>
+          <span className="block text-xs text-muted-foreground">
+            Photograph a restaurant wine list and see what to order.
+          </span>
+        </span>
+      </button>
+
 
 
       <section className="space-y-4">
