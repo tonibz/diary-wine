@@ -16,14 +16,22 @@ export type MenuParsedItem = {
   by_the_glass: boolean;
 };
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 export type ReadMenuResult =
   | {
       ok: true;
       restaurant_name: string | null;
       items: MenuParsedItem[];
-      raw: unknown;
+      raw: JsonValue;
     }
-  | { ok: false; error: string; raw?: unknown };
+  | { ok: false; error: string; raw: JsonValue };
 
 const PROMPT = `You are reading a photograph of a restaurant wine list. Return ONLY a JSON object with no prose and no markdown code fences.
 
@@ -38,7 +46,7 @@ export const readMenu = createServerFn({ method: "POST" })
   .inputValidator((v: unknown) => Input.parse(v))
   .handler(async ({ data, context }): Promise<ReadMenuResult> => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return { ok: false, error: "ANTHROPIC_API_KEY is not configured" };
+    if (!apiKey) return { ok: false, error: "ANTHROPIC_API_KEY is not configured", raw: null };
     const { supabase } = context;
 
     const content: Array<Record<string, unknown>> = [];
@@ -51,10 +59,10 @@ export const readMenu = createServerFn({ method: "POST" })
         source: { type: "base64", media_type: dl.data.type || "image/jpeg", data: b64 },
       });
     }
-    if (content.length === 0) return { ok: false, error: "Could not read the uploaded photos" };
+    if (content.length === 0) return { ok: false, error: "Could not read the uploaded photos", raw: null };
     content.push({ type: "text", text: PROMPT });
 
-    let raw: unknown = null;
+    let raw: JsonValue = null;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -69,7 +77,7 @@ export const readMenu = createServerFn({ method: "POST" })
           messages: [{ role: "user", content }],
         }),
       });
-      raw = await res.json();
+      raw = (await res.json()) as JsonValue;
       if (!res.ok) return { ok: false, error: `Anthropic returned ${res.status}`, raw };
       const text =
         (raw as { content?: Array<{ type: string; text?: string }> })?.content?.find(
