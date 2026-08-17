@@ -5,7 +5,7 @@ import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StarRating } from "@/components/StarRating";
-import { Wine, Search } from "lucide-react";
+import { Wine, Search, ScrollText, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 
 type Entry = {
@@ -87,6 +87,20 @@ function DiaryPage() {
         <h1 className="text-4xl font-serif text-primary">My Diary</h1>
         <p className="text-sm text-muted-foreground mt-1">Every bottle, in your own words.</p>
       </header>
+
+      <Link
+        to="/menu"
+        className="mb-5 flex items-center gap-3 rounded-2xl border border-primary/30 bg-card px-4 py-3 shadow-notebook hover:border-primary/60"
+      >
+        <ScrollText size={20} className="text-primary shrink-0" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">Scan a menu</span>
+          <span className="block text-xs text-muted-foreground">
+            Handed a long wine list? I'll tell you what you already know.
+          </span>
+        </span>
+        <ChevronRight size={16} className="text-muted-foreground shrink-0" />
+      </Link>
 
       <div className="space-y-2 mb-5">
         <div className="relative">
