@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { MENU_PROMPT } from "./read-menu-prompt";
 
 const Input = z.object({
   photoPaths: z.array(z.string().min(1)).min(1).max(8),
@@ -33,14 +34,6 @@ export type ReadMenuResult =
     }
   | { ok: false; error: string; raw: JsonValue };
 
-const PROMPT = `You are reading a photograph of a restaurant wine list. Return ONLY a JSON object with no prose and no markdown code fences.
-
-Return: { "restaurant_name": string or null, "items": [ ... ] }
-
-Each item: { "raw_text": the line exactly as printed, "name": the wine name, "producer": the winery or null, "vintage": integer or null, "price": number or null, "currency": three-letter code or null, "by_the_glass": true or false }
-
-Rules. Include every wine you can read, even if some fields are missing. Wine lists are terse and often omit the producer. Do not invent producers or vintages that are not printed. Menus frequently group by region or style with headings such as Rioja or Champagne: use those headings to help identify the wines but do not return the headings as items. If a wine is listed at both glass and bottle prices, return the bottle price and set by_the_glass true. If the photo is unreadable, return an empty items array.`;
-
 export const readMenu = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => Input.parse(v))
@@ -60,7 +53,7 @@ export const readMenu = createServerFn({ method: "POST" })
       });
     }
     if (content.length === 0) return { ok: false, error: "Could not read the uploaded photos", raw: null };
-    content.push({ type: "text", text: PROMPT });
+    content.push({ type: "text", text: MENU_PROMPT });
 
     let raw: JsonValue = null;
     try {
