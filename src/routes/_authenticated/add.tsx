@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { StarRating } from "@/components/StarRating";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus, Images } from "lucide-react";
+import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus, Images, ScrollText } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -509,6 +509,20 @@ function AddPage() {
           <span className="block text-sm font-medium">Import several photos</span>
           <span className="block text-xs text-muted-foreground">
             Read a whole gallery of labels at once, review before saving.
+          </span>
+        </span>
+      </button>
+
+      {/* Handed a wine list? */}
+      <button
+        onClick={() => navigate({ to: "/menu" })}
+        className="mb-5 flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook hover:border-primary/40"
+      >
+        <ScrollText size={20} className="text-primary shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-sm font-medium">Scan a menu</span>
+          <span className="block text-xs text-muted-foreground">
+            Photograph a restaurant wine list and see what to order.
           </span>
         </span>
       </button>
