@@ -210,8 +210,9 @@ export function enrichItems(
   return items.map((item) => {
     // 1. Have they had it? Either the confident catalogue link is in their diary,
     //    or the printed name closely matches something they logged.
-    let diary: DiaryWine | null =
-      (item.matched_wine_id ? byWineId.get(item.matched_wine_id) ?? null : null) ?? null;
+    let diary: DiaryWine | null = item.matched_wine_id
+      ? byWineId.get(item.matched_wine_id) ?? null
+      : null;
     if (!diary) {
       const t = textOf(item);
       for (const e of ctx.entries) {
