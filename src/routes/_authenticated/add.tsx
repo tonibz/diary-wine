@@ -103,6 +103,8 @@ function AddPage() {
   const [priceContext, setPriceContext] = useState("");
   const [grapeInput, setGrapeInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [refCheck, setRefCheck] = useState<ReferenceOutcome | null>(null);
+  const [referenceValues, setReferenceValues] = useState<Record<string, unknown>>({});
   const [mergePrompt, setMergePrompt] = useState<{
     candidate: WineCandidate;
     draft: WineDraft;
@@ -112,7 +114,43 @@ function AddPage() {
 
   // Fields the model worked out rather than read — the ones most worth checking.
   const inferredSet = new Set(inferredFields.map((f) => f.trim().toLowerCase()));
-  const check = (field: string) => (inferredSet.has(field) ? "Guessed — please check" : undefined);
+  const check = (field: string) => {
+    if (referenceValues[field] !== undefined) return "From Wikipedia";
+    return inferredSet.has(field) ? "Guessed — please check" : undefined;
+  };
+  const disagreement = (field: "wine_type" | "country") =>
+    refCheck?.disagreements.find((d) => d.field === field) ?? null;
+
+  /** Check the model's inferences against the appellations reference table. */
+  async function runReferenceCheck(recId: string | null, data: RecognitionData) {
+    try {
+      const outcome = await checkAgainstReference(
+        recId,
+        {
+          country: data.country,
+          region: data.region,
+          wine_type: data.wine_type,
+          grapes: data.grapes ?? [],
+        },
+        data.appellation,
+      );
+      if (!outcome) return;
+      setRefCheck(outcome);
+      if (Object.keys(outcome.fills).length) {
+        setReferenceValues((prev) => ({ ...prev, ...outcome.fills }));
+        // Fill gaps only — never override what the model or the user provided.
+        setBottle((b) => ({
+          ...b,
+          country: b.country || outcome.fills.country || "",
+          region: b.region || outcome.fills.region || "",
+          wine_type: b.wine_type || outcome.fills.wine_type || "",
+        }));
+      }
+    } catch (e) {
+      console.error("appellation reference check failed", e);
+    }
+  }
+
 
   const bottleFieldsFilled = [
     bottle.name, bottle.producer, bottle.appellation, bottle.region, bottle.country,
