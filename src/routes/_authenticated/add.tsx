@@ -307,6 +307,7 @@ function AddPage() {
       modelData as unknown as Record<string, unknown> | null,
       userValues,
       inferredFields,
+      referenceValues,
     );
     return {
       name: bottle.name.trim(),
