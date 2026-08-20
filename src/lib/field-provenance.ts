@@ -130,8 +130,15 @@ export function rowDataSource(sources: FieldSources): "label" | "inferred" | "us
   return "user";
 }
 
-/** Merge a patch into wines.field_sources without dropping what's already there. */
-export async function mergeFieldSources(wineId: string, patch: FieldSources): Promise<void> {
+/**
+ * Merge a patch into wines.field_sources without dropping what's already there.
+ * With onlyMissing, existing entries win — used when merging into a catalogue wine.
+ */
+export async function mergeFieldSources(
+  wineId: string,
+  patch: FieldSources,
+  opts: { onlyMissing?: boolean } = {},
+): Promise<void> {
   if (Object.keys(patch).length === 0) return;
   const { data } = await supabase
     .from("wines")
@@ -139,9 +146,10 @@ export async function mergeFieldSources(wineId: string, patch: FieldSources): Pr
     .eq("id", wineId)
     .maybeSingle();
   const current = ((data as { field_sources?: FieldSources } | null)?.field_sources ?? {}) as FieldSources;
+  const next = opts.onlyMissing ? { ...patch, ...current } : { ...current, ...patch };
   await supabase
     .from("wines")
-    .update({ field_sources: { ...current, ...patch } } as never)
+    .update({ field_sources: next } as never)
     .eq("id", wineId);
 }
 
