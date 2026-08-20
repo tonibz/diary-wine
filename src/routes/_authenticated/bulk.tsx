@@ -40,6 +40,7 @@ import {
   ArrowLeft, Images, X, Loader2, ChevronDown, ChevronRight, Trash2, Camera, Info, Link2, Unlink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { withTimeout } from "@/lib/with-timeout";
 
 export const Route = createFileRoute("/_authenticated/bulk")({
   head: () => ({
@@ -159,7 +160,11 @@ function BulkPage() {
     for (let start = 0; start < uploaded.length; start += 12) {
       const chunk = uploaded.slice(start, start + 12);
       try {
-        const res = await classify({ data: { paths: chunk.map((c) => c.photoPath!) } });
+        const res = await withTimeout(
+          classify({ data: { paths: chunk.map((c) => c.photoPath!) } }),
+          60_000,
+          "Sorting front and back labels took too long",
+        );
         if (res.ok) {
           chunk.forEach((c, k) => {
             const idx = working.findIndex((w) => w.id === c.id);

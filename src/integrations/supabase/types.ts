@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      appellations: {
+        Row: {
+          country: string | null
+          grape_count: number | null
+          grapes: Json | null
+          id: string
+          name: string
+          norm_name: string
+          region: string | null
+          source: string | null
+          typical_colour: string | null
+          wikipedia_langs: string | null
+          wikipedia_title: string | null
+        }
+        Insert: {
+          country?: string | null
+          grape_count?: number | null
+          grapes?: Json | null
+          id?: string
+          name: string
+          norm_name: string
+          region?: string | null
+          source?: string | null
+          typical_colour?: string | null
+          wikipedia_langs?: string | null
+          wikipedia_title?: string | null
+        }
+        Update: {
+          country?: string | null
+          grape_count?: number | null
+          grapes?: Json | null
+          id?: string
+          name?: string
+          norm_name?: string
+          region?: string | null
+          source?: string | null
+          typical_colour?: string | null
+          wikipedia_langs?: string | null
+          wikipedia_title?: string | null
+        }
+        Relationships: []
+      }
       entries: {
         Row: {
           back_photo_url: string | null
@@ -510,6 +552,18 @@ export type Database = {
         Returns: {
           country: string
           id: string
+          name: string
+          producer: string
+          region: string
+          score: number
+        }[]
+      }
+      find_wine_matches: {
+        Args: { _names: string[]; _producers: string[] }
+        Returns: {
+          country: string
+          id: string
+          idx: number
           name: string
           producer: string
           region: string

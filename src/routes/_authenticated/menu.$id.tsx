@@ -5,6 +5,10 @@ import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { loadMenuScan, type MenuItemRow, type MenuScanRow } from "@/lib/menu-match";
 import { MenuResults } from "@/components/MenuResults";
+import { withTimeout } from "@/lib/with-timeout";
+import { Button } from "@/components/ui/button";
+
+
 
 export const Route = createFileRoute("/_authenticated/menu/$id")({
   head: () => ({
@@ -27,17 +31,25 @@ function MenuScanDetail() {
   const [items, setItems] = useState<MenuItemRow[] | null>(null);
   const [missing, setMissing] = useState(false);
 
+  const [failure, setFailure] = useState<string | null>(null);
+
   useEffect(() => {
     (async () => {
-      const res = await loadMenuScan(id);
-      if (!res) {
-        setMissing(true);
-        return;
+      try {
+        const res = await withTimeout(loadMenuScan(id));
+        if (!res) {
+          setMissing(true);
+          return;
+        }
+        setScan(res.scan);
+        setItems(res.items);
+      } catch (err) {
+        console.error("Could not load menu scan", err);
+        setFailure(err instanceof Error ? err.message : "Could not load that scan");
       }
-      setScan(res.scan);
-      setItems(res.items);
     })();
   }, [id]);
+
 
   return (
     <div className="px-5 pt-6 pb-8">
@@ -45,10 +57,18 @@ function MenuScanDetail() {
         <ArrowLeft size={16} /> Past scans
       </Link>
 
-      {missing ? (
+      {failure ? (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
+          <p className="text-sm text-foreground">{failure}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => window.location.reload()}>
+            Try again
+          </Button>
+        </div>
+      ) : missing ? (
         <p className="text-center text-sm text-muted-foreground py-16">That scan is no longer here.</p>
       ) : !scan || !items || !user ? (
         <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
+
       ) : (
         <>
           <header className="mb-6">
