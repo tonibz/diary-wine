@@ -69,8 +69,11 @@ const emptyBottle: BottleForm = {
 function AddPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const backFileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
+  const backCameraRef = useRef<HTMLInputElement>(null);
+  const backLibraryRef = useRef<HTMLInputElement>(null);
+
   const [photoDisplayUrl, setPhotoDisplayUrl] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [backPhotoDisplayUrl, setBackPhotoDisplayUrl] = useState<string | null>(null);
