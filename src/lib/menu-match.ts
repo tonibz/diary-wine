@@ -177,10 +177,13 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
 export async function matchItemsToCatalogue(
   items: MenuParsedItem[],
 ): Promise<Array<{ wineId: string | null; score: number | null }>> {
-  const inputs = items.map((it) => ({ name: it.name ?? "", producer: it.producer ?? null }));
+  const inputs = items.map((it) => ({
+    name: it.rejected ? "" : it.name ?? "",
+    producer: it.producer ?? null,
+  }));
   const results = await withTimeout(findBestMatches(inputs), 30_000, "Matching timed out");
   return items.map((it, i) => {
-    const m = it.name ? results[i] : null;
+    const m = it.name && !it.rejected ? results[i] : null;
     if (!m) return { wineId: null, score: null };
     return { wineId: m.score >= CONFIDENT_MATCH ? m.id : null, score: m.score };
   });
@@ -371,7 +374,8 @@ export async function saveMenuScan(args: {
         "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
       );
     if (itemErr) throw itemErr;
-    items = (inserted ?? []) as MenuItemRow[];
+    // Rejected lines stay in the database but never reach the review screen.
+    items = ((inserted ?? []) as MenuItemRow[]).filter((r) => !r.rejected);
     items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }
   return { scan: scan as MenuScanRow, items };
@@ -392,6 +396,7 @@ export async function loadMenuScan(
       "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
     )
     .eq("menu_scan_id", scanId)
+    .eq("rejected", false)
     .order("position", { ascending: true });
   return { scan: scan as MenuScanRow, items: (items ?? []) as MenuItemRow[] };
 }
