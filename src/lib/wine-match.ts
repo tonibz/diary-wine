@@ -146,15 +146,27 @@ export async function logAlias(
   } as never);
 }
 
+export type MatchDecision =
+  | "auto_merge"
+  | "user_merge"
+  | "user_rejected"
+  | "auto_new"
+  | "auto_merge_visual"
+  | "auto_new_visual";
+
 export async function logDecision(
   userId: string,
   newName: string,
   newProducer: string | null,
   newVintage: number | null,
   candidate: { id: string | null; score: number | null },
-  decision: "auto_merge" | "user_merge" | "user_rejected" | "auto_new",
+  decision: MatchDecision,
+  visual?: { same_wine: boolean | null; confidence: number | null; reason: string | null } | null,
 ) {
   await supabase.from("match_decisions").insert({
+    visual_same_wine: visual?.same_wine ?? null,
+    visual_confidence: visual?.confidence ?? null,
+    visual_reason: visual?.reason ?? null,
     user_id: userId,
     new_name: newName,
     new_producer: newProducer,
