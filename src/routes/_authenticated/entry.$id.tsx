@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Wine, Pencil, Trash2, Check, ImagePlus, X } from "lucide-react";
+import { ArrowLeft, Wine, Pencil, Trash2, Check, ImagePlus, Camera, X } from "lucide-react";
 import { format } from "date-fns";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
@@ -65,6 +65,7 @@ function EntryDetail() {
   const { id } = useParams({ from: "/_authenticated/entry/$id" });
   const navigate = useNavigate();
   const backFileRef = useRef<HTMLInputElement>(null);
+  const backLibraryRef = useRef<HTMLInputElement>(null);
   const [entry, setEntry] = useState<Entry | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [backPhotoUrl, setBackPhotoUrl] = useState<string | null>(null);
