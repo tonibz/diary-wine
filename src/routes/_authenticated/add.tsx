@@ -409,6 +409,16 @@ function AddPage() {
         .eq("id", recognitionId);
     }
 
+    // The user's own choice on a disputed field is the most valuable signal we have.
+    if (recognitionId && refCheck?.disagreements.length) {
+      for (const d of refCheck.disagreements) {
+        const value = d.field === "wine_type" ? draft.wine_type : draft.country;
+        await recordUserResolution(recognitionId, d.field, value ?? null);
+      }
+    }
+
+
+
     if (tasted) await recomputeTasteProfile(uid);
     toast.success(tasted ? "Saved to your diary." : "Added to your wishlist.");
     navigate({ to: "/entry/$id", params: { id: entry.id } });
