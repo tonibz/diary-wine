@@ -7,8 +7,21 @@ export type SalvageResult = {
   restaurant_name: string | null;
   currency: string | null;
   items: Array<Record<string, unknown>>;
+  skipped_count: number;
+  skipped_categories: string[];
   truncated: boolean;
 };
+
+function topLevelNumber(text: string, key: string): number | null {
+  const m = new RegExp(`"${key}"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`).exec(text);
+  return m ? Number(m[1]) : null;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.flatMap((v) => (typeof v === "string" && v.trim() ? [v.trim()] : []))
+    : [];
+}
 
 function topLevelString(text: string, key: string): string | null {
   const m = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(text);
@@ -72,6 +85,11 @@ export function parseMenuJson(text: string): SalvageResult | null {
       restaurant_name: typeof parsed.restaurant_name === "string" ? parsed.restaurant_name : null,
       currency: typeof parsed.currency === "string" ? parsed.currency : null,
       items: Array.isArray(parsed.items) ? (parsed.items as Array<Record<string, unknown>>) : [],
+      skipped_count:
+        typeof parsed.skipped_count === "number" && parsed.skipped_count > 0
+          ? Math.round(parsed.skipped_count)
+          : 0,
+      skipped_categories: stringArray(parsed.skipped_categories),
       truncated: false,
     };
   } catch {
@@ -81,6 +99,8 @@ export function parseMenuJson(text: string): SalvageResult | null {
       restaurant_name: topLevelString(cleaned, "restaurant_name"),
       currency: topLevelString(cleaned, "currency"),
       items,
+      skipped_count: Math.max(0, Math.round(topLevelNumber(cleaned, "skipped_count") ?? 0)),
+      skipped_categories: [],
       truncated: true,
     };
   }
