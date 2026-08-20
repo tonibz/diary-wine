@@ -3,6 +3,14 @@ import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { recogniseLabel, type RecognitionData } from "@/lib/recognise.functions";
+import { compareLabels } from "@/lib/compare-labels.functions";
+import {
+  candidateLabelPath,
+  compareLabelsVisually,
+  type CompareFn,
+  type VisualVerdict,
+} from "@/lib/label-compare";
+import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { compressImage } from "@/lib/image-compress";
 import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
@@ -75,6 +83,7 @@ const emptyBottle: BottleForm = {
 function AddPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
+  const compare = useServerFn(compareLabels) as unknown as CompareFn;
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
   const backCameraRef = useRef<HTMLInputElement>(null);
@@ -108,6 +117,10 @@ function AddPage() {
   const [mergePrompt, setMergePrompt] = useState<{
     candidate: WineCandidate;
     draft: WineDraft;
+    /** the visual check's verdict, when it ran but was not confident enough */
+    visual: VisualVerdict | null;
+    candidatePhotoUrl: string | null;
+    newPhotoUrl: string | null;
   } | null>(null);
 
   const tasted = status === "tasted";
@@ -351,8 +364,9 @@ function AddPage() {
     wineId: string,
     draft: WineDraft,
     uid: string,
-    decision: "auto_merge" | "user_merge" | "user_rejected" | "auto_new",
+    decision: MatchDecision,
     candidate: WineCandidate | null,
+    visual?: VisualVerdict | null,
   ) {
     // Alias log (every save)
     await logAlias(wineId, draft.name, draft.producer, draft.data_source, uid);
@@ -364,6 +378,13 @@ function AddPage() {
       draft.vintage,
       { id: candidate?.id ?? null, score: candidate?.score ?? null },
       decision,
+      visual
+        ? {
+            same_wine: visual.comparison.same_wine,
+            confidence: visual.comparison.confidence,
+            reason: visual.comparison.reason,
+          }
+        : null,
     );
 
     // Find or create the vintage row underneath the wine
@@ -445,8 +466,25 @@ function AddPage() {
         return;
       }
       if (candidate && candidate.score >= 0.6) {
-        // Ask the user; keep saving state until they decide
-        setMergePrompt({ candidate, draft });
+        // Ambiguous band only: let the labels themselves settle it before asking.
+        const candPath = await candidateLabelPath(candidate.id);
+        const visual = await compareLabelsVisually(compare, candPath, photoPath);
+
+        if (visual?.outcome === "merge") {
+          await fillEmptyWineFields(candidate.id, draft);
+          await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
+          await finalizeSave(candidate.id, draft, uid, "auto_merge_visual", candidate, visual);
+          return;
+        }
+        if (visual?.outcome === "new") {
+          const newId = await insertNewWine(draft, uid);
+          await finalizeSave(newId, draft, uid, "auto_new_visual", candidate, visual);
+          return;
+        }
+
+        // Still unclear — ask, but show both labels.
+        const [candidatePhotoUrl, newPhotoUrl] = await getSignedPhotoUrls([candPath, photoPath]);
+        setMergePrompt({ candidate, draft, visual, candidatePhotoUrl, newPhotoUrl });
         return;
       }
       // Below 0.6 or no candidate → new row
@@ -460,7 +498,7 @@ function AddPage() {
 
   async function confirmMerge(sameWine: boolean) {
     if (!mergePrompt) return;
-    const { candidate, draft } = mergePrompt;
+    const { candidate, draft, visual } = mergePrompt;
     setMergePrompt(null);
     try {
       const { data: userRes } = await supabase.auth.getUser();
@@ -468,10 +506,10 @@ function AddPage() {
       if (sameWine) {
         await fillEmptyWineFields(candidate.id, draft);
         await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
-        await finalizeSave(candidate.id, draft, uid, "user_merge", candidate);
+        await finalizeSave(candidate.id, draft, uid, "user_merge", candidate, visual);
       } else {
         const wineId = await insertNewWine(draft, uid);
-        await finalizeSave(wineId, draft, uid, "user_rejected", candidate);
+        await finalizeSave(wineId, draft, uid, "user_rejected", candidate, visual);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
