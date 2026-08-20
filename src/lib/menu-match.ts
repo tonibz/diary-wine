@@ -179,21 +179,8 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
   };
 }
 
-/** Wine-level trigram match for every parsed line — one database round trip. */
-export async function matchItemsToCatalogue(
-  items: MenuParsedItem[],
-): Promise<Array<{ wineId: string | null; score: number | null }>> {
-  const inputs = items.map((it) => ({
-    name: it.rejected ? "" : it.name ?? "",
-    producer: it.producer ?? null,
-  }));
-  const results = await withTimeout(findBestMatches(inputs), 30_000, "Matching timed out");
-  return items.map((it, i) => {
-    const m = it.name && !it.rejected ? results[i] : null;
-    if (!m) return { wineId: null, score: null };
-    return { wineId: m.score >= CONFIDENT_MATCH ? m.id : null, score: m.score };
-  });
-}
+
+
 
 
 function textOf(item: MenuItemRow) {
