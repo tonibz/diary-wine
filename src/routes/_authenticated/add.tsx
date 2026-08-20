@@ -460,21 +460,39 @@ function AddPage() {
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="w-full h-40 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
-          >
-            <Camera size={28} />
-            <span className="text-sm">Take or upload a photo of the label</span>
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              className="h-28 flex-col gap-2"
+              onClick={() => cameraRef.current?.click()}
+            >
+              <Camera size={24} />
+              <span className="text-sm">Take a photo</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-28 flex-col gap-2"
+              onClick={() => libraryRef.current?.click()}
+            >
+              <Images size={24} />
+              <span className="text-sm">Choose from library</span>
+            </Button>
+          </div>
         )}
         <input
-          ref={fileRef}
+          ref={cameraRef}
           type="file"
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); }}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ""; }}
+        />
+        <input
+          ref={libraryRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ""; }}
         />
 
         {/* Back label — optional, does not block saving */}
@@ -493,23 +511,37 @@ function AddPage() {
               </span>
             </div>
           ) : (
-            <button
-              onClick={() => backFileRef.current?.click()}
-              className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary"
-            >
-              <ImagePlus size={16} />
-              Add back label (optional — helps with alcohol % and grapes)
-            </button>
+            <>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Back label (optional — helps with alcohol % and grapes)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" onClick={() => backCameraRef.current?.click()}>
+                  <Camera size={14} /> Take a photo
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => backLibraryRef.current?.click()}>
+                  <ImagePlus size={14} /> Choose from library
+                </Button>
+              </div>
+            </>
           )}
           <input
-            ref={backFileRef}
+            ref={backCameraRef}
             type="file"
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); e.target.value = ""; }}
+          />
+          <input
+            ref={backLibraryRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); e.target.value = ""; }}
           />
         </div>
+
 
         {recognising && (
           <p className="mt-3 flex items-center gap-2 text-sm text-primary">
