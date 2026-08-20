@@ -2,14 +2,27 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, Images, Loader2, ScrollText, X, History } from "lucide-react";
+import {
+  ArrowLeft,
+  Camera,
+  Images,
+  Loader2,
+  ScrollText,
+  X,
+  History,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { compressImage } from "@/lib/image-compress";
-import { readMenu } from "@/lib/read-menu.functions";
+import { readMenuPage } from "@/lib/read-menu.functions";
+import type { JsonValue } from "@/lib/read-menu.functions";
+import type { MenuParsedItem } from "@/lib/menu-parse";
 import { matchItemsToCatalogue, saveMenuScan } from "@/lib/menu-match";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 
 export const Route = createFileRoute("/_authenticated/menu")({
   head: () => ({
