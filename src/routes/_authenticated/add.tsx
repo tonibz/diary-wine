@@ -326,28 +326,23 @@ function AddPage() {
     if (entryErr) throw entryErr;
 
     if (recognitionId && modelData) {
-      const diffs: Record<string, { model: unknown; user: unknown }> = {};
-      const compare: Array<[keyof RecognitionData, unknown]> = [
-        ["name", draft.name],
-        ["producer", draft.producer],
-        ["appellation", draft.appellation],
-        ["region", draft.region],
-        ["country", draft.country],
-        ["vintage", draft.vintage],
-        ["wine_type", draft.wine_type],
-        ["grapes", draft.grapes],
-        ["alcohol_percent", draft.alcohol_percent],
-      ];
-      for (const [k, userVal] of compare) {
-        const modelVal = (modelData as unknown as Record<string, unknown>)[k];
-        if (JSON.stringify(modelVal ?? null) !== JSON.stringify(userVal ?? null)) {
-          diffs[k as string] = { model: modelVal ?? null, user: userVal ?? null };
-        }
-      }
+      const m = modelData as unknown as Record<string, unknown>;
+      // Only genuine differences count: a model null against an empty array is not a correction.
+      const diffs = diffCorrections([
+        ["name", m.name, draft.name],
+        ["producer", m.producer, draft.producer],
+        ["appellation", m.appellation, draft.appellation],
+        ["region", m.region, draft.region],
+        ["country", m.country, draft.country],
+        ["vintage", m.vintage, draft.vintage],
+        ["wine_type", m.wine_type, draft.wine_type],
+        ["grapes", m.grapes, draft.grapes],
+        ["alcohol_percent", m.alcohol_percent, draft.alcohol_percent],
+      ]);
       await supabase.from("recognitions")
         .update({
           entry_id: entry.id,
-          corrected_fields: (Object.keys(diffs).length ? diffs : null) as never,
+          corrected_fields: diffs as never,
         })
         .eq("id", recognitionId);
     }
