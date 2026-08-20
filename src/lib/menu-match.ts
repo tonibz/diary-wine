@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
-import { findBestMatch } from "@/lib/wine-match";
+import { findBestMatches } from "@/lib/wine-match";
+import { withTimeout } from "@/lib/with-timeout";
+
 import type { MenuParsedItem } from "@/lib/menu-parse";
 
 /**
