@@ -427,8 +427,9 @@ export async function saveItem(
       wine_vintage_id: vintageId,
       status: item.entryStatus,
       photo_url: item.photoPath,
-      back_photo_url: null,
-      rating: null,
+      back_photo_url: item.backPhotoPath,
+      rating: tasted && item.rating > 0 ? item.rating : null,
+
       tasted_on: tasted ? item.tastedOn : format(new Date(), "yyyy-MM-dd"),
       place: tasted ? item.place.trim() || null : null,
       company: null,
