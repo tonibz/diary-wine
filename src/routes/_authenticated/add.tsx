@@ -22,6 +22,7 @@ import {
   fillEmptyWineFields,
   logAlias,
   logDecision,
+  type MatchDecision,
   type WineCandidate,
   type WineDraft,
 } from "@/lib/wine-match";
