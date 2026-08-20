@@ -21,6 +21,8 @@ export type WineDraft = {
   grapes: string[];
   label_image_url: string | null;
   data_source: "label" | "inferred" | "user";
+  /** per-field provenance: field name -> 'label' | 'inferred' | 'user' */
+  field_sources: FieldSources;
   /** carried along for the vintage row, not stored on wines */
   vintage: number | null;
   alcohol_percent: number | null;
