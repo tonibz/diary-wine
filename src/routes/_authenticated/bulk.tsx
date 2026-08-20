@@ -4,6 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { recogniseLabel } from "@/lib/recognise.functions";
 import { classifyLabelSides } from "@/lib/classify-label.functions";
+import { compareLabels } from "@/lib/compare-labels.functions";
+import {
+  candidateLabelPath,
+  compareLabelsVisually,
+  type CompareFn,
+} from "@/lib/label-compare";
+import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { findBestMatch } from "@/lib/wine-match";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import {
@@ -69,6 +76,7 @@ function BulkPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
   const classify = useServerFn(classifyLabelSides);
+  const compare = useServerFn(compareLabels) as unknown as CompareFn;
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
   const filesRef = useRef<Map<string, File>>(new Map());
@@ -214,7 +222,28 @@ function BulkPage() {
     let out = merged;
     try {
       const cand = await findBestMatch(out.fields.name.trim(), out.fields.producer.trim() || null);
-      out = cand && cand.score >= 0.6 ? { ...out, candidate: cand, candidateScore: cand.score } : out;
+      if (cand && cand.score >= 0.6) {
+        out = { ...out, candidate: cand, candidateScore: cand.score };
+        // Ambiguous band only: try to settle it on the labels before asking.
+        if (cand.score < 0.85) {
+          const candPath = await candidateLabelPath(cand.id);
+          const verdict = await compareLabelsVisually(compare, candPath, out.photoPath);
+          const [candUrl] = await getSignedPhotoUrls([candPath]);
+          out = {
+            ...out,
+            candidatePhotoUrl: candUrl,
+            visual: verdict
+              ? {
+                  same_wine: verdict.comparison.same_wine,
+                  confidence: verdict.comparison.confidence,
+                  reason: verdict.comparison.reason,
+                }
+              : null,
+            visualResolved: verdict?.outcome != null,
+            mergeChoice: verdict?.outcome === "merge" ? "same" : "different",
+          };
+        }
+      }
     } catch { /* matching is best-effort */ }
 
     for (const other of all) {
@@ -623,7 +652,10 @@ function Row({
   const looseBack = isLooseBack(item);
   const dupOf = item.dupOfId ? items.find((i) => i.id === item.dupOfId) : null;
   const ambiguousCandidate =
-    item.candidate && (item.candidateScore ?? 0) >= 0.6 && (item.candidateScore ?? 0) < 0.85
+    item.candidate &&
+    (item.candidateScore ?? 0) >= 0.6 &&
+    (item.candidateScore ?? 0) < 0.85 &&
+    !item.visualResolved
       ? item.candidate
       : null;
   const looseBacks = items.filter((i) => !i.discarded && isLooseBack(i) && i.id !== item.id);
@@ -741,6 +773,34 @@ function Row({
             {ambiguousCandidate.producer ? ` — ${ambiguousCandidate.producer}` : ""}
             {ambiguousCandidate.region ? `, ${ambiguousCandidate.region}` : ""}
           </p>
+          {(item.candidatePhotoUrl || item.thumbUrl) && (
+            <div className="mb-2 grid grid-cols-2 gap-2">
+              {[
+                { label: "In the catalogue", url: item.candidatePhotoUrl },
+                { label: "This bottle", url: item.thumbUrl },
+              ].map((p) => (
+                <div key={p.label} className="space-y-1">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{p.label}</p>
+                  {p.url ? (
+                    <img
+                      src={p.url}
+                      alt={`${p.label} wine label`}
+                      className="h-44 w-full rounded-lg border border-border object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-44 w-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                      No photo
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {item.visual?.reason && (
+            <p className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-2 text-xs">
+              {item.visual.reason}
+            </p>
+          )}
           <div className="flex gap-2">
             <Button
               size="sm"

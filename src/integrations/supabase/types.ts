@@ -188,6 +188,9 @@ export type Database = {
           new_vintage: number | null
           similarity_score: number | null
           user_id: string
+          visual_confidence: number | null
+          visual_reason: string | null
+          visual_same_wine: boolean | null
         }
         Insert: {
           candidate_wine_id?: string | null
@@ -199,6 +202,9 @@ export type Database = {
           new_vintage?: number | null
           similarity_score?: number | null
           user_id: string
+          visual_confidence?: number | null
+          visual_reason?: string | null
+          visual_same_wine?: boolean | null
         }
         Update: {
           candidate_wine_id?: string | null
@@ -210,6 +216,9 @@ export type Database = {
           new_vintage?: number | null
           similarity_score?: number | null
           user_id?: string
+          visual_confidence?: number | null
+          visual_reason?: string | null
+          visual_same_wine?: boolean | null
         }
         Relationships: [
           {
@@ -648,6 +657,8 @@ export type Database = {
         | "user_merge"
         | "user_rejected"
         | "auto_new"
+        | "auto_merge_visual"
+        | "auto_new_visual"
       price_context_kind: "restaurant" | "shop" | "online" | "other"
       wine_data_source: "label" | "inferred" | "user"
       wine_type:
@@ -790,6 +801,8 @@ export const Constants = {
         "user_merge",
         "user_rejected",
         "auto_new",
+        "auto_merge_visual",
+        "auto_new_visual",
       ],
       price_context_kind: ["restaurant", "shop", "online", "other"],
       wine_data_source: ["label", "inferred", "user"],
