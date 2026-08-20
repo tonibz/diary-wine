@@ -33,8 +33,6 @@ export type ReadMenuPageResult =
     }
   | { ok: false; error: string; raw: JsonValue };
 
-const TIMEOUT_MS = 110_000;
-
 export const readMenuPage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => Input.parse(v))
@@ -51,7 +49,7 @@ export const readMenuPage = createServerFn({ method: "POST" })
 
     let raw: JsonValue = null;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), 110_000);
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
