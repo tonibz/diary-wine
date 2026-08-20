@@ -124,6 +124,59 @@ export type Database = {
           },
         ]
       }
+      inference_checks: {
+        Row: {
+          agrees: boolean | null
+          appellation_match_score: number | null
+          appellation_matched: string | null
+          created_at: string
+          field: string
+          id: string
+          model_value: Json | null
+          overlap_count: number | null
+          recognition_id: string
+          reference_count: number | null
+          reference_value: Json | null
+          user_resolved_to: string | null
+        }
+        Insert: {
+          agrees?: boolean | null
+          appellation_match_score?: number | null
+          appellation_matched?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          model_value?: Json | null
+          overlap_count?: number | null
+          recognition_id: string
+          reference_count?: number | null
+          reference_value?: Json | null
+          user_resolved_to?: string | null
+        }
+        Update: {
+          agrees?: boolean | null
+          appellation_match_score?: number | null
+          appellation_matched?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          model_value?: Json | null
+          overlap_count?: number | null
+          recognition_id?: string
+          reference_count?: number | null
+          reference_value?: Json | null
+          user_resolved_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inference_checks_recognition_id_fkey"
+            columns: ["recognition_id"]
+            isOneToOne: false
+            referencedRelation: "recognitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_decisions: {
         Row: {
           candidate_wine_id: string | null
@@ -568,6 +621,19 @@ export type Database = {
           producer: string
           region: string
           score: number
+        }[]
+      }
+      lookup_appellation: {
+        Args: { _name: string }
+        Returns: {
+          country: string
+          grape_count: number
+          grapes: Json
+          id: string
+          name: string
+          region: string
+          score: number
+          typical_colour: string
         }[]
       }
       normalize_wine_text: { Args: { t: string }; Returns: string }

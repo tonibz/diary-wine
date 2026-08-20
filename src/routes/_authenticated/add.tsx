@@ -23,6 +23,11 @@ import {
   diffCorrections,
   mergeFieldSources,
 } from "@/lib/field-provenance";
+import {
+  checkAgainstReference,
+  recordUserResolution,
+  type ReferenceOutcome,
+} from "@/lib/appellation-check";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,6 +103,8 @@ function AddPage() {
   const [priceContext, setPriceContext] = useState("");
   const [grapeInput, setGrapeInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [refCheck, setRefCheck] = useState<ReferenceOutcome | null>(null);
+  const [referenceValues, setReferenceValues] = useState<Record<string, unknown>>({});
   const [mergePrompt, setMergePrompt] = useState<{
     candidate: WineCandidate;
     draft: WineDraft;
@@ -107,7 +114,43 @@ function AddPage() {
 
   // Fields the model worked out rather than read — the ones most worth checking.
   const inferredSet = new Set(inferredFields.map((f) => f.trim().toLowerCase()));
-  const check = (field: string) => (inferredSet.has(field) ? "Guessed — please check" : undefined);
+  const check = (field: string) => {
+    if (referenceValues[field] !== undefined) return "From Wikipedia";
+    return inferredSet.has(field) ? "Guessed — please check" : undefined;
+  };
+  const disagreement = (field: "wine_type" | "country") =>
+    refCheck?.disagreements.find((d) => d.field === field) ?? null;
+
+  /** Check the model's inferences against the appellations reference table. */
+  async function runReferenceCheck(recId: string | null, data: RecognitionData) {
+    try {
+      const outcome = await checkAgainstReference(
+        recId,
+        {
+          country: data.country,
+          region: data.region,
+          wine_type: data.wine_type,
+          grapes: data.grapes ?? [],
+        },
+        data.appellation,
+      );
+      if (!outcome) return;
+      setRefCheck(outcome);
+      if (Object.keys(outcome.fills).length) {
+        setReferenceValues((prev) => ({ ...prev, ...outcome.fills }));
+        // Fill gaps only — never override what the model or the user provided.
+        setBottle((b) => ({
+          ...b,
+          country: b.country || outcome.fills.country || "",
+          region: b.region || outcome.fills.region || "",
+          wine_type: b.wine_type || outcome.fills.wine_type || "",
+        }));
+      }
+    } catch (e) {
+      console.error("appellation reference check failed", e);
+    }
+  }
+
 
   const bottleFieldsFilled = [
     bottle.name, bottle.producer, bottle.appellation, bottle.region, bottle.country,
@@ -179,6 +222,7 @@ function AddPage() {
         });
         setInferredFields(result.data.inferred_fields ?? []);
         setDataSource(result.data.inferred_fields?.length ? "inferred" : "label");
+        await runReferenceCheck(result.recognition_id ?? null, result.data);
       } else {
         toast("Couldn't read that one clearly, fill it in below.");
         setDataSource("user");
@@ -229,6 +273,7 @@ function AddPage() {
           }));
           setInferredFields(result.data.inferred_fields ?? []);
           setDataSource(result.data.inferred_fields?.length ? "inferred" : "label");
+          await runReferenceCheck(result.recognition_id ?? null, result.data);
         }
       }
     } catch (e) {
@@ -262,6 +307,7 @@ function AddPage() {
       modelData as unknown as Record<string, unknown> | null,
       userValues,
       inferredFields,
+      referenceValues,
     );
     return {
       name: bottle.name.trim(),
@@ -362,6 +408,16 @@ function AddPage() {
         })
         .eq("id", recognitionId);
     }
+
+    // The user's own choice on a disputed field is the most valuable signal we have.
+    if (recognitionId && refCheck?.disagreements.length) {
+      for (const d of refCheck.disagreements) {
+        const value = d.field === "wine_type" ? draft.wine_type : draft.country;
+        await recordUserResolution(recognitionId, d.field, value ?? null);
+      }
+    }
+
+
 
     if (tasted) await recomputeTasteProfile(uid);
     toast.success(tasted ? "Saved to your diary." : "Added to your wishlist.");
@@ -611,6 +667,14 @@ function AddPage() {
           <Field label="Region" hint={check("region")}><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
           <Field label="Country" hint={check("country")}><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
         </div>
+        {disagreement("country") && (
+          <Conflict
+            note={disagreement("country")!.note}
+            options={[disagreement("country")!.modelValue, disagreement("country")!.referenceValue]}
+            current={bottle.country}
+            onPick={(v) => setBottle({ ...bottle, country: v })}
+          />
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Vintage" hint={check("vintage")}><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
           <Field label="Type" hint={check("wine_type")}>
@@ -627,6 +691,14 @@ function AddPage() {
             </Select>
           </Field>
         </div>
+        {disagreement("wine_type") && (
+          <Conflict
+            note={disagreement("wine_type")!.note}
+            options={[disagreement("wine_type")!.modelValue, disagreement("wine_type")!.referenceValue]}
+            current={bottle.wine_type}
+            onPick={(v) => setBottle({ ...bottle, wine_type: v })}
+          />
+        )}
         <Field label="Grapes" hint={check("grapes")}>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {bottle.grapes.map((g) => (
@@ -647,6 +719,28 @@ function AddPage() {
             />
             <Button type="button" variant="secondary" onClick={addGrape}>Add</Button>
           </div>
+          {refCheck && refCheck.grapeSuggestions.length > 0 && bottle.grapes.length === 0 && (
+            <div className="mt-2 rounded-xl border border-border bg-parchment p-3">
+              <p className="text-xs text-muted-foreground">
+                Wikipedia lists these grapes as permitted in {refCheck.ref.name}. This bottle may only
+                use some of them, so tap the ones that apply.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {refCheck.grapeSuggestions.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() =>
+                      setBottle((b) => (b.grapes.includes(g) ? b : { ...b, grapes: [...b.grapes, g] }))
+                    }
+                    className="rounded-full border border-primary/30 px-2.5 py-1 text-xs text-primary hover:bg-primary/10"
+                  >
+                    + {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </Field>
         <Field label="Alcohol %" hint={check("alcohol_percent")}><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
       </section>
@@ -790,6 +884,46 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
         {hint && <span className="text-[10px] uppercase tracking-wide text-primary/70">{hint}</span>}
       </div>
       {children}
+    </div>
+  );
+}
+
+/** Model vs. reference disagreement — the user picks, and we record their choice. */
+function Conflict({
+  note,
+  options,
+  current,
+  onPick,
+}: {
+  note: string;
+  options: string[];
+  current: string;
+  onPick: (v: string) => void;
+}) {
+  const choices = Array.from(new Set(options.filter(Boolean)));
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <p className="flex items-start gap-2 text-xs text-foreground">
+        <Info size={14} className="mt-0.5 shrink-0 text-primary" />
+        <span>{note}</span>
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {choices.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onPick(c)}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs border",
+              current === c
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-primary/30 text-primary hover:bg-primary/10",
+            )}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
