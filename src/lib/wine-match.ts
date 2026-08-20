@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { FieldSources } from "@/lib/field-provenance";
 
 export type WineCandidate = {
   id: string;
