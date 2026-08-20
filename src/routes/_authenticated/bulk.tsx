@@ -3,13 +3,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { recogniseLabel } from "@/lib/recognise.functions";
+import { classifyLabelSides } from "@/lib/classify-label.functions";
 import { findBestMatch } from "@/lib/wine-match";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import {
   type BulkItem,
   type BulkFields,
   newItem,
-  processPhoto,
+  uploadPhoto,
+  recogniseItem,
+  pairFrontsAndBacks,
   saveItem,
   batchScore,
   saveProgress,
@@ -20,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { StarRating } from "@/components/StarRating";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -33,7 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Images, X, Loader2, ChevronDown, ChevronRight, Trash2, Camera, Info,
+  ArrowLeft, Images, X, Loader2, ChevronDown, ChevronRight, Trash2, Camera, Info, Link2, Unlink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,22 +55,31 @@ export const Route = createFileRoute("/_authenticated/bulk")({
   component: BulkPage,
 });
 
-type Phase = "pick" | "processing" | "review" | "saving";
+type Phase = "pick" | "uploading" | "processing" | "review" | "saving";
 
 const WINE_TYPES = ["red", "white", "rose", "sparkling", "dessert", "fortified"] as const;
+
+/** A back label that nobody paired: never becomes a wine on its own. */
+function isLooseBack(i: BulkItem) {
+  return i.side === "back" && !i.pairedIntoId;
+}
 
 function BulkPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const classify = useServerFn(classifyLabelSides);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
   const filesRef = useRef<Map<string, File>>(new Map());
 
   const [phase, setPhase] = useState<Phase>("pick");
   const [items, setItems] = useState<BulkItem[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [currentThumb, setCurrentThumb] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState(0);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [busyRows, setBusyRows] = useState<Record<string, boolean>>({});
   const [openGroups, setOpenGroups] = useState({ good: false, check: true, bad: true });
 
   /* restore an interrupted batch */
@@ -86,7 +99,7 @@ function BulkPage() {
 
   /* warn before navigating away mid-flight */
   useEffect(() => {
-    if (phase !== "processing" && phase !== "saving") return;
+    if (phase !== "processing" && phase !== "saving" && phase !== "uploading") return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
@@ -111,7 +124,6 @@ function BulkPage() {
 
   async function startProcessing() {
     setConfirmOpen(false);
-    setPhase("processing");
     const { data: userRes } = await supabase.auth.getUser();
     const uid = userRes.user!.id;
     const { data: profile } = await supabase
@@ -121,56 +133,98 @@ function BulkPage() {
       .maybeSingle();
     const gpsEnabled = !!profile?.gps_lookup_enabled;
 
-    // One at a time, deliberately serial to stay inside API rate limits.
-    const working = [...items];
+    /* ---- 1. upload every photo, reading EXIF first ---- */
+    setPhase("uploading");
+    let working = [...items];
     for (let i = 0; i < working.length; i++) {
       setCurrentIdx(i);
+      setCurrentThumb(working[i].thumbUrl);
       const item = working[i];
-      setItems((prev) => prev.map((p) => (p.id === item.id ? { ...p, status: "processing" } : p)));
       const file = filesRef.current.get(item.id);
-      let patch: Partial<BulkItem>;
       try {
         if (!file) throw new Error("Photo is no longer available");
-        patch = await processPhoto(file, uid, gpsEnabled, recognise);
+        working[i] = { ...item, ...(await uploadPhoto(file, uid, gpsEnabled)) } as BulkItem;
       } catch (e) {
-        patch = { status: "failed", error: e instanceof Error ? e.message : "Failed to read this photo" };
+        working[i] = {
+          ...item,
+          status: "failed",
+          error: e instanceof Error ? e.message : "Could not upload this photo",
+        };
       }
-      let merged: BulkItem = { ...item, ...patch } as BulkItem;
+      setItems([...working]);
+    }
 
-      // Catalogue match, computed now so the review screen can prompt inline.
-      if (merged.status === "done" && merged.fields.name.trim()) {
-        try {
-          const cand = await findBestMatch(merged.fields.name.trim(), merged.fields.producer.trim() || null);
-          if (cand && cand.score >= 0.6) {
-            merged = { ...merged, candidate: cand, candidateScore: cand.score };
-          }
-        } catch { /* matching is best-effort */ }
-
-        // Duplicates within this same batch.
-        for (let j = 0; j < i; j++) {
-          const other = working[j];
-          if (other.status !== "done" || !other.fields.name.trim() || other.dupOfId) continue;
-          const s = batchScore(
-            merged.fields.name, merged.fields.producer,
-            other.fields.name, other.fields.producer,
-          );
-          if (s >= 0.6) {
-            merged = {
-              ...merged,
-              dupOfId: other.id,
-              dupOfScore: s,
-              dupChoice: s >= 0.85 ? "same" : "different",
-            };
-            break;
-          }
+    /* ---- 2. one cheap call to tell front labels from back labels ---- */
+    const uploaded = working.filter((i) => i.photoPath);
+    for (let start = 0; start < uploaded.length; start += 12) {
+      const chunk = uploaded.slice(start, start + 12);
+      try {
+        const res = await classify({ data: { paths: chunk.map((c) => c.photoPath!) } });
+        if (res.ok) {
+          chunk.forEach((c, k) => {
+            const idx = working.findIndex((w) => w.id === c.id);
+            if (idx >= 0) {
+              working[idx] = { ...working[idx], side: res.sides[k].side, sideReason: res.sides[k].reason };
+            }
+          });
         }
-      }
+      } catch { /* classification is best-effort; everything stays a front label */ }
+    }
 
-      working[i] = merged;
-      setItems((prev) => prev.map((p) => (p.id === merged.id ? merged : p)));
+    /* ---- 3. pair backs with the front taken next to them ---- */
+    const patches = pairFrontsAndBacks(working);
+    working = working.map((w) => (patches.has(w.id) ? { ...w, ...patches.get(w.id)! } : w));
+    setItems([...working]);
+
+    /* ---- 4. read the labels, one bottle at a time ---- */
+    setPhase("processing");
+    const toRead = working.filter((w) => w.photoPath && !w.pairedIntoId && !isLooseBack(w));
+    for (let n = 0; n < toRead.length; n++) {
+      setCurrentIdx(n);
+      const idx = working.findIndex((w) => w.id === toRead[n].id);
+      setCurrentThumb(working[idx].thumbUrl);
+      setItems((prev) => prev.map((p) => (p.id === working[idx].id ? { ...p, status: "processing" } : p)));
+      let merged: BulkItem;
+      try {
+        merged = { ...working[idx], ...(await recogniseItem(working[idx], recognise)) } as BulkItem;
+      } catch (e) {
+        merged = {
+          ...working[idx],
+          status: "failed",
+          error: e instanceof Error ? e.message : "Failed to read this photo",
+        };
+      }
+      merged = await withMatches(merged, working);
+      working[idx] = merged;
+      setItems([...working]);
       saveProgress(working, "review");
     }
+    setCurrentThumb(null);
     setPhase("review");
+  }
+
+  /** Catalogue match plus in-batch duplicate check for one row. */
+  async function withMatches(merged: BulkItem, all: BulkItem[]): Promise<BulkItem> {
+    if (merged.status !== "done" || !merged.fields.name.trim()) return merged;
+    let out = merged;
+    try {
+      const cand = await findBestMatch(out.fields.name.trim(), out.fields.producer.trim() || null);
+      out = cand && cand.score >= 0.6 ? { ...out, candidate: cand, candidateScore: cand.score } : out;
+    } catch { /* matching is best-effort */ }
+
+    for (const other of all) {
+      if (other.id === out.id) continue;
+      if (other.status !== "done" || !other.fields.name.trim() || other.dupOfId || other.pairedIntoId) continue;
+      const s = batchScore(
+        out.fields.name, out.fields.producer,
+        other.fields.name, other.fields.producer,
+      );
+      if (s >= 0.6) {
+        out = { ...out, dupOfId: other.id, dupOfScore: s, dupChoice: s >= 0.85 ? "same" : "different" };
+        break;
+      }
+    }
+    return out;
   }
 
   function patchItem(id: string, patch: Partial<BulkItem>) {
@@ -189,21 +243,96 @@ function BulkPage() {
     });
   }
 
-  const keep = useMemo(() => items.filter((i) => !i.discarded), [items]);
+  /** Re-read a bottle after its pairing changed. */
+  async function reread(id: string) {
+    setBusyRows((b) => ({ ...b, [id]: true }));
+    try {
+      const current = items.find((i) => i.id === id);
+      if (!current) return;
+      const patch = await recogniseItem(current, recognise);
+      setItems((prev) => {
+        const next = prev.map((p) => (p.id === id ? ({ ...p, ...patch } as BulkItem) : p));
+        saveProgress(next, "review");
+        return next;
+      });
+    } catch {
+      toast.error("Couldn't re-read that bottle.");
+    } finally {
+      setBusyRows((b) => ({ ...b, [id]: false }));
+    }
+  }
+
+  /** Attach a back-label row to a front row and read them together. */
+  async function pairRows(frontId: string, backId: string) {
+    const back = items.find((i) => i.id === backId);
+    if (!back) return;
+    setItems((prev) => {
+      const next = prev.map((p) => {
+        if (p.id === frontId) {
+          return { ...p, pairedBackId: backId, backPhotoPath: back.photoPath, backThumbUrl: back.thumbUrl };
+        }
+        if (p.id === backId) return { ...p, pairedIntoId: frontId, side: "back" as const };
+        return p;
+      });
+      saveProgress(next, "review");
+      return next;
+    });
+    // Read with both photos, exactly as the single-photo flow does.
+    setBusyRows((b) => ({ ...b, [frontId]: true }));
+    try {
+      const front = items.find((i) => i.id === frontId);
+      if (!front) return;
+      const patch = await recogniseItem(
+        { ...front, backPhotoPath: back.photoPath } as BulkItem,
+        recognise,
+      );
+      setItems((prev) => {
+        const next = prev.map((p) => (p.id === frontId ? ({ ...p, ...patch } as BulkItem) : p));
+        saveProgress(next, "review");
+        return next;
+      });
+    } catch {
+      toast.error("Couldn't re-read that bottle.");
+    } finally {
+      setBusyRows((b) => ({ ...b, [frontId]: false }));
+    }
+  }
+
+  function unpairRow(frontId: string) {
+    const front = items.find((i) => i.id === frontId);
+    const backId = front?.pairedBackId ?? null;
+    setItems((prev) => {
+      const next = prev.map((p) => {
+        if (p.id === frontId) return { ...p, pairedBackId: null, backPhotoPath: null, backThumbUrl: null };
+        if (backId && p.id === backId) return { ...p, pairedIntoId: null };
+        return p;
+      });
+      saveProgress(next, "review");
+      return next;
+    });
+    reread(frontId);
+  }
+
+  const visible = useMemo(() => items.filter((i) => !i.discarded && !i.pairedIntoId), [items]);
   const groups = useMemo(() => {
     const byConf = (a: BulkItem, b: BulkItem) => (a.confidence ?? -1) - (b.confidence ?? -1);
+    const readable = visible.filter((i) => !isLooseBack(i));
     return {
-      good: keep.filter((i) => i.status === "done" && (i.confidence ?? 0) >= 0.8).sort(byConf),
-      check: keep
+      good: readable.filter((i) => i.status === "done" && (i.confidence ?? 0) >= 0.8).sort(byConf),
+      check: readable
         .filter((i) => i.status === "done" && (i.confidence ?? 0) >= 0.6 && (i.confidence ?? 0) < 0.8)
         .sort(byConf),
-      bad: keep
-        .filter((i) => i.status === "failed" || (i.status === "done" && (i.confidence ?? 0) < 0.6))
+      bad: visible
+        .filter(
+          (i) =>
+            isLooseBack(i) || i.status === "failed" || (i.status === "done" && (i.confidence ?? 0) < 0.6),
+        )
         .sort(byConf),
     };
-  }, [keep]);
+  }, [visible]);
 
-  const savable = keep.filter((i) => i.fields.name.trim().length > 0);
+  const savable = visible.filter((i) => !isLooseBack(i) && i.fields.name.trim().length > 0);
+  const frontRows = visible.filter((i) => !isLooseBack(i));
 
   async function saveAll() {
     if (!savable.length) {
@@ -245,27 +374,33 @@ function BulkPage() {
 
   /* ---------------- render ---------------- */
 
-  if (phase === "processing" || phase === "saving") {
-    const total = phase === "processing" ? items.length : savable.length;
-    const done = phase === "processing" ? currentIdx : savedCount;
+  if (phase === "uploading" || phase === "processing" || phase === "saving") {
+    const total =
+      phase === "saving"
+        ? savable.length
+        : phase === "uploading"
+          ? items.length
+          : items.filter((i) => i.photoPath && !i.pairedIntoId && !isLooseBack(i)).length;
+    const done = phase === "saving" ? savedCount : currentIdx;
     const pct = total ? Math.round((done / total) * 100) : 0;
-    const current = phase === "processing" ? items[currentIdx] : null;
+    const heading =
+      phase === "uploading" ? "Getting your photos ready" : phase === "processing" ? "Reading your labels" : "Saving";
     return (
       <div className="px-5 pt-10 pb-8">
-        <h1 className="text-2xl font-serif text-primary mb-2">
-          {phase === "processing" ? "Reading your labels" : "Saving"}
-        </h1>
+        <h1 className="text-2xl font-serif text-primary mb-2">{heading}</h1>
         <p className="text-sm text-muted-foreground mb-5">
-          {phase === "processing"
-            ? `Reading label ${Math.min(done + 1, total)} of ${total}`
-            : `Saved ${done} of ${total}`}
+          {phase === "saving"
+            ? `Saved ${done} of ${total}`
+            : phase === "uploading"
+              ? `Photo ${Math.min(done + 1, total)} of ${total}`
+              : `Reading bottle ${Math.min(done + 1, total)} of ${total}`}
         </p>
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden mb-5">
           <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
         </div>
-        {current?.thumbUrl && (
+        {currentThumb && (
           <img
-            src={current.thumbUrl}
+            src={currentThumb}
             alt="label being read"
             className="w-40 h-40 object-cover rounded-2xl shadow-notebook border border-border mx-auto"
           />
@@ -278,8 +413,17 @@ function BulkPage() {
   }
 
   if (phase === "review") {
+    const rowProps = {
+      items,
+      frontRows,
+      busyRows,
+      patchItem,
+      patchFields,
+      pairRows,
+      unpairRow,
+    };
     return (
-      <div className="px-5 pt-6 pb-32">
+      <div className="px-5 pt-6 pb-36">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate({ to: "/diary" })} className="p-2 -ml-2 text-muted-foreground">
             <ArrowLeft size={22} />
@@ -288,7 +432,8 @@ function BulkPage() {
           <span className="w-8" />
         </div>
         <p className="text-sm text-muted-foreground mb-5">
-          Nothing is in your diary yet. Check the ones flagged below, then save.
+          Nothing is in your diary yet. Rate them here if you can — that's what builds your taste
+          profile — then save.
         </p>
 
         <Section
@@ -298,9 +443,9 @@ function BulkPage() {
           onToggle={() => setOpenGroups((g) => ({ ...g, good: !g.good }))}
         >
           {groups.good.map((i) => (
-            <Row key={i.id} item={i} items={items} expanded={!!expanded[i.id]}
+            <Row key={i.id} item={i} expanded={!!expanded[i.id]}
               onExpand={() => setExpanded((e) => ({ ...e, [i.id]: !e[i.id] }))}
-              patchItem={patchItem} patchFields={patchFields} />
+              {...rowProps} />
           ))}
         </Section>
 
@@ -311,9 +456,9 @@ function BulkPage() {
           onToggle={() => setOpenGroups((g) => ({ ...g, check: !g.check }))}
         >
           {groups.check.map((i) => (
-            <Row key={i.id} item={i} items={items} expanded={!!expanded[i.id]}
+            <Row key={i.id} item={i} expanded={!!expanded[i.id]}
               onExpand={() => setExpanded((e) => ({ ...e, [i.id]: !e[i.id] }))}
-              patchItem={patchItem} patchFields={patchFields} />
+              {...rowProps} />
           ))}
         </Section>
 
@@ -324,9 +469,9 @@ function BulkPage() {
           onToggle={() => setOpenGroups((g) => ({ ...g, bad: !g.bad }))}
         >
           {groups.bad.map((i) => (
-            <Row key={i.id} item={i} items={items} expanded
+            <Row key={i.id} item={i} expanded={!isLooseBack(i)}
               onExpand={() => setExpanded((e) => ({ ...e, [i.id]: !e[i.id] }))}
-              patchItem={patchItem} patchFields={patchFields} />
+              {...rowProps} />
           ))}
         </Section>
 
@@ -351,21 +496,36 @@ function BulkPage() {
       </div>
 
       <div className="rounded-2xl bg-card p-4 shadow-notebook border border-border mb-5">
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="w-full h-36 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
-        >
-          <Images size={28} />
-          <span className="text-sm">Pick photos from your gallery</span>
-        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => cameraRef.current?.click()}>
+            <Camera size={22} />
+            <span className="text-sm">Take a photo</span>
+          </Button>
+          <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => libraryRef.current?.click()}>
+            <Images size={22} />
+            <span className="text-sm">Choose from library</span>
+          </Button>
+        </div>
         <input
-          ref={fileRef}
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => { if (e.target.files?.length) onPick(e.target.files); e.target.value = ""; }}
+        />
+        <input
+          ref={libraryRef}
           type="file"
           accept="image/*"
           multiple
           className="hidden"
           onChange={(e) => { if (e.target.files?.length) onPick(e.target.files); e.target.value = ""; }}
         />
+        <p className="mt-3 text-xs text-muted-foreground">
+          Front and back of the same bottle? Photograph them one after the other and I'll pair them
+          for you.
+        </p>
 
         {items.length > 0 && (
           <>
@@ -440,42 +600,64 @@ function Section({
 }
 
 function Row({
-  item, items, expanded, onExpand, patchItem, patchFields,
+  item, items, frontRows, busyRows, expanded, onExpand, patchItem, patchFields, pairRows, unpairRow,
 }: {
   item: BulkItem;
   items: BulkItem[];
+  frontRows: BulkItem[];
+  busyRows: Record<string, boolean>;
   expanded: boolean;
   onExpand: () => void;
   patchItem: (id: string, patch: Partial<BulkItem>) => void;
   patchFields: (id: string, patch: Partial<BulkFields>) => void;
+  pairRows: (frontId: string, backId: string) => void;
+  unpairRow: (frontId: string) => void;
 }) {
   const f = item.fields;
+  const busy = !!busyRows[item.id];
+  const looseBack = isLooseBack(item);
   const dupOf = item.dupOfId ? items.find((i) => i.id === item.dupOfId) : null;
   const ambiguousCandidate =
     item.candidate && (item.candidateScore ?? 0) >= 0.6 && (item.candidateScore ?? 0) < 0.85
       ? item.candidate
       : null;
+  const looseBacks = items.filter((i) => !i.discarded && isLooseBack(i) && i.id !== item.id);
 
   return (
     <div className="rounded-2xl border border-border bg-card p-3 shadow-notebook">
       <div className="flex gap-3">
-        {item.thumbUrl ? (
-          <img src={item.thumbUrl} alt="label" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
-        ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <Camera size={18} />
-          </div>
-        )}
+        <div className="flex shrink-0 gap-1">
+          {item.thumbUrl ? (
+            <img src={item.thumbUrl} alt="label" className="h-16 w-16 rounded-lg object-cover" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <Camera size={18} />
+            </div>
+          )}
+          {item.backThumbUrl && (
+            <img
+              src={item.backThumbUrl}
+              alt="back label"
+              className="h-16 w-16 rounded-lg object-cover opacity-90"
+            />
+          )}
+        </div>
         <button onClick={onExpand} className="min-w-0 flex-1 text-left">
-          <p className="truncate font-medium">{f.name || "Not read — fill in by hand"}</p>
+          <p className="truncate font-medium">
+            {looseBack ? "Looks like a back label" : f.name || "Not read — fill in by hand"}
+          </p>
           <p className="truncate text-sm text-muted-foreground">
-            {[f.producer, f.vintage].filter(Boolean).join(" · ") || "—"}
+            {looseBack
+              ? item.sideReason ?? "Dense small print, no wine name"
+              : [f.producer, f.vintage].filter(Boolean).join(" · ") || "—"}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {item.status === "failed"
-              ? item.error ?? "Failed"
-              : `Confidence ${Math.round((item.confidence ?? 0) * 100)}%`}
-            {item.dateFromPhoto && ` · ${item.tastedOn} from photo`}
+            {looseBack
+              ? "It won't be saved as a wine — pair it with a front label instead."
+              : item.status === "failed"
+                ? item.error ?? "Failed"
+                : `Confidence ${Math.round((item.confidence ?? 0) * 100)}%`}
+            {!looseBack && item.dateFromPhoto && ` · ${item.tastedOn} from photo`}
           </p>
         </button>
         <button
@@ -486,6 +668,66 @@ function Row({
           <Trash2 size={16} />
         </button>
       </div>
+
+      {busy && (
+        <p className="mt-2 flex items-center gap-2 text-xs text-primary">
+          <Loader2 size={13} className="animate-spin" /> Reading this bottle again…
+        </p>
+      )}
+
+      {/* pairing */}
+      {item.pairedBackId && !looseBack && (
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-muted/60 p-3 text-sm">
+          <span className="flex items-center gap-1.5">
+            <Link2 size={14} /> Front and back of one bottle
+          </span>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => unpairRow(item.id)}>
+            <Unlink size={13} /> Separate
+          </Button>
+        </div>
+      )}
+
+      {!item.pairedBackId && !looseBack && looseBacks.length > 0 && (
+        <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
+          <p className="mb-2">Is one of these its back label?</p>
+          <Select value="" onValueChange={(v) => pairRows(item.id, v)}>
+            <SelectTrigger><SelectValue placeholder="Pair a back label" /></SelectTrigger>
+            <SelectContent>
+              {looseBacks.map((b, k) => (
+                <SelectItem key={b.id} value={b.id}>
+                  Back label {k + 1}
+                  {b.takenAtMs ? ` · ${new Date(b.takenAtMs).toLocaleTimeString()}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {looseBack && (
+        <div className="mt-3 space-y-2 rounded-xl bg-muted/60 p-3 text-sm">
+          <p>Pair it with the bottle it belongs to:</p>
+          <Select value="" onValueChange={(v) => pairRows(v, item.id)}>
+            <SelectTrigger><SelectValue placeholder="Choose a bottle" /></SelectTrigger>
+            <SelectContent>
+              {frontRows
+                .filter((r) => !r.pairedBackId)
+                .map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.fields.name || "Unnamed bottle"}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => patchItem(item.id, { side: "front", sideReason: null })}
+          >
+            It's actually a front label
+          </Button>
+        </div>
+      )}
 
       {ambiguousCandidate && (
         <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
@@ -544,7 +786,39 @@ function Row({
         </p>
       )}
 
-      {expanded && (
+      {/* inline rating + status, no editor needed */}
+      {!looseBack && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <StarRating
+              value={item.rating}
+              onChange={(v) => patchItem(item.id, { rating: v, entryStatus: v ? "tasted" : item.entryStatus })}
+              size={22}
+            />
+            {item.entryStatus === "interested" && item.rating === 0 && (
+              <span className="text-xs text-muted-foreground">not tried yet</span>
+            )}
+          </div>
+          <div className="flex rounded-xl bg-muted/50 p-1">
+            {(["tasted", "interested"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => patchItem(item.id, { entryStatus: s })}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs transition-colors",
+                  item.entryStatus === s
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {s === "tasted" ? "Tasted" : "Want to try"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {expanded && !looseBack && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Name" value={f.name} onChange={(v) => patchFields(item.id, { name: v })} />
@@ -599,23 +873,6 @@ function Row({
               value={item.notes}
               onChange={(e) => patchItem(item.id, { notes: e.target.value })}
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1.5">
-            {(["tasted", "interested"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => patchItem(item.id, { entryStatus: s })}
-                className={cn(
-                  "rounded-lg py-2 text-sm transition-colors",
-                  item.entryStatus === s
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {s === "tasted" ? "I tasted this" : "Haven't tried it yet"}
-              </button>
-            ))}
           </div>
         </div>
       )}
