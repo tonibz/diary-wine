@@ -15,6 +15,7 @@ import {
   fillEmptyWineFields,
   logAlias,
   logDecision,
+  type MatchDecision,
   type WineCandidate,
   type WineDraft,
 } from "@/lib/wine-match";
@@ -80,6 +81,10 @@ export type BulkItem = {
   candidateScore: number | null;
   /** user's answer to the inline "might be the same" prompt; default different */
   mergeChoice: "same" | "different";
+  /** label-photo comparison verdict for the ambiguous band, when it ran */
+  visual: { same_wine: boolean | null; confidence: number | null; reason: string | null } | null;
+  /** true when the photo comparison was confident enough to decide without asking */
+  visualResolved: boolean;
   /** another item earlier in this same batch that looks like the same wine */
   dupOfId: string | null;
   dupOfScore: number | null;
@@ -118,6 +123,8 @@ export function newItem(id: string): BulkItem {
     candidate: null,
     candidateScore: null,
     mergeChoice: "different",
+    visual: null,
+    visualResolved: false,
     dupOfId: null,
     dupOfScore: null,
     dupChoice: "different",
@@ -404,7 +411,7 @@ export async function saveItem(
 ): Promise<string> {
   const draft = draftOf(item);
   let wineId: string;
-  let decision: "auto_merge" | "user_merge" | "user_rejected" | "auto_new" = "auto_new";
+  let decision: MatchDecision = "auto_new";
   let candidate: WineCandidate | null = null;
 
   if (reuseWineId) {
@@ -421,10 +428,15 @@ export async function saveItem(
       await fillEmptyWineFields(candidate.id, draft);
       await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
       wineId = candidate.id;
-      decision = "user_merge";
+      decision = item.visualResolved ? "auto_merge_visual" : "user_merge";
     } else {
       wineId = await insertWine(draft, uid);
-      decision = candidate && candidate.score >= 0.6 ? "user_rejected" : "auto_new";
+      decision =
+        candidate && candidate.score >= 0.6
+          ? item.visualResolved
+            ? "auto_new_visual"
+            : "user_rejected"
+          : "auto_new";
     }
   }
 
@@ -436,6 +448,7 @@ export async function saveItem(
     draft.vintage,
     { id: candidate?.id ?? reuseWineId ?? null, score: candidate?.score ?? item.dupOfScore ?? null },
     decision,
+    item.visual,
   );
 
   const vintageId = await findOrCreateVintage(wineId, draft.vintage, draft.alcohol_percent);
