@@ -202,6 +202,23 @@ export function MenuResults({
 
   return (
     <div className="space-y-8">
+      {matchingFailed && (
+        <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
+          <p className="text-sm text-foreground">
+            Couldn't match these against your diary. The wines were read fine — the full list is
+            below.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            onClick={() => setReloadKey((k) => k + 1)}
+          >
+            Retry matching
+          </Button>
+        </section>
+      )}
+
       {groups.had.length > 0 && (
         <section>
           <h2 className="font-serif text-2xl text-primary mb-1">You've had this</h2>
@@ -213,7 +230,8 @@ export function MenuResults({
         </section>
       )}
 
-      {ctx.entries.length < MIN_ENTRIES_FOR_SUGGESTIONS ? (
+      {ctx && ctx.entries.length < MIN_ENTRIES_FOR_SUGGESTIONS ? (
+
         <section className="rounded-2xl border border-border bg-parchment/60 p-4">
           <h2 className="font-serif text-xl text-foreground">No suggestions yet</h2>
           <p className="text-sm text-muted-foreground mt-1">
