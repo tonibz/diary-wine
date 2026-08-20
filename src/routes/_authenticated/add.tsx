@@ -225,6 +225,22 @@ function AddPage() {
   }
 
   function buildDraft(): WineDraft {
+    const userValues: Record<string, unknown> = {
+      name: bottle.name.trim(),
+      producer: bottle.producer.trim(),
+      appellation: bottle.appellation.trim(),
+      region: bottle.region.trim(),
+      country: bottle.country.trim(),
+      vintage: bottle.vintage ? Number(bottle.vintage) : null,
+      wine_type: bottle.wine_type,
+      grapes: bottle.grapes,
+      alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
+    };
+    const sources = buildFieldSources(
+      modelData as unknown as Record<string, unknown> | null,
+      userValues,
+      inferredFields,
+    );
     return {
       name: bottle.name.trim(),
       producer: bottle.producer.trim() || null,
@@ -234,7 +250,8 @@ function AddPage() {
       wine_type: bottle.wine_type || null,
       grapes: bottle.grapes,
       label_image_url: null, // privacy: never contribute personal photos to shared catalogue
-      data_source: dataSource,
+      data_source: rowDataSource(sources),
+      field_sources: sources,
       vintage: bottle.vintage ? Number(bottle.vintage) : null,
       alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
     };
@@ -253,6 +270,7 @@ function AddPage() {
         grapes: draft.grapes,
         label_image_url: draft.label_image_url,
         data_source: draft.data_source as never,
+        field_sources: draft.field_sources as never,
         created_by: uid,
       })
       .select("id")
