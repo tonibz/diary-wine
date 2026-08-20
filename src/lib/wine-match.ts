@@ -33,16 +33,36 @@ export async function findBestMatch(
   name: string,
   producer: string | null,
 ): Promise<WineCandidate | null> {
-  const { data, error } = await supabase.rpc("find_wine_match", {
-    _name: name,
-    _producer: producer,
-  } as never);
-  if (error || !data) return null;
-  const rows = data as unknown as WineCandidate[];
-  const top = rows[0];
-  if (!top) return null;
-  return { ...top, score: Number(top.score) };
+  const [first] = await findBestMatches([{ name, producer }]);
+  return first ?? null;
 }
+
+/**
+ * One database round trip for a whole list of wines — no per-item query and no
+ * external API call. Returns a candidate (or null) per input, in order.
+ */
+export async function findBestMatches(
+  inputs: Array<{ name: string; producer: string | null }>,
+): Promise<Array<WineCandidate | null>> {
+  const out: Array<WineCandidate | null> = inputs.map(() => null);
+  if (!inputs.length) return out;
+
+  const { data, error } = await supabase.rpc("find_wine_matches", {
+    _names: inputs.map((i) => i.name ?? ""),
+    _producers: inputs.map((i) => i.producer ?? ""),
+  } as never);
+  if (error) {
+    console.error("find_wine_matches failed", error);
+    throw new Error(error.message || "Could not match wines against the catalogue");
+  }
+
+  for (const row of (data ?? []) as unknown as Array<WineCandidate & { idx: number }>) {
+    const i = Number(row.idx) - 1; // Postgres arrays are 1-based
+    if (i >= 0 && i < out.length) out[i] = { ...row, score: Number(row.score) };
+  }
+  return out;
+}
+
 
 /** Find or create the vintage row underneath a wine. */
 export async function findOrCreateVintage(
