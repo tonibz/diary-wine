@@ -101,14 +101,28 @@ export function MenuResults({
           {e.item.parsed_producer && (
             <p className="text-sm text-muted-foreground">{e.item.parsed_producer}</p>
           )}
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            {e.item.wine_type && <span className="capitalize">{e.item.wine_type}</span>}
+            {e.item.section_heading && <span>· {e.item.section_heading}</span>}
+            {e.item.grapes?.length ? <span>· {e.item.grapes.join(", ")}</span> : null}
+            {e.item.truncated && (
+              <span className="text-destructive">· text was cut off, please check</span>
+            )}
+          </p>
         </div>
-        {e.item.price != null && (
+        {(e.item.price != null || e.item.glass_price != null) && (
           <div className="text-right flex-shrink-0">
             <p className="text-sm font-medium text-foreground">
               {e.item.currency ? `${e.item.currency} ` : ""}
-              {e.item.price}
+              {e.item.price ?? e.item.glass_price}
             </p>
-            {e.item.by_the_glass && (
+            {e.item.glass_price != null && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
+                <GlassWater size={11} /> {e.item.currency ? `${e.item.currency} ` : ""}
+                {e.item.glass_price} by the glass
+              </p>
+            )}
+            {e.item.glass_price == null && e.item.by_the_glass && (
               <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
                 <GlassWater size={11} /> by the glass
               </p>
@@ -116,6 +130,7 @@ export function MenuResults({
           </div>
         )}
       </div>
+
 
       {e.diary && (
         <div className="mt-3 rounded-xl bg-parchment/70 p-3">

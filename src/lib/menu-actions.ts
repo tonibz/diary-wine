@@ -28,6 +28,9 @@ async function resolveVintageId(item: MenuItemRow, userId: string): Promise<stri
     .insert({
       name,
       producer,
+      // The section heading on the list is the most reliable colour signal.
+      wine_type: (item.wine_type ?? null) as never,
+      grapes: (item.grapes ?? []) as never,
       data_source: "user" as never,
       created_by: userId,
     } as never)
