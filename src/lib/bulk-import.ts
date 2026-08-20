@@ -94,6 +94,7 @@ export function newItem(id: string): BulkItem {
     status: "pending",
     error: null,
     confidence: null,
+    referenceValues: {},
     fields: { ...emptyFields, grapes: [] },
     inferredFields: [],
     dataSource: "user",
