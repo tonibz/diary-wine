@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type FieldSource = "label" | "inferred" | "user";
+export type FieldSource = "label" | "inferred" | "reference" | "user";
 export type FieldSources = Record<string, FieldSource>;
 
 /** Fields whose provenance we track. vintage/alcohol live on wine_vintages but are still recorded here. */
