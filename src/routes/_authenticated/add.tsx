@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus, Images, ScrollText } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { withTimeout } from "@/lib/with-timeout";
 
 export const Route = createFileRoute("/_authenticated/add")({
   head: () => ({ meta: [{ title: "Add a wine — Wine Diary" }, { name: "description", content: "Log a new bottle." }] }),
@@ -157,7 +158,11 @@ function AddPage() {
       setPhotoPath(path);
       setPhotoDisplayUrl(await getSignedPhotoUrl(path));
 
-      const result = await recognise({ data: { photoPath: path, backPhotoPath: backPhotoPath } });
+      const result = await withTimeout(
+        recognise({ data: { photoPath: path, backPhotoPath: backPhotoPath } }),
+        120_000,
+        "Reading that label took too long — please try again",
+      );
       if (result.recognition_id) setRecognitionId(result.recognition_id);
       if (result.ok && result.data.confidence >= 0.6) {
         setModelData(result.data);
@@ -201,7 +206,11 @@ function AddPage() {
 
       // If we already have a front photo, re-run recognition with both.
       if (photoPath) {
-        const result = await recognise({ data: { photoPath, backPhotoPath: path } });
+        const result = await withTimeout(
+          recognise({ data: { photoPath, backPhotoPath: path } }),
+          120_000,
+          "Reading that label took too long — please try again",
+        );
         if (result.recognition_id) setRecognitionId(result.recognition_id);
         if (result.ok && result.data.confidence >= 0.6) {
           setModelData(result.data);

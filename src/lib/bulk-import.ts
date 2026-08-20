@@ -19,6 +19,7 @@ import {
   type WineDraft,
 } from "@/lib/wine-match";
 import { format } from "date-fns";
+import { withTimeout } from "@/lib/with-timeout";
 
 export const BULK_STORAGE_KEY = "wine-diary:bulk-import:v1";
 
@@ -242,9 +243,11 @@ export async function recogniseItem(
   recognise: RecogniseFn,
 ): Promise<Partial<BulkItem>> {
   if (!item.photoPath) return { status: "failed", error: "Photo is no longer available" };
-  const result = await recognise({
-    data: { photoPath: item.photoPath, backPhotoPath: item.backPhotoPath },
-  });
+  const result = await withTimeout(
+    recognise({ data: { photoPath: item.photoPath, backPhotoPath: item.backPhotoPath } }),
+    120_000,
+    "Reading that photo took too long",
+  );
 
   const base: Partial<BulkItem> = { recognitionId: result.recognition_id ?? null };
 

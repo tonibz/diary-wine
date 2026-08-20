@@ -22,6 +22,7 @@ import { matchItemsToCatalogue, saveMenuScan } from "@/lib/menu-match";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { withTimeout } from "@/lib/with-timeout";
 
 
 export const Route = createFileRoute("/_authenticated/menu")({
@@ -165,7 +166,11 @@ function MenuScanPage() {
   /** Never let a page failure escape as a swallowed exception. */
   async function readMenuPageSafe(pageNumber: number, path: string) {
     try {
-      return await readPage({ data: { photoPath: path, pageNumber } });
+      return await withTimeout(
+        readPage({ data: { photoPath: path, pageNumber } }),
+        120_000,
+        `Page ${pageNumber} took too long — try again with fewer pages at once`,
+      );
     } catch (e) {
       return {
         ok: false as const,
