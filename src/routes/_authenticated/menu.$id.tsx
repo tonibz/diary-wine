@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/auth-context";
 import { loadMenuScan, type MenuItemRow, type MenuScanRow } from "@/lib/menu-match";
 import { MenuResults } from "@/components/MenuResults";
 import { withTimeout } from "@/lib/with-timeout";
+import { Button } from "@/components/ui/button";
+
 
 
 export const Route = createFileRoute("/_authenticated/menu/$id")({
