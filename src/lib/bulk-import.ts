@@ -85,6 +85,8 @@ export type BulkItem = {
   visual: { same_wine: boolean | null; confidence: number | null; reason: string | null } | null;
   /** true when the photo comparison was confident enough to decide without asking */
   visualResolved: boolean;
+  /** signed URL of the candidate wine's label, shown when we still have to ask */
+  candidatePhotoUrl: string | null;
   /** another item earlier in this same batch that looks like the same wine */
   dupOfId: string | null;
   dupOfScore: number | null;
@@ -125,6 +127,7 @@ export function newItem(id: string): BulkItem {
     mergeChoice: "different",
     visual: null,
     visualResolved: false,
+    candidatePhotoUrl: null,
     dupOfId: null,
     dupOfScore: null,
     dupChoice: "different",

@@ -4,6 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { recogniseLabel } from "@/lib/recognise.functions";
 import { classifyLabelSides } from "@/lib/classify-label.functions";
+import { compareLabels } from "@/lib/compare-labels.functions";
+import {
+  candidateLabelPath,
+  compareLabelsVisually,
+  type CompareFn,
+} from "@/lib/label-compare";
+import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { findBestMatch } from "@/lib/wine-match";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import {
@@ -69,6 +76,7 @@ function BulkPage() {
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
   const classify = useServerFn(classifyLabelSides);
+  const compare = useServerFn(compareLabels) as unknown as CompareFn;
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
   const filesRef = useRef<Map<string, File>>(new Map());
