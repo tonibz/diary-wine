@@ -98,12 +98,15 @@ export function diffCorrections(
  * Per-field provenance for a wine created from a recognition.
  * - model value kept as-is and not listed as inferred -> 'label'
  * - field named in inferred_fields -> 'inferred'
+ * - value taken from the appellations reference table -> 'reference'
  * - anything the user typed or changed -> 'user'
  */
 export function buildFieldSources(
   modelValues: Record<string, unknown> | null,
   userValues: Record<string, unknown>,
   inferredFields: string[],
+  /** field -> value we filled from the appellations reference */
+  referenceValues: Record<string, unknown> = {},
 ): FieldSources {
   const inferred = new Set(inferredFields.map((f) => f.trim().toLowerCase()));
   const sources: FieldSources = {};
@@ -111,12 +114,14 @@ export function buildFieldSources(
     const userVal = userValues[field];
     if (!hasValue(userVal)) continue;
     const modelVal = modelValues ? modelValues[field] : undefined;
-    if (!modelValues || !hasValue(modelVal) || !valuesEquivalent(modelVal, userVal)) {
-      sources[field] = "user";
-    } else if (inferred.has(field)) {
-      sources[field] = "inferred";
+    const refVal = referenceValues[field];
+    if (modelValues && hasValue(modelVal) && valuesEquivalent(modelVal, userVal)) {
+      sources[field] = inferred.has(field) ? "inferred" : "label";
+    } else if (hasValue(refVal) && valuesEquivalent(refVal, userVal)) {
+      // model said nothing here; the value came out of the reference table
+      sources[field] = "reference";
     } else {
-      sources[field] = "label";
+      sources[field] = "user";
     }
   }
   return sources;
@@ -126,7 +131,7 @@ export function buildFieldSources(
 export function rowDataSource(sources: FieldSources): "label" | "inferred" | "user" {
   const vals = Object.values(sources);
   if (vals.includes("label")) return "label";
-  if (vals.includes("inferred")) return "inferred";
+  if (vals.includes("inferred") || vals.includes("reference")) return "inferred";
   return "user";
 }
 
