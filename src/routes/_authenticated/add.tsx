@@ -23,6 +23,11 @@ import {
   diffCorrections,
   mergeFieldSources,
 } from "@/lib/field-provenance";
+import {
+  checkAgainstReference,
+  recordUserResolution,
+  type ReferenceOutcome,
+} from "@/lib/appellation-check";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
