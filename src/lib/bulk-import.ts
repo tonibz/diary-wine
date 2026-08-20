@@ -56,8 +56,21 @@ export type BulkItem = {
   place: string;
   placeFromPhoto: boolean;
   notes: string;
+  rating: number;
   entryStatus: "tasted" | "interested";
   discarded: boolean;
+  /** EXIF capture time in ms, used to find front/back pairs */
+  takenAtMs: number | null;
+  /** classifier verdict for this photo */
+  side: "front" | "back";
+  sideReason: string | null;
+  /** back label attached to this bottle */
+  backPhotoPath: string | null;
+  backThumbUrl: string | null;
+  /** the item whose photo became this bottle's back label */
+  pairedBackId: string | null;
+  /** set on a back-label item that has been folded into another row */
+  pairedIntoId: string | null;
   /** existing catalogue candidate in the ambiguous 0.6–0.85 band */
   candidate: (WineCandidate & { vintage?: number | null }) | null;
   candidateScore: number | null;
@@ -87,8 +100,16 @@ export function newItem(id: string): BulkItem {
     place: "",
     placeFromPhoto: false,
     notes: "",
+    rating: 0,
     entryStatus: "tasted",
     discarded: false,
+    takenAtMs: null,
+    side: "front",
+    sideReason: null,
+    backPhotoPath: null,
+    backThumbUrl: null,
+    pairedBackId: null,
+    pairedIntoId: null,
     candidate: null,
     candidateScore: null,
     mergeChoice: "different",
@@ -97,6 +118,7 @@ export function newItem(id: string): BulkItem {
     dupChoice: "different",
   };
 }
+
 
 /* ---------- persistence: survives leaving the screen ---------- */
 
@@ -176,15 +198,20 @@ export function batchScore(
 
 /* ---------- per-photo processing (mirrors the single-photo flow) ---------- */
 
-export async function processPhoto(
+export type RecogniseFn = (args: {
+  data: { photoPath: string; backPhotoPath?: string | null };
+}) => Promise<Awaited<ReturnType<typeof import("@/lib/recognise.functions").recogniseLabel>>>;
+
+/**
+ * Step 1: EXIF, compress, upload. No API call — pairing is decided from these
+ * results before any label is read.
+ */
+export async function uploadPhoto(
   file: File,
   uid: string,
   gpsEnabled: boolean,
-  recognise: (args: { data: { photoPath: string; backPhotoPath?: string | null } }) => Promise<
-    Awaited<ReturnType<typeof import("@/lib/recognise.functions").recogniseLabel>>
-  >,
 ): Promise<Partial<BulkItem>> {
-  // 1. EXIF first — compression re-encodes and destroys metadata.
+  // EXIF first — compression re-encodes and destroys metadata.
   const meta = await readPhotoMeta(file);
   let tastedOn: string | null = null;
   let place: string | null = null;
@@ -193,7 +220,6 @@ export async function processPhoto(
     place = await reverseGeocode(meta.gps.lat, meta.gps.lon);
   }
 
-  // 2. Compress + upload
   const compressed = await compressImage(file);
   const path = `${uid}/${crypto.randomUUID()}.jpg`;
   const up = await supabase.storage.from("wine-photos").upload(path, compressed, {
@@ -201,18 +227,26 @@ export async function processPhoto(
   });
   if (up.error) throw up.error;
 
-  const thumbUrl = await getSignedPhotoUrl(path);
-
-  // 3. Recognition (also logs a recognitions row server-side)
-  const result = await recognise({ data: { photoPath: path, backPhotoPath: null } });
-
-  const base: Partial<BulkItem> = {
+  return {
     photoPath: path,
-    thumbUrl,
-    recognitionId: result.recognition_id ?? null,
+    thumbUrl: await getSignedPhotoUrl(path),
+    takenAtMs: meta.takenAt ? meta.takenAt.getTime() : null,
     ...(tastedOn ? { tastedOn, dateFromPhoto: true } : {}),
     ...(place ? { place, placeFromPhoto: true } : {}),
   };
+}
+
+/** Step 2: read the label. Sends the back photo too when the bottle is paired. */
+export async function recogniseItem(
+  item: BulkItem,
+  recognise: RecogniseFn,
+): Promise<Partial<BulkItem>> {
+  if (!item.photoPath) return { status: "failed", error: "Photo is no longer available" };
+  const result = await recognise({
+    data: { photoPath: item.photoPath, backPhotoPath: item.backPhotoPath },
+  });
+
+  const base: Partial<BulkItem> = { recognitionId: result.recognition_id ?? null };
 
   if (!result.ok) {
     return { ...base, status: "failed", error: result.error, confidence: null };
@@ -222,6 +256,7 @@ export async function processPhoto(
   return {
     ...base,
     status: "done",
+    error: null,
     confidence: d.confidence,
     modelData: d,
     inferredFields: d.inferred_fields ?? [],
@@ -239,6 +274,48 @@ export async function processPhoto(
     },
   };
 }
+
+/** Photos taken within this window are candidates for being one bottle. */
+export const PAIR_WINDOW_MS = 2 * 60 * 1000;
+
+/**
+ * Pairs each back label with the nearest front label taken within two minutes.
+ * Returns a patch map; nothing is paired silently — the review screen shows it.
+ */
+export function pairFrontsAndBacks(items: BulkItem[]): Map<string, Partial<BulkItem>> {
+  const patches = new Map<string, Partial<BulkItem>>();
+  const takenBack = new Set<string>();
+
+  const backs = items.filter((i) => i.side === "back" && i.takenAtMs != null);
+  for (const back of backs) {
+    const fronts = items
+      .filter(
+        (i) =>
+          i.side === "front" &&
+          i.takenAtMs != null &&
+          !patches.get(i.id)?.pairedBackId &&
+          !i.pairedBackId &&
+          Math.abs((i.takenAtMs as number) - (back.takenAtMs as number)) <= PAIR_WINDOW_MS,
+      )
+      .sort(
+        (a, b) =>
+          Math.abs((a.takenAtMs as number) - (back.takenAtMs as number)) -
+          Math.abs((b.takenAtMs as number) - (back.takenAtMs as number)),
+      );
+    const front = fronts.find((f) => !takenBack.has(f.id));
+    if (!front) continue;
+    takenBack.add(front.id);
+    patches.set(front.id, {
+      ...(patches.get(front.id) ?? {}),
+      pairedBackId: back.id,
+      backPhotoPath: back.photoPath,
+      backThumbUrl: back.thumbUrl,
+    });
+    patches.set(back.id, { ...(patches.get(back.id) ?? {}), pairedIntoId: front.id });
+  }
+  return patches;
+}
+
 
 /* ---------- saving ---------- */
 
@@ -350,8 +427,9 @@ export async function saveItem(
       wine_vintage_id: vintageId,
       status: item.entryStatus,
       photo_url: item.photoPath,
-      back_photo_url: null,
-      rating: null,
+      back_photo_url: item.backPhotoPath,
+      rating: tasted && item.rating > 0 ? item.rating : null,
+
       tasted_on: tasted ? item.tastedOn : format(new Date(), "yyyy-MM-dd"),
       place: tasted ? item.place.trim() || null : null,
       company: null,

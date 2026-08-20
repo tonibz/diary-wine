@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Wine, Pencil, Trash2, Check, ImagePlus, X } from "lucide-react";
+import { ArrowLeft, Wine, Pencil, Trash2, Check, ImagePlus, Camera, X } from "lucide-react";
 import { format } from "date-fns";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
@@ -65,6 +65,7 @@ function EntryDetail() {
   const { id } = useParams({ from: "/_authenticated/entry/$id" });
   const navigate = useNavigate();
   const backFileRef = useRef<HTMLInputElement>(null);
+  const backLibraryRef = useRef<HTMLInputElement>(null);
   const [entry, setEntry] = useState<Entry | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [backPhotoUrl, setBackPhotoUrl] = useState<string | null>(null);
@@ -316,12 +317,14 @@ function EntryDetail() {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => backFileRef.current?.click()}
-              className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary"
-            >
-              <ImagePlus size={16} /> Add a photo of the back label (optional)
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" onClick={() => backFileRef.current?.click()}>
+                <Camera size={14} /> Take a photo
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => backLibraryRef.current?.click()}>
+                <ImagePlus size={14} /> Choose from library
+              </Button>
+            </div>
           )}
           <input
             ref={backFileRef}
@@ -329,8 +332,16 @@ function EntryDetail() {
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); e.target.value = ""; }}
           />
+          <input
+            ref={backLibraryRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); e.target.value = ""; }}
+          />
+
         </section>
 
         {isWishlist ? (
