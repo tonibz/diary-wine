@@ -98,6 +98,10 @@ function MenuScanDetail() {
             <p className="text-sm text-muted-foreground mt-1">
               {format(new Date(scan.scanned_at), "d MMM yyyy")} · {items.length}{" "}
               {items.length === 1 ? "wine" : "wines"} read
+              {[scan.city, scan.country].filter(Boolean).length
+                ? ` · ${[scan.city, scan.country].filter(Boolean).join(", ")}`
+                : ""}
+              {scan.venue_note ? ` · ${scan.venue_note}` : ""}
             </p>
             {scan.skipped_count > 0 && (
               <p className="text-xs text-muted-foreground mt-2">
@@ -108,7 +112,32 @@ function MenuScanDetail() {
                   : ""}
               </p>
             )}
+            {neverMatched && (
+              <div className="mt-3 rounded-2xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
+                  Matching against your diary wasn't available — the list and its prices are saved.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  disabled={rematching}
+                  onClick={onRematch}
+                >
+                  {rematching ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Matching…
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw size={14} /> Try matching again
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </header>
+
 
           <MenuResults items={items} restaurantName={scan.restaurant_name} userId={user.id} />
         </>
