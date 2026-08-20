@@ -887,3 +887,43 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </div>
   );
 }
+
+/** Model vs. reference disagreement — the user picks, and we record their choice. */
+function Conflict({
+  note,
+  options,
+  current,
+  onPick,
+}: {
+  note: string;
+  options: string[];
+  current: string;
+  onPick: (v: string) => void;
+}) {
+  const choices = Array.from(new Set(options.filter(Boolean)));
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <p className="flex items-start gap-2 text-xs text-foreground">
+        <Info size={14} className="mt-0.5 shrink-0 text-primary" />
+        <span>{note}</span>
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {choices.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onPick(c)}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs border",
+              current === c
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-primary/30 text-primary hover:bg-primary/10",
+            )}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
