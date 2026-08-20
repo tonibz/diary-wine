@@ -17,6 +17,12 @@ import {
   type WineCandidate,
   type WineDraft,
 } from "@/lib/wine-match";
+import {
+  buildFieldSources,
+  rowDataSource,
+  diffCorrections,
+  mergeFieldSources,
+} from "@/lib/field-provenance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
