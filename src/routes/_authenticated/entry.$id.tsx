@@ -14,6 +14,7 @@ import { ArrowLeft, Wine, Pencil, Trash2, Check, ImagePlus, X } from "lucide-rea
 import { format } from "date-fns";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
+import { markFieldsAsUser } from "@/lib/field-provenance";
 
 export const Route = createFileRoute("/_authenticated/entry/$id")({
   head: () => ({ meta: [{ title: "Wine detail — Wine Diary" }, { name: "description", content: "A bottle you tasted." }] }),
@@ -146,6 +147,7 @@ function EntryDetail() {
     const payload: Record<string, unknown> = { [key]: value.trim() || null };
     const { error } = await supabase.from("wines").update(payload as never).eq("id", w.id);
     if (error) return toast.error(error.message);
+    await markFieldsAsUser(w.id, [key]);
     await load();
     const { data } = await supabase.auth.getUser();
     if (data.user) recomputeTasteProfile(data.user.id);
@@ -155,6 +157,8 @@ function EntryDetail() {
   async function saveVintageField(key: "vintage" | "alcohol_percent", value: string) {
     if (!entry?.vintage_row) return;
     const num = value ? Number(value) : null;
+    const wineIdForSources = entry.vintage_row.wine?.id;
+    if (wineIdForSources) await markFieldsAsUser(wineIdForSources, [key]);
     if (key === "alcohol_percent") {
       const { error } = await supabase
         .from("wine_vintages")
@@ -290,7 +294,12 @@ function EntryDetail() {
               onSave={(v) => {
                 const arr = v.split(",").map((s) => s.trim()).filter(Boolean);
                 if (!w) return;
-                supabase.from("wines").update({ grapes: arr }).eq("id", w.id).then(() => load());
+                supabase
+                  .from("wines")
+                  .update({ grapes: arr })
+                  .eq("id", w.id)
+                  .then(() => markFieldsAsUser(w.id, ["grapes"]))
+                  .then(() => load());
               }}
             />
           </dl>

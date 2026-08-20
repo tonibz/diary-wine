@@ -101,6 +101,10 @@ function AddPage() {
 
   const tasted = status === "tasted";
 
+  // Fields the model worked out rather than read — the ones most worth checking.
+  const inferredSet = new Set(inferredFields.map((f) => f.trim().toLowerCase()));
+  const check = (field: string) => (inferredSet.has(field) ? "Guessed — please check" : undefined);
+
   const bottleFieldsFilled = [
     bottle.name, bottle.producer, bottle.appellation, bottle.region, bottle.country,
     bottle.vintage, bottle.wine_type, bottle.grapes.length ? "g" : "", bottle.alcohol_percent,
@@ -556,16 +560,16 @@ function AddPage() {
           <span className="text-xs text-muted-foreground">{bottleFieldsFilled} of 9 filled in</span>
         </div>
 
-        <Field label="Name *"><Input value={bottle.name} onChange={(e) => setBottle({ ...bottle, name: e.target.value })} /></Field>
-        <Field label="Producer"><Input value={bottle.producer} onChange={(e) => setBottle({ ...bottle, producer: e.target.value })} /></Field>
-        <Field label="Appellation"><Input value={bottle.appellation} onChange={(e) => setBottle({ ...bottle, appellation: e.target.value })} /></Field>
+        <Field label="Name *" hint={check("name")}><Input value={bottle.name} onChange={(e) => setBottle({ ...bottle, name: e.target.value })} /></Field>
+        <Field label="Producer" hint={check("producer")}><Input value={bottle.producer} onChange={(e) => setBottle({ ...bottle, producer: e.target.value })} /></Field>
+        <Field label="Appellation" hint={check("appellation")}><Input value={bottle.appellation} onChange={(e) => setBottle({ ...bottle, appellation: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Region"><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
-          <Field label="Country"><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
+          <Field label="Region" hint={check("region")}><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
+          <Field label="Country" hint={check("country")}><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Vintage"><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
-          <Field label="Type">
+          <Field label="Vintage" hint={check("vintage")}><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
+          <Field label="Type" hint={check("wine_type")}>
             <Select value={bottle.wine_type} onValueChange={(v) => setBottle({ ...bottle, wine_type: v })}>
               <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
               <SelectContent>
@@ -579,7 +583,7 @@ function AddPage() {
             </Select>
           </Field>
         </div>
-        <Field label="Grapes">
+        <Field label="Grapes" hint={check("grapes")}>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {bottle.grapes.map((g) => (
               <span key={g} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-1 text-xs">
@@ -600,7 +604,7 @@ function AddPage() {
             <Button type="button" variant="secondary" onClick={addGrape}>Add</Button>
           </div>
         </Field>
-        <Field label="Alcohol %"><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
+        <Field label="Alcohol %" hint={check("alcohol_percent")}><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
       </section>
 
       {tasted ? (
