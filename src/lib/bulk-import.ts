@@ -1,4 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+import {
+  buildFieldSources,
+  rowDataSource,
+  diffCorrections,
+  mergeFieldSources,
+} from "@/lib/field-provenance";
 import { compressImage } from "@/lib/image-compress";
 import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
 import { getSignedPhotoUrl } from "@/lib/wine-photo";
@@ -238,6 +244,22 @@ export async function processPhoto(
 
 export function draftOf(item: BulkItem): WineDraft {
   const f = item.fields;
+  const userValues: Record<string, unknown> = {
+    name: f.name.trim(),
+    producer: f.producer.trim(),
+    appellation: f.appellation.trim(),
+    region: f.region.trim(),
+    country: f.country.trim(),
+    vintage: f.vintage ? Number(f.vintage) : null,
+    wine_type: f.wine_type,
+    grapes: f.grapes,
+    alcohol_percent: f.alcohol_percent ? Number(f.alcohol_percent) : null,
+  };
+  const sources = buildFieldSources(
+    (item.modelData as unknown as Record<string, unknown> | null) ?? null,
+    userValues,
+    item.inferredFields ?? [],
+  );
   return {
     name: f.name.trim(),
     producer: f.producer.trim() || null,
@@ -247,7 +269,8 @@ export function draftOf(item: BulkItem): WineDraft {
     wine_type: f.wine_type || null,
     grapes: f.grapes,
     label_image_url: null, // privacy: personal photos stay out of the shared catalogue
-    data_source: item.dataSource,
+    data_source: rowDataSource(sources),
+    field_sources: sources,
     vintage: f.vintage ? Number(f.vintage) : null,
     alcohol_percent: f.alcohol_percent ? Number(f.alcohol_percent) : null,
   };
@@ -266,6 +289,7 @@ async function insertWine(draft: WineDraft, uid: string): Promise<string> {
       grapes: draft.grapes,
       label_image_url: null,
       data_source: draft.data_source as never,
+      field_sources: draft.field_sources as never,
       created_by: uid,
     })
     .select("id")
@@ -292,10 +316,12 @@ export async function saveItem(
     candidate = await findBestMatch(draft.name, draft.producer);
     if (candidate && candidate.score >= 0.85) {
       await fillEmptyWineFields(candidate.id, draft);
+      await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
       wineId = candidate.id;
       decision = "auto_merge";
     } else if (candidate && candidate.score >= 0.6 && item.mergeChoice === "same") {
       await fillEmptyWineFields(candidate.id, draft);
+      await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
       wineId = candidate.id;
       decision = "user_merge";
     } else {
@@ -336,7 +362,24 @@ export async function saveItem(
   if (error) throw error;
 
   if (item.recognitionId) {
-    await supabase.from("recognitions").update({ entry_id: entry.id }).eq("id", item.recognitionId);
+    const m = (item.modelData as unknown as Record<string, unknown> | null) ?? null;
+    const diffs = m
+      ? diffCorrections([
+          ["name", m.name, draft.name],
+          ["producer", m.producer, draft.producer],
+          ["appellation", m.appellation, draft.appellation],
+          ["region", m.region, draft.region],
+          ["country", m.country, draft.country],
+          ["vintage", m.vintage, draft.vintage],
+          ["wine_type", m.wine_type, draft.wine_type],
+          ["grapes", m.grapes, draft.grapes],
+          ["alcohol_percent", m.alcohol_percent, draft.alcohol_percent],
+        ])
+      : null;
+    await supabase
+      .from("recognitions")
+      .update({ entry_id: entry.id, corrected_fields: diffs as never })
+      .eq("id", item.recognitionId);
   }
 
   return wineId;

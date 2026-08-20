@@ -368,6 +368,7 @@ function AddPage() {
 
       if (candidate && candidate.score >= 0.85) {
         await fillEmptyWineFields(candidate.id, draft);
+        await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
         await finalizeSave(candidate.id, draft, uid, "auto_merge", candidate);
         return;
       }
@@ -394,6 +395,7 @@ function AddPage() {
       const uid = userRes.user!.id;
       if (sameWine) {
         await fillEmptyWineFields(candidate.id, draft);
+        await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
         await finalizeSave(candidate.id, draft, uid, "user_merge", candidate);
       } else {
         const wineId = await insertNewWine(draft, uid);
