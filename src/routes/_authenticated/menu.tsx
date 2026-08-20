@@ -113,7 +113,21 @@ function MenuScanPage() {
       }
 
       setProgress(`Matching ${items.length} wines to your diary`);
-      const matches = await matchItemsToCatalogue(items);
+      // Matching must never cost us the parsed list: on failure we still save
+      // every wine we read, unmatched.
+      let matches: Array<{ wineId: string | null; score: number | null }> = items.map(() => ({
+        wineId: null,
+        score: null,
+      }));
+      let matchingFailed = false;
+      try {
+        matches = await matchItemsToCatalogue(items);
+      } catch (err) {
+        console.error("Menu matching failed", err);
+        matchingFailed = true;
+      }
+
+      setProgress("Saving the list");
       const { scan } = await saveMenuScan({
         userId: uid,
         photoPath: paths[0] ?? null,
@@ -124,6 +138,11 @@ function MenuScanPage() {
         matches,
       });
 
+      if (matchingFailed) {
+        toast.error(
+          "Couldn't match these against your diary. The wines were read fine — showing the full list.",
+        );
+      }
       if (salvagedPages > 0) {
         toast.warning(
           `One page was very long — I saved the ${items.length} wines I could read. Photograph fewer pages at once for the rest.`,
@@ -132,6 +151,7 @@ function MenuScanPage() {
       if (pageErrors.length) {
         toast.error(`${pageErrors.length} page(s) couldn't be read: ${pageErrors[0]}`);
       }
+
       navigate({ to: "/menu/$id", params: { id: scan.id } });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not read that wine list";
