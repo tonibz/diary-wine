@@ -20,6 +20,7 @@ import {
 } from "@/lib/wine-match";
 import { format } from "date-fns";
 import { withTimeout } from "@/lib/with-timeout";
+import { checkAgainstReference } from "@/lib/appellation-check";
 
 export const BULK_STORAGE_KEY = "wine-diary:bulk-import:v1";
 
@@ -52,6 +53,8 @@ export type BulkItem = {
   dataSource: "label" | "inferred" | "user";
   recognitionId: string | null;
   modelData: RecognitionData | null;
+  /** values filled from the appellations reference table, per field */
+  referenceValues: Record<string, unknown>;
   tastedOn: string;
   dateFromPhoto: boolean;
   place: string;
@@ -256,9 +259,22 @@ export async function recogniseItem(
   }
 
   const d = result.data;
+  // Check the model's inferences against the appellations reference table.
+  let referenceValues: Record<string, unknown> = {};
+  try {
+    const outcome = await checkAgainstReference(
+      result.recognition_id ?? null,
+      { country: d.country, region: d.region, wine_type: d.wine_type, grapes: d.grapes ?? [] },
+      d.appellation,
+    );
+    if (outcome) referenceValues = { ...outcome.fills };
+  } catch (e) {
+    console.error("appellation reference check failed", e);
+  }
   return {
     ...base,
     status: "done",
+    referenceValues,
     error: null,
     confidence: d.confidence,
     modelData: d,
@@ -268,10 +284,10 @@ export async function recogniseItem(
       name: d.name ?? "",
       producer: d.producer ?? "",
       appellation: d.appellation ?? "",
-      region: d.region ?? "",
-      country: d.country ?? "",
+      region: d.region ?? (referenceValues.region as string | undefined) ?? "",
+      country: d.country ?? (referenceValues.country as string | undefined) ?? "",
       vintage: d.vintage ? String(d.vintage) : "",
-      wine_type: d.wine_type ?? "",
+      wine_type: d.wine_type ?? (referenceValues.wine_type as string | undefined) ?? "",
       grapes: d.grapes ?? [],
       alcohol_percent: d.alcohol_percent ? String(d.alcohol_percent) : "",
     },
@@ -339,6 +355,7 @@ export function draftOf(item: BulkItem): WineDraft {
     (item.modelData as unknown as Record<string, unknown> | null) ?? null,
     userValues,
     item.inferredFields ?? [],
+    item.referenceValues ?? {},
   );
   return {
     name: f.name.trim(),
