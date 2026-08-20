@@ -27,17 +27,25 @@ function MenuScanDetail() {
   const [items, setItems] = useState<MenuItemRow[] | null>(null);
   const [missing, setMissing] = useState(false);
 
+  const [failure, setFailure] = useState<string | null>(null);
+
   useEffect(() => {
     (async () => {
-      const res = await loadMenuScan(id);
-      if (!res) {
-        setMissing(true);
-        return;
+      try {
+        const res = await withTimeout(loadMenuScan(id));
+        if (!res) {
+          setMissing(true);
+          return;
+        }
+        setScan(res.scan);
+        setItems(res.items);
+      } catch (err) {
+        console.error("Could not load menu scan", err);
+        setFailure(err instanceof Error ? err.message : "Could not load that scan");
       }
-      setScan(res.scan);
-      setItems(res.items);
     })();
   }, [id]);
+
 
   return (
     <div className="px-5 pt-6 pb-8">
