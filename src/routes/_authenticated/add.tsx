@@ -667,6 +667,14 @@ function AddPage() {
           <Field label="Region" hint={check("region")}><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
           <Field label="Country" hint={check("country")}><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
         </div>
+        {disagreement("country") && (
+          <Conflict
+            note={disagreement("country")!.note}
+            options={[disagreement("country")!.modelValue, disagreement("country")!.referenceValue]}
+            current={bottle.country}
+            onPick={(v) => setBottle({ ...bottle, country: v })}
+          />
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Vintage" hint={check("vintage")}><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
           <Field label="Type" hint={check("wine_type")}>
@@ -683,6 +691,14 @@ function AddPage() {
             </Select>
           </Field>
         </div>
+        {disagreement("wine_type") && (
+          <Conflict
+            note={disagreement("wine_type")!.note}
+            options={[disagreement("wine_type")!.modelValue, disagreement("wine_type")!.referenceValue]}
+            current={bottle.wine_type}
+            onPick={(v) => setBottle({ ...bottle, wine_type: v })}
+          />
+        )}
         <Field label="Grapes" hint={check("grapes")}>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {bottle.grapes.map((g) => (
@@ -703,6 +719,28 @@ function AddPage() {
             />
             <Button type="button" variant="secondary" onClick={addGrape}>Add</Button>
           </div>
+          {refCheck && refCheck.grapeSuggestions.length > 0 && bottle.grapes.length === 0 && (
+            <div className="mt-2 rounded-xl border border-border bg-parchment p-3">
+              <p className="text-xs text-muted-foreground">
+                Wikipedia lists these grapes as permitted in {refCheck.ref.name}. This bottle may only
+                use some of them, so tap the ones that apply.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {refCheck.grapeSuggestions.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() =>
+                      setBottle((b) => (b.grapes.includes(g) ? b : { ...b, grapes: [...b.grapes, g] }))
+                    }
+                    className="rounded-full border border-primary/30 px-2.5 py-1 text-xs text-primary hover:bg-primary/10"
+                  >
+                    + {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </Field>
         <Field label="Alcohol %" hint={check("alcohol_percent")}><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
       </section>
