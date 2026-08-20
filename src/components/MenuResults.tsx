@@ -16,6 +16,8 @@ import {
   type TasteContext,
 } from "@/lib/menu-match";
 import { addMenuItemAsTasted, addMenuItemToWishlist } from "@/lib/menu-actions";
+import { withTimeout } from "@/lib/with-timeout";
+
 
 export function MenuResults({
   items,
