@@ -316,12 +316,14 @@ function EntryDetail() {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => backFileRef.current?.click()}
-              className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary"
-            >
-              <ImagePlus size={16} /> Add a photo of the back label (optional)
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" onClick={() => backFileRef.current?.click()}>
+                <Camera size={14} /> Take a photo
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => backLibraryRef.current?.click()}>
+                <ImagePlus size={14} /> Choose from library
+              </Button>
+            </div>
           )}
           <input
             ref={backFileRef}
@@ -329,8 +331,16 @@ function EntryDetail() {
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); e.target.value = ""; }}
           />
+          <input
+            ref={backLibraryRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onBackPhoto(f); e.target.value = ""; }}
+          />
+
         </section>
 
         {isWishlist ? (
