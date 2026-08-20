@@ -79,7 +79,17 @@ function MenuScanDetail() {
               {format(new Date(scan.scanned_at), "d MMM yyyy")} · {items.length}{" "}
               {items.length === 1 ? "wine" : "wines"} read
             </p>
+            {scan.skipped_count > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Skipped {scan.skipped_count} non-wine item
+                {scan.skipped_count === 1 ? "" : "s"}
+                {scan.skipped_categories.length
+                  ? ` (${scan.skipped_categories.join(", ")})`
+                  : ""}
+              </p>
+            )}
           </header>
+
           <MenuResults items={items} restaurantName={scan.restaurant_name} userId={user.id} />
         </>
       )}

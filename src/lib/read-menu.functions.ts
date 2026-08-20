@@ -27,6 +27,8 @@ export type ReadMenuPageResult =
       restaurant_name: string | null;
       currency: string | null;
       items: MenuParsedItem[];
+      skipped_count: number;
+      skipped_categories: string[];
       /** true when the model's reply was cut off and we salvaged what we could */
       salvaged: boolean;
       raw: JsonValue;
@@ -108,6 +110,8 @@ export const readMenuPage = createServerFn({ method: "POST" })
         restaurant_name: parsed.restaurant_name,
         currency: normaliseCurrency(parsed.currency),
         items: parsed.items.map(normaliseMenuItem),
+        skipped_count: parsed.skipped_count,
+        skipped_categories: parsed.skipped_categories,
         salvaged: parsed.truncated || stopReason === "max_tokens",
         raw,
       };

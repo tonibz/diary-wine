@@ -247,7 +247,9 @@ export type Database = {
           parsed_vintage: number | null
           position: number | null
           price: number | null
+          prices: Json | null
           raw_text: string | null
+          rejected: boolean
           section_heading: string | null
           truncated: boolean
           wine_type: string | null
@@ -268,7 +270,9 @@ export type Database = {
           parsed_vintage?: number | null
           position?: number | null
           price?: number | null
+          prices?: Json | null
           raw_text?: string | null
+          rejected?: boolean
           section_heading?: string | null
           truncated?: boolean
           wine_type?: string | null
@@ -289,7 +293,9 @@ export type Database = {
           parsed_vintage?: number | null
           position?: number | null
           price?: number | null
+          prices?: Json | null
           raw_text?: string | null
+          rejected?: boolean
           section_heading?: string | null
           truncated?: boolean
           wine_type?: string | null
@@ -319,6 +325,8 @@ export type Database = {
           raw_response: Json | null
           restaurant_name: string | null
           scanned_at: string
+          skipped_categories: Json
+          skipped_count: number
           user_id: string
         }
         Insert: {
@@ -328,6 +336,8 @@ export type Database = {
           raw_response?: Json | null
           restaurant_name?: string | null
           scanned_at?: string
+          skipped_categories?: Json
+          skipped_count?: number
           user_id: string
         }
         Update: {
@@ -337,6 +347,8 @@ export type Database = {
           raw_response?: Json | null
           restaurant_name?: string | null
           scanned_at?: string
+          skipped_categories?: Json
+          skipped_count?: number
           user_id?: string
         }
         Relationships: []

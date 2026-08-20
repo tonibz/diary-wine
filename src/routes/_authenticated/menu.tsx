@@ -91,6 +91,8 @@ function MenuScanPage() {
       let restaurantFromMenu: string | null = null;
       let currency: string | null = null;
       let salvagedPages = 0;
+      let skippedCount = 0;
+      const skippedCategories = new Set<string>();
 
       for (const [i, path] of paths.entries()) {
         setProgress(`Reading page ${i + 1} of ${paths.length}`);
@@ -101,19 +103,26 @@ function MenuScanPage() {
         }
         raws.push(res.raw);
         if (res.salvaged) salvagedPages++;
+        skippedCount += res.skipped_count;
+        for (const c of res.skipped_categories) skippedCategories.add(c);
         restaurantFromMenu ??= res.restaurant_name;
         currency ??= res.currency;
         items.push(...res.items);
       }
 
-      if (!items.length) {
+      // Anything the model returned that clearly describes a cocktail is counted
+      // as skipped too, but still saved flagged.
+      const rejectedCount = items.filter((it) => it.rejected).length;
+      const wines = items.filter((it) => !it.rejected);
+
+      if (!wines.length) {
         throw new Error(
           pageErrors[0] ??
             (paths.length > 1 ? "No wines found on those photos" : "No wines found on that photo"),
         );
       }
 
-      setProgress(`Matching ${items.length} wines to your diary`);
+      setProgress(`Matching ${wines.length} wines to your diary`);
       // Matching must never cost us the parsed list: on failure we still save
       // every wine we read, unmatched.
       let matches: Array<{ wineId: string | null; score: number | null }> = items.map(() => ({
@@ -137,6 +146,8 @@ function MenuScanPage() {
         items,
         currency,
         matches,
+        skippedCount: skippedCount + rejectedCount,
+        skippedCategories: [...skippedCategories],
       });
 
       if (matchingFailed) {
@@ -146,7 +157,7 @@ function MenuScanPage() {
       }
       if (salvagedPages > 0) {
         toast.warning(
-          `One page was very long — I saved the ${items.length} wines I could read. Photograph fewer pages at once for the rest.`,
+          `One page was very long — I saved the ${wines.length} wines I could read. Photograph fewer pages at once for the rest.`,
         );
       }
       if (pageErrors.length) {

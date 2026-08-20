@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { findBestMatches } from "@/lib/wine-match";
 import { withTimeout } from "@/lib/with-timeout";
 
-import type { MenuParsedItem } from "@/lib/menu-parse";
+import type { MenuParsedItem, MenuPrice } from "@/lib/menu-parse";
 
 /**
  * menu_scans / menu_items are user-private tables that hold what a restaurant
@@ -25,6 +25,8 @@ export type MenuItemRow = {
   price: number | null;
   currency: string | null;
   glass_price: number | null;
+  prices: MenuPrice[] | null;
+  rejected: boolean;
   by_the_glass: boolean;
   section_heading: string | null;
   wine_type: string | null;
@@ -41,6 +43,8 @@ export type MenuScanRow = {
   restaurant_name: string | null;
   photo_path: string | null;
   scanned_at: string;
+  skipped_count: number;
+  skipped_categories: string[];
 };
 
 export type DiaryWine = {
@@ -173,10 +177,13 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
 export async function matchItemsToCatalogue(
   items: MenuParsedItem[],
 ): Promise<Array<{ wineId: string | null; score: number | null }>> {
-  const inputs = items.map((it) => ({ name: it.name ?? "", producer: it.producer ?? null }));
+  const inputs = items.map((it) => ({
+    name: it.rejected ? "" : it.name ?? "",
+    producer: it.producer ?? null,
+  }));
   const results = await withTimeout(findBestMatches(inputs), 30_000, "Matching timed out");
   return items.map((it, i) => {
-    const m = it.name ? results[i] : null;
+    const m = it.name && !it.rejected ? results[i] : null;
     if (!m) return { wineId: null, score: null };
     return { wineId: m.score >= CONFIDENT_MATCH ? m.id : null, score: m.score };
   });
@@ -315,6 +322,8 @@ export async function saveMenuScan(args: {
   items: MenuParsedItem[];
   currency: string | null;
   matches: Array<{ wineId: string | null; score: number | null }>;
+  skippedCount?: number;
+  skippedCategories?: string[];
 }): Promise<{ scan: MenuScanRow; items: MenuItemRow[] }> {
   const { data: scan, error } = await menuDb
     .from("menu_scans")
@@ -323,8 +332,10 @@ export async function saveMenuScan(args: {
       photo_path: args.photoPath,
       restaurant_name: args.restaurantName,
       raw_response: args.raw,
+      skipped_count: args.skippedCount ?? 0,
+      skipped_categories: args.skippedCategories ?? [],
     })
-    .select("id, restaurant_name, photo_path, scanned_at")
+    .select("id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories")
     .single();
   if (error) throw error;
 
@@ -339,6 +350,10 @@ export async function saveMenuScan(args: {
     price: it.price,
     currency: args.currency,
     glass_price: it.glass_price,
+    prices: it.prices.length ? it.prices : null,
+    // Non-wine lines are kept, flagged, and never shown, so the filter's
+    // accuracy can be measured against what the model returned.
+    rejected: it.rejected,
     by_the_glass: it.by_the_glass,
     section_heading: it.section_heading,
     wine_type: it.wine_type,
@@ -356,10 +371,11 @@ export async function saveMenuScan(args: {
       .from("menu_items")
       .insert(rows)
       .select(
-        "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
+        "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
       );
     if (itemErr) throw itemErr;
-    items = (inserted ?? []) as MenuItemRow[];
+    // Rejected lines stay in the database but never reach the review screen.
+    items = ((inserted ?? []) as MenuItemRow[]).filter((r) => !r.rejected);
     items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }
   return { scan: scan as MenuScanRow, items };
@@ -370,16 +386,17 @@ export async function loadMenuScan(
 ): Promise<{ scan: MenuScanRow; items: MenuItemRow[] } | null> {
   const { data: scan } = await menuDb
     .from("menu_scans")
-    .select("id, restaurant_name, photo_path, scanned_at")
+    .select("id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories")
     .eq("id", scanId)
     .maybeSingle();
   if (!scan) return null;
   const { data: items } = await menuDb
     .from("menu_items")
     .select(
-      "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
+      "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
     )
     .eq("menu_scan_id", scanId)
+    .eq("rejected", false)
     .order("position", { ascending: true });
   return { scan: scan as MenuScanRow, items: (items ?? []) as MenuItemRow[] };
 }
@@ -387,13 +404,15 @@ export async function loadMenuScan(
 export async function listMenuScans(): Promise<Array<MenuScanRow & { item_count: number }>> {
   const { data } = await menuDb
     .from("menu_scans")
-    .select("id, restaurant_name, photo_path, scanned_at, menu_items(count)")
+    .select("id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories, menu_items(count)")
     .order("scanned_at", { ascending: false });
   return ((data ?? []) as Array<Record<string, unknown>>).map((s) => ({
     id: s.id as string,
     restaurant_name: (s.restaurant_name as string) ?? null,
     photo_path: (s.photo_path as string) ?? null,
     scanned_at: s.scanned_at as string,
+    skipped_count: Number(s.skipped_count ?? 0),
+    skipped_categories: (s.skipped_categories as string[] | null) ?? [],
     item_count: Number(
       (s.menu_items as Array<{ count: number }> | undefined)?.[0]?.count ?? 0,
     ),
