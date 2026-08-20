@@ -1,10 +1,15 @@
 /** Shapes and cleanup shared by the menu reader and the client. */
+export type MenuPriceSize = "glass" | "carafe" | "half_bottle" | "bottle" | "unknown";
+
+export type MenuPrice = { size: MenuPriceSize; amount: number };
+
 export type MenuParsedItem = {
   raw_text: string | null;
   name: string | null;
   producer: string | null;
   vintage: number | null;
   grapes: string[];
+  prices: MenuPrice[];
   price: number | null;
   glass_price: number | null;
   by_the_glass: boolean;
@@ -12,9 +17,33 @@ export type MenuParsedItem = {
   section_heading: string | null;
   confidence: number | null;
   truncated: boolean;
+  /** true when the line describes a cocktail, spirit, beer or other non-wine */
+  rejected: boolean;
 };
 
 const WINE_TYPES = ["red", "white", "rose", "sparkling", "dessert", "fortified"];
+
+const PRICE_SIZES: MenuPriceSize[] = ["glass", "carafe", "half_bottle", "bottle", "unknown"];
+
+/**
+ * Last line of defence: the model is told to skip non-wine, but a cocktail that
+ * slipped through is recognisable from the spirits and mixers in its description.
+ */
+const NON_WINE_WORDS =
+  /\b(vodka|gin|rum|rhum|tequila|mezcal|whisk(?:e)?y|bourbon|rye|scotch|cognac|armagnac|brandy|absinthe|aperol|campari|bitters?|amaro|liqueu?r|schnapps|sake|soju|cachaca|cachaça|pisco|triple sec|curacao|curaçao|soda|tonic|juice|puree|purée|syrup|sirop|cordial|lager|pilsner|\bipa\b|stout|ale\b|cerveza|birra|cider|seltzer|kombucha|espresso|coffee|cold brew)\b/i;
+
+export function isNonWineText(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return NON_WINE_WORDS.test(text);
+}
+
+/** Any of the printed text that could betray a cocktail. */
+export function looksNonWine(item: MenuParsedItem): boolean {
+  return (
+    isNonWineText(item.raw_text) || isNonWineText(item.name) || isNonWineText(item.producer)
+  );
+}
+
 
 const SYMBOL_CURRENCY: Record<string, string> = {
   "€": "EUR",
