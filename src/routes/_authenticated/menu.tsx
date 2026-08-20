@@ -236,18 +236,32 @@ function MenuScanPage() {
         onChange={(e) => addFiles(e.target.files)}
       />
 
+      {failure && (
+        <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
+          <p className="flex gap-2 text-sm text-foreground">
+            <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-destructive" />
+            <span>{failure}</span>
+          </p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={onRead}>
+            <RotateCcw size={14} /> Try again
+          </Button>
+        </div>
+      )}
+
       <Button className="w-full mt-6" disabled={!pages.length || reading} onClick={onRead}>
         {reading ? (
           <>
-            <Loader2 size={16} className="animate-spin" /> Reading the list…
+            <Loader2 size={16} className="animate-spin" />
+            {progress ?? "Reading the list…"}
           </>
         ) : (
           <>
-            <ScrollText size={16} /> Read this list
+            <ScrollText size={16} /> {failure ? "Read this list again" : "Read this list"}
             {pages.length > 1 ? ` (${pages.length} pages)` : ""}
           </>
         )}
       </Button>
+
       <p className="text-xs text-muted-foreground mt-3 text-center">
         Nothing here goes into your diary until you say you ordered something.
       </p>
