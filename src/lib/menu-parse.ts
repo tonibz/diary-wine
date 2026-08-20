@@ -60,8 +60,13 @@ function normaliseWineType(value: unknown): string | null {
     .toLowerCase()
     .trim();
   if (WINE_TYPES.includes(t)) return t;
-  if (t.startsWith("ros") || t.includes("orange")) return "rose";
-  if (t.includes("champagne") || t.includes("cava") || t.includes("spark")) return "sparkling";
+  // Section headings across the languages these lists are printed in.
+  if (/\bros(e|at|ado|ados)\b|rosado|rosat|orange/.test(t)) return "rose";
+  if (/champagne|cava|espumos|burbuja|spark|cremant|prosecco|escumos/.test(t)) return "sparkling";
+  if (/blanc|blanco|bianco|white|weiss/.test(t)) return "white";
+  if (/tinto|negre|rouge|rosso|\bred\b|rot/.test(t)) return "red";
+  if (/dulce|dolc|dessert|postre|moscatel|sauternes/.test(t)) return "dessert";
+  if (/jerez|sherry|oporto|\bport\b|fortified|generoso|vermut/.test(t)) return "fortified";
   return null;
 }
 
