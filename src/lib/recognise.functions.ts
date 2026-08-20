@@ -125,6 +125,7 @@ Rules. If something is not legible on the label, return null instead of guessing
         photo_path: data.photoPath,
         model_name: modelName,
         raw_response: raw as never,
+        inferred_fields: (parsed?.inferred_fields ?? null) as never,
         confidence: parsed?.confidence ?? null,
       })
       .select("id")

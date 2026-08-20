@@ -17,6 +17,12 @@ import {
   type WineCandidate,
   type WineDraft,
 } from "@/lib/wine-match";
+import {
+  buildFieldSources,
+  rowDataSource,
+  diffCorrections,
+  mergeFieldSources,
+} from "@/lib/field-provenance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,6 +100,10 @@ function AddPage() {
   } | null>(null);
 
   const tasted = status === "tasted";
+
+  // Fields the model worked out rather than read — the ones most worth checking.
+  const inferredSet = new Set(inferredFields.map((f) => f.trim().toLowerCase()));
+  const check = (field: string) => (inferredSet.has(field) ? "Guessed — please check" : undefined);
 
   const bottleFieldsFilled = [
     bottle.name, bottle.producer, bottle.appellation, bottle.region, bottle.country,
@@ -225,6 +235,22 @@ function AddPage() {
   }
 
   function buildDraft(): WineDraft {
+    const userValues: Record<string, unknown> = {
+      name: bottle.name.trim(),
+      producer: bottle.producer.trim(),
+      appellation: bottle.appellation.trim(),
+      region: bottle.region.trim(),
+      country: bottle.country.trim(),
+      vintage: bottle.vintage ? Number(bottle.vintage) : null,
+      wine_type: bottle.wine_type,
+      grapes: bottle.grapes,
+      alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
+    };
+    const sources = buildFieldSources(
+      modelData as unknown as Record<string, unknown> | null,
+      userValues,
+      inferredFields,
+    );
     return {
       name: bottle.name.trim(),
       producer: bottle.producer.trim() || null,
@@ -234,7 +260,8 @@ function AddPage() {
       wine_type: bottle.wine_type || null,
       grapes: bottle.grapes,
       label_image_url: null, // privacy: never contribute personal photos to shared catalogue
-      data_source: dataSource,
+      data_source: rowDataSource(sources),
+      field_sources: sources,
       vintage: bottle.vintage ? Number(bottle.vintage) : null,
       alcohol_percent: bottle.alcohol_percent ? Number(bottle.alcohol_percent) : null,
     };
@@ -253,6 +280,7 @@ function AddPage() {
         grapes: draft.grapes,
         label_image_url: draft.label_image_url,
         data_source: draft.data_source as never,
+        field_sources: draft.field_sources as never,
         created_by: uid,
       })
       .select("id")
@@ -302,28 +330,23 @@ function AddPage() {
     if (entryErr) throw entryErr;
 
     if (recognitionId && modelData) {
-      const diffs: Record<string, { model: unknown; user: unknown }> = {};
-      const compare: Array<[keyof RecognitionData, unknown]> = [
-        ["name", draft.name],
-        ["producer", draft.producer],
-        ["appellation", draft.appellation],
-        ["region", draft.region],
-        ["country", draft.country],
-        ["vintage", draft.vintage],
-        ["wine_type", draft.wine_type],
-        ["grapes", draft.grapes],
-        ["alcohol_percent", draft.alcohol_percent],
-      ];
-      for (const [k, userVal] of compare) {
-        const modelVal = (modelData as unknown as Record<string, unknown>)[k];
-        if (JSON.stringify(modelVal ?? null) !== JSON.stringify(userVal ?? null)) {
-          diffs[k as string] = { model: modelVal ?? null, user: userVal ?? null };
-        }
-      }
+      const m = modelData as unknown as Record<string, unknown>;
+      // Only genuine differences count: a model null against an empty array is not a correction.
+      const diffs = diffCorrections([
+        ["name", m.name, draft.name],
+        ["producer", m.producer, draft.producer],
+        ["appellation", m.appellation, draft.appellation],
+        ["region", m.region, draft.region],
+        ["country", m.country, draft.country],
+        ["vintage", m.vintage, draft.vintage],
+        ["wine_type", m.wine_type, draft.wine_type],
+        ["grapes", m.grapes, draft.grapes],
+        ["alcohol_percent", m.alcohol_percent, draft.alcohol_percent],
+      ]);
       await supabase.from("recognitions")
         .update({
           entry_id: entry.id,
-          corrected_fields: (Object.keys(diffs).length ? diffs : null) as never,
+          corrected_fields: diffs as never,
         })
         .eq("id", recognitionId);
     }
@@ -349,6 +372,7 @@ function AddPage() {
 
       if (candidate && candidate.score >= 0.85) {
         await fillEmptyWineFields(candidate.id, draft);
+        await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
         await finalizeSave(candidate.id, draft, uid, "auto_merge", candidate);
         return;
       }
@@ -375,6 +399,7 @@ function AddPage() {
       const uid = userRes.user!.id;
       if (sameWine) {
         await fillEmptyWineFields(candidate.id, draft);
+        await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
         await finalizeSave(candidate.id, draft, uid, "user_merge", candidate);
       } else {
         const wineId = await insertNewWine(draft, uid);
@@ -535,16 +560,16 @@ function AddPage() {
           <span className="text-xs text-muted-foreground">{bottleFieldsFilled} of 9 filled in</span>
         </div>
 
-        <Field label="Name *"><Input value={bottle.name} onChange={(e) => setBottle({ ...bottle, name: e.target.value })} /></Field>
-        <Field label="Producer"><Input value={bottle.producer} onChange={(e) => setBottle({ ...bottle, producer: e.target.value })} /></Field>
-        <Field label="Appellation"><Input value={bottle.appellation} onChange={(e) => setBottle({ ...bottle, appellation: e.target.value })} /></Field>
+        <Field label="Name *" hint={check("name")}><Input value={bottle.name} onChange={(e) => setBottle({ ...bottle, name: e.target.value })} /></Field>
+        <Field label="Producer" hint={check("producer")}><Input value={bottle.producer} onChange={(e) => setBottle({ ...bottle, producer: e.target.value })} /></Field>
+        <Field label="Appellation" hint={check("appellation")}><Input value={bottle.appellation} onChange={(e) => setBottle({ ...bottle, appellation: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Region"><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
-          <Field label="Country"><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
+          <Field label="Region" hint={check("region")}><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
+          <Field label="Country" hint={check("country")}><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Vintage"><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
-          <Field label="Type">
+          <Field label="Vintage" hint={check("vintage")}><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
+          <Field label="Type" hint={check("wine_type")}>
             <Select value={bottle.wine_type} onValueChange={(v) => setBottle({ ...bottle, wine_type: v })}>
               <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
               <SelectContent>
@@ -558,7 +583,7 @@ function AddPage() {
             </Select>
           </Field>
         </div>
-        <Field label="Grapes">
+        <Field label="Grapes" hint={check("grapes")}>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {bottle.grapes.map((g) => (
               <span key={g} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-1 text-xs">
@@ -579,7 +604,7 @@ function AddPage() {
             <Button type="button" variant="secondary" onClick={addGrape}>Add</Button>
           </div>
         </Field>
-        <Field label="Alcohol %"><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
+        <Field label="Alcohol %" hint={check("alcohol_percent")}><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
       </section>
 
       {tasted ? (

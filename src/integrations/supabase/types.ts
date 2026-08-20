@@ -154,6 +154,7 @@ export type Database = {
           created_at: string
           entry_id: string | null
           id: string
+          inferred_fields: Json | null
           model_name: string | null
           photo_path: string
           raw_response: Json | null
@@ -165,6 +166,7 @@ export type Database = {
           created_at?: string
           entry_id?: string | null
           id?: string
+          inferred_fields?: Json | null
           model_name?: string | null
           photo_path: string
           raw_response?: Json | null
@@ -176,6 +178,7 @@ export type Database = {
           created_at?: string
           entry_id?: string | null
           id?: string
+          inferred_fields?: Json | null
           model_name?: string | null
           photo_path?: string
           raw_response?: Json | null
@@ -339,6 +342,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           data_source: Database["public"]["Enums"]["wine_data_source"]
+          field_sources: Json
           grapes: string[] | null
           id: string
           label_image_url: string | null
@@ -355,6 +359,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_source?: Database["public"]["Enums"]["wine_data_source"]
+          field_sources?: Json
           grapes?: string[] | null
           id?: string
           label_image_url?: string | null
@@ -371,6 +376,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_source?: Database["public"]["Enums"]["wine_data_source"]
+          field_sources?: Json
           grapes?: string[] | null
           id?: string
           label_image_url?: string | null
