@@ -99,6 +99,61 @@ function normaliseWineType(value: unknown): string | null {
   return null;
 }
 
+/**
+ * A heading is only usable when it names exactly one kind of drink:
+ * "SAKE, WHITE & ROSÉ BY THE GLASS" tells us nothing about any single line.
+ */
+function headingWineType(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const t = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (/sake|soju|beer|cerveza|birra|cocktail|coctel|cider|spirit|gin|vodka|whisk/.test(t)) {
+    return null;
+  }
+  const tests: Array<[string, RegExp]> = [
+    ["white", /blanc|blanco|bianco|white|weiss/],
+    ["red", /tinto|negre|rouge|rosso|\bred\b|rot/],
+    ["rose", /\bros(e|at|ado|ados)\b|rosado|rosat|orange/],
+    ["sparkling", /champagne|cava|espumos|burbuja|spark|cremant|prosecco|escumos/],
+    ["dessert", /dulce|dolc|dessert|postre|moscatel|sauternes/],
+    ["fortified", /jerez|sherry|oporto|\bport\b|fortified|generoso/],
+  ];
+  const hits = tests.filter(([, re]) => re.test(t)).map(([k]) => k);
+  return hits.length === 1 ? hits[0]! : null;
+}
+
+function normalisePrices(value: unknown): MenuPrice[] {
+  if (!Array.isArray(value)) return [];
+  const out: MenuPrice[] = [];
+  for (const p of value) {
+    if (typeof p === "number" || typeof p === "string") {
+      const amount = toNumber(p);
+      if (amount !== null) out.push({ size: "unknown", amount });
+      continue;
+    }
+    if (!p || typeof p !== "object") continue;
+    const row = p as Record<string, unknown>;
+    const amount = toNumber(row.amount ?? row.price);
+    if (amount === null) continue;
+    const rawSize = typeof row.size === "string" ? row.size.trim().toLowerCase() : "";
+    const size = (PRICE_SIZES as string[]).includes(rawSize)
+      ? (rawSize as MenuPriceSize)
+      : /quartino|carafe/.test(rawSize)
+        ? "carafe"
+        : /half/.test(rawSize)
+          ? "half_bottle"
+          : /glass|copa|verre/.test(rawSize)
+            ? "glass"
+            : /bottle|botella|ampolla/.test(rawSize)
+              ? "bottle"
+              : "unknown";
+    out.push({ size, amount });
+  }
+  return out;
+}
+
 export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
   const vintageRaw = toNumber(it.vintage);
@@ -117,22 +172,37 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
           .filter(Boolean)
       : [];
 
-  const price = toNumber(it.price);
-  const glass = toNumber(it.glass_price);
+  const prices = normalisePrices(it.prices);
+  const amounts = prices.map((p) => p.amount);
+  const bottle = prices.find((p) => p.size === "bottle")?.amount ?? null;
+  const glassSized = prices.find((p) => p.size === "glass")?.amount ?? null;
+
+  // The largest is the bottle and the smallest the glass, as printed.
+  const price = toNumber(it.price) ?? bottle ?? (amounts.length ? Math.max(...amounts) : null);
+  const glass =
+    toNumber(it.glass_price) ??
+    glassSized ??
+    (amounts.length > 1 ? Math.min(...amounts) : null);
+
   const confidence = toNumber(it.confidence);
 
-  return {
+  const item: MenuParsedItem = {
     raw_text: str(it.raw_text),
     name: str(it.name),
     producer: str(it.producer),
     vintage,
     grapes,
+    prices: prices.length ? prices : price !== null ? [{ size: "unknown", amount: price }] : [],
     price,
     glass_price: glass,
     by_the_glass: it.by_the_glass === true || glass !== null,
-    wine_type: normaliseWineType(it.wine_type) ?? normaliseWineType(it.section_heading),
+    wine_type: normaliseWineType(it.wine_type) ?? headingWineType(it.section_heading),
     section_heading: str(it.section_heading),
     confidence: confidence !== null ? Math.min(1, Math.max(0, confidence)) : null,
     truncated: it.truncated === true,
+    rejected: false,
   };
+  item.rejected = looksNonWine(item);
+  return item;
+
 }
