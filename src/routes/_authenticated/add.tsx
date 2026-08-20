@@ -273,6 +273,7 @@ function AddPage() {
           }));
           setInferredFields(result.data.inferred_fields ?? []);
           setDataSource(result.data.inferred_fields?.length ? "inferred" : "label");
+          await runReferenceCheck(result.recognition_id ?? null, result.data);
         }
       }
     } catch (e) {
