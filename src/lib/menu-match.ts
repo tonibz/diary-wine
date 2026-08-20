@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { findBestMatch } from "@/lib/wine-match";
-import type { MenuParsedItem } from "@/lib/read-menu.functions";
+import type { MenuParsedItem } from "@/lib/menu-parse";
 
 /**
  * menu_scans / menu_items are user-private tables that hold what a restaurant
@@ -22,7 +22,13 @@ export type MenuItemRow = {
   parsed_vintage: number | null;
   price: number | null;
   currency: string | null;
+  glass_price: number | null;
   by_the_glass: boolean;
+  section_heading: string | null;
+  wine_type: string | null;
+  grapes: string[] | null;
+  item_confidence: number | null;
+  truncated: boolean;
   matched_wine_id: string | null;
   match_score: number | null;
   position: number | null;
@@ -316,6 +322,7 @@ export async function saveMenuScan(args: {
   restaurantName: string | null;
   raw: unknown;
   items: MenuParsedItem[];
+  currency: string | null;
   matches: Array<{ wineId: string | null; score: number | null }>;
 }): Promise<{ scan: MenuScanRow; items: MenuItemRow[] }> {
   const { data: scan, error } = await menuDb
@@ -339,8 +346,14 @@ export async function saveMenuScan(args: {
     // Prices are always stored, even when the wine matches nothing and nobody
     // orders it: only the moment of scanning can capture what a list charged.
     price: it.price,
-    currency: it.currency,
+    currency: args.currency,
+    glass_price: it.glass_price,
     by_the_glass: it.by_the_glass,
+    section_heading: it.section_heading,
+    wine_type: it.wine_type,
+    grapes: it.grapes.length ? it.grapes : null,
+    item_confidence: it.confidence,
+    truncated: it.truncated,
     matched_wine_id: args.matches[i]?.wineId ?? null,
     match_score: args.matches[i]?.score ?? null,
     position: i,
@@ -352,7 +365,7 @@ export async function saveMenuScan(args: {
       .from("menu_items")
       .insert(rows)
       .select(
-        "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, currency, by_the_glass, matched_wine_id, match_score, position",
+        "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
       );
     if (itemErr) throw itemErr;
     items = (inserted ?? []) as MenuItemRow[];
@@ -373,7 +386,7 @@ export async function loadMenuScan(
   const { data: items } = await menuDb
     .from("menu_items")
     .select(
-      "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, currency, by_the_glass, matched_wine_id, match_score, position",
+      "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
     )
     .eq("menu_scan_id", scanId)
     .order("position", { ascending: true });
