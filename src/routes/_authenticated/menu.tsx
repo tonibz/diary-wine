@@ -18,7 +18,8 @@ import { compressImage } from "@/lib/image-compress";
 import { readMenuPage } from "@/lib/read-menu.functions";
 import type { JsonValue } from "@/lib/read-menu.functions";
 import type { MenuParsedItem } from "@/lib/menu-parse";
-import { matchItemsToCatalogue, saveMenuScan } from "@/lib/menu-match";
+import { matchStoredItems, saveMenuScan } from "@/lib/menu-match";
+import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,16 +52,44 @@ function MenuScanPage() {
   const galleryRef = useRef<HTMLInputElement>(null);
   const [pages, setPages] = useState<Page[]>([]);
   const [restaurant, setRestaurant] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+  const [venueNote, setVenueNote] = useState("");
+  const [placeFromPhoto, setPlaceFromPhoto] = useState(false);
   const [reading, setReading] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   function addFiles(files: FileList | null) {
     if (!files) return;
-    const next = Array.from(files)
-      .slice(0, 8 - pages.length)
-      .map((file) => ({ file, preview: URL.createObjectURL(file) }));
-    setPages((p) => [...p, ...next]);
+    const chosen = Array.from(files).slice(0, 8 - pages.length);
+    setPages((p) => [...p, ...chosen.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+    if (chosen[0]) void prefillPlace(chosen[0]);
+  }
+
+  /** City/country from the photo's GPS, only when the user opted in. */
+  async function prefillPlace(file: File) {
+    if (city || country) return;
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("gps_lookup_enabled")
+        .eq("id", uid)
+        .maybeSingle();
+      if (!profile?.gps_lookup_enabled) return;
+      const meta = await readPhotoMeta(file);
+      if (!meta.gps) return;
+      const place = await reverseGeocodeCity(meta.gps.lat, meta.gps.lon);
+      if (!place.city && !place.country) return;
+      setCity((c) => c || place.city || "");
+      setCountry((c) => c || place.country || "");
+      setPlaceFromPhoto(true);
+    } catch {
+      // A missing location is never a reason to block a scan.
+    }
   }
 
   async function onRead() {
@@ -122,39 +151,34 @@ function MenuScanPage() {
         );
       }
 
-      setProgress(`Matching ${wines.length} wines to your diary`);
-      // Matching must never cost us the parsed list: on failure we still save
-      // every wine we read, unmatched.
-      let matches: Array<{ wineId: string | null; score: number | null }> = items.map(() => ({
-        wineId: null,
-        score: null,
-      }));
-      let matchingFailed = false;
-      try {
-        matches = await matchItemsToCatalogue(items);
-      } catch (err) {
-        console.error("Menu matching failed", err);
-        matchingFailed = true;
-      }
-
+      // Save FIRST. The prices on this list exist nowhere else, so storage must
+      // not depend on the diary, on find_wine_match, or on anything downstream.
       setProgress("Saving the list");
-      const { scan } = await saveMenuScan({
+      const { scan, items: stored } = await saveMenuScan({
         userId: uid,
         photoPath: paths[0] ?? null,
         restaurantName: restaurant.trim() || restaurantFromMenu,
         raw: { pages: raws } as unknown,
         items,
         currency,
-        matches,
+        city: city.trim() || null,
+        country: country.trim() || null,
+        venueNote: venueNote.trim() || null,
         skippedCount: skippedCount + rejectedCount,
         skippedCategories: [...skippedCategories],
       });
 
-      if (matchingFailed) {
+      // Matching second, purely as enrichment over rows that already exist.
+      setProgress(`Matching ${stored.length} wines to your diary`);
+      try {
+        await matchStoredItems(stored);
+      } catch (err) {
+        console.error("Menu matching failed", err);
         toast.error(
-          "Couldn't match these against your diary. The wines were read fine — showing the full list.",
+          "Couldn't match these against your diary. The list and its prices are saved — you can try matching again.",
         );
       }
+
       if (salvagedPages > 0) {
         toast.warning(
           `One page was very long — I saved the ${wines.length} wines I could read. Photograph fewer pages at once for the rest.`,
@@ -173,6 +197,7 @@ function MenuScanPage() {
       setProgress(null);
     }
   }
+
 
   /** Never let a page failure escape as a swallowed exception. */
   async function readMenuPageSafe(pageNumber: number, path: string) {
@@ -216,16 +241,60 @@ function MenuScanPage() {
         </p>
       </header>
 
-      <div className="space-y-2 mb-5">
-        <Label htmlFor="restaurant">Restaurant (optional)</Label>
-        <Input
-          id="restaurant"
-          value={restaurant}
-          onChange={(e) => setRestaurant(e.target.value)}
-          placeholder="Where are you?"
-          className="bg-card"
-        />
+      <div className="space-y-4 mb-5">
+        <div className="space-y-2">
+          <Label htmlFor="restaurant">Restaurant (optional)</Label>
+          <Input
+            id="restaurant"
+            value={restaurant}
+            onChange={(e) => setRestaurant(e.target.value)}
+            placeholder="Where are you?"
+            className="bg-card"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value);
+                setPlaceFromPhoto(false);
+              }}
+              placeholder="Optional"
+              className="bg-card"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              value={country}
+              onChange={(e) => {
+                setCountry(e.target.value);
+                setPlaceFromPhoto(false);
+              }}
+              placeholder="Optional"
+              className="bg-card"
+            />
+          </div>
+        </div>
+        {placeFromPhoto && (
+          <p className="text-xs text-muted-foreground">From the photo's location — edit if wrong.</p>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="venue-note">Kind of place</Label>
+          <Input
+            id="venue-note"
+            value={venueNote}
+            onChange={(e) => setVenueNote(e.target.value)}
+            placeholder="Wine bar, fine dining, trattoria…"
+            className="bg-card"
+          />
+        </div>
       </div>
+
 
       {pages.length > 0 && (
         <ul className="grid grid-cols-3 gap-2 mb-5">

@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RotateCcw, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
-import { loadMenuScan, type MenuItemRow, type MenuScanRow } from "@/lib/menu-match";
+import { loadMenuScan, rematchScan, type MenuItemRow, type MenuScanRow } from "@/lib/menu-match";
 import { MenuResults } from "@/components/MenuResults";
 import { withTimeout } from "@/lib/with-timeout";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ function MenuScanDetail() {
   const [scan, setScan] = useState<MenuScanRow | null>(null);
   const [items, setItems] = useState<MenuItemRow[] | null>(null);
   const [missing, setMissing] = useState(false);
+  const [rematching, setRematching] = useState(false);
 
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -49,6 +51,24 @@ function MenuScanDetail() {
       }
     })();
   }, [id]);
+
+  // Nothing matched at all: the list is stored, matching simply never landed.
+  const neverMatched = !!items && items.length > 0 && items.every((i) => i.match_score == null);
+
+  async function onRematch() {
+    setRematching(true);
+    try {
+      const updated = await rematchScan(id);
+      setItems(updated);
+      toast.success("Matched against your diary.");
+    } catch (err) {
+      console.error("Re-matching failed", err);
+      toast.error("Still couldn't match these. The list and its prices are safe.");
+    } finally {
+      setRematching(false);
+    }
+  }
+
 
 
   return (
@@ -78,6 +98,10 @@ function MenuScanDetail() {
             <p className="text-sm text-muted-foreground mt-1">
               {format(new Date(scan.scanned_at), "d MMM yyyy")} · {items.length}{" "}
               {items.length === 1 ? "wine" : "wines"} read
+              {[scan.city, scan.country].filter(Boolean).length
+                ? ` · ${[scan.city, scan.country].filter(Boolean).join(", ")}`
+                : ""}
+              {scan.venue_note ? ` · ${scan.venue_note}` : ""}
             </p>
             {scan.skipped_count > 0 && (
               <p className="text-xs text-muted-foreground mt-2">
@@ -88,7 +112,32 @@ function MenuScanDetail() {
                   : ""}
               </p>
             )}
+            {neverMatched && (
+              <div className="mt-3 rounded-2xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
+                  Matching against your diary wasn't available — the list and its prices are saved.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  disabled={rematching}
+                  onClick={onRematch}
+                >
+                  {rematching ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Matching…
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw size={14} /> Try matching again
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </header>
+
 
           <MenuResults items={items} restaurantName={scan.restaurant_name} userId={user.id} />
         </>

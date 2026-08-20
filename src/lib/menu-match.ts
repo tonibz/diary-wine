@@ -45,7 +45,13 @@ export type MenuScanRow = {
   scanned_at: string;
   skipped_count: number;
   skipped_categories: string[];
+  /** price context: what a bottle costs means nothing without where and in what */
+  currency: string | null;
+  city: string | null;
+  country: string | null;
+  venue_note: string | null;
 };
+
 
 export type DiaryWine = {
   entryId: string;
@@ -173,21 +179,8 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
   };
 }
 
-/** Wine-level trigram match for every parsed line — one database round trip. */
-export async function matchItemsToCatalogue(
-  items: MenuParsedItem[],
-): Promise<Array<{ wineId: string | null; score: number | null }>> {
-  const inputs = items.map((it) => ({
-    name: it.rejected ? "" : it.name ?? "",
-    producer: it.producer ?? null,
-  }));
-  const results = await withTimeout(findBestMatches(inputs), 30_000, "Matching timed out");
-  return items.map((it, i) => {
-    const m = it.name && !it.rejected ? results[i] : null;
-    if (!m) return { wineId: null, score: null };
-    return { wineId: m.score >= CONFIDENT_MATCH ? m.id : null, score: m.score };
-  });
-}
+
+
 
 
 function textOf(item: MenuItemRow) {
@@ -313,7 +306,31 @@ export async function loadLinkedWines(ids: string[]): Promise<Map<string, DiaryW
   return map;
 }
 
-/** Persist the scan and every parsed line, prices included, matched or not. */
+const SCAN_COLS =
+  "id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note";
+const ITEM_COLS =
+  "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
+
+function asScan(row: Record<string, unknown>): MenuScanRow {
+  return {
+    id: row.id as string,
+    restaurant_name: (row.restaurant_name as string) ?? null,
+    photo_path: (row.photo_path as string) ?? null,
+    scanned_at: row.scanned_at as string,
+    skipped_count: Number(row.skipped_count ?? 0),
+    skipped_categories: (row.skipped_categories as string[] | null) ?? [],
+    currency: (row.currency as string) ?? null,
+    city: (row.city as string) ?? null,
+    country: (row.country as string) ?? null,
+    venue_note: (row.venue_note as string) ?? null,
+  };
+}
+
+/**
+ * Persist the scan and every parsed line, prices included. This runs BEFORE any
+ * matching: the prices on a list can only be captured at the moment it was
+ * photographed, so storage must never depend on the diary or on find_wine_match.
+ */
 export async function saveMenuScan(args: {
   userId: string;
   photoPath: string | null;
@@ -321,7 +338,9 @@ export async function saveMenuScan(args: {
   raw: unknown;
   items: MenuParsedItem[];
   currency: string | null;
-  matches: Array<{ wineId: string | null; score: number | null }>;
+  city?: string | null;
+  country?: string | null;
+  venueNote?: string | null;
   skippedCount?: number;
   skippedCategories?: string[];
 }): Promise<{ scan: MenuScanRow; items: MenuItemRow[] }> {
@@ -329,18 +348,23 @@ export async function saveMenuScan(args: {
     .from("menu_scans")
     .insert({
       user_id: args.userId,
+      scanned_by: args.userId,
       photo_path: args.photoPath,
       restaurant_name: args.restaurantName,
       raw_response: args.raw,
+      currency: args.currency,
+      city: args.city ?? null,
+      country: args.country ?? null,
+      venue_note: args.venueNote ?? null,
       skipped_count: args.skippedCount ?? 0,
       skipped_categories: args.skippedCategories ?? [],
     })
-    .select("id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories")
+    .select(SCAN_COLS)
     .single();
   if (error) throw error;
 
   const rows = args.items.map((it, i) => ({
-    menu_scan_id: (scan as MenuScanRow).id,
+    menu_scan_id: (scan as { id: string }).id,
     raw_text: it.raw_text,
     parsed_name: it.name,
     parsed_producer: it.producer,
@@ -360,8 +384,9 @@ export async function saveMenuScan(args: {
     grapes: it.grapes.length ? it.grapes : null,
     item_confidence: it.confidence,
     truncated: it.truncated,
-    matched_wine_id: args.matches[i]?.wineId ?? null,
-    match_score: args.matches[i]?.score ?? null,
+    // Matching is a later enrichment step; these start empty on purpose.
+    matched_wine_id: null,
+    match_score: null,
     position: i,
   }));
 
@@ -370,15 +395,55 @@ export async function saveMenuScan(args: {
     const { data: inserted, error: itemErr } = await menuDb
       .from("menu_items")
       .insert(rows)
-      .select(
-        "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
-      );
+      .select(ITEM_COLS);
     if (itemErr) throw itemErr;
     // Rejected lines stay in the database but never reach the review screen.
     items = ((inserted ?? []) as MenuItemRow[]).filter((r) => !r.rejected);
     items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }
-  return { scan: scan as MenuScanRow, items };
+  return { scan: asScan(scan as Record<string, unknown>), items };
+}
+
+/**
+ * Enrichment only: match already-stored rows against the catalogue and write
+ * back matched_wine_id / match_score. Throws on failure — the caller shows the
+ * stored list anyway and offers a retry.
+ */
+export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRow[]> {
+  const candidates = items.filter((i) => !i.rejected && i.parsed_name);
+  if (!candidates.length) return items;
+
+  const results = await withTimeout(
+    findBestMatches(
+      candidates.map((i) => ({ name: i.parsed_name ?? "", producer: i.parsed_producer })),
+    ),
+    30_000,
+    "Matching timed out",
+  );
+
+  const patched = new Map<string, { matched_wine_id: string | null; match_score: number | null }>();
+  candidates.forEach((item, i) => {
+    const m = results[i];
+    patched.set(item.id, {
+      matched_wine_id: m && m.score >= CONFIDENT_MATCH ? m.id : null,
+      match_score: m ? m.score : null,
+    });
+  });
+
+  await Promise.all(
+    [...patched.entries()].map(([id, patch]) =>
+      menuDb.from("menu_items").update(patch).eq("id", id),
+    ),
+  );
+
+  return items.map((i) => (patched.has(i.id) ? { ...i, ...patched.get(i.id)! } : i));
+}
+
+/** Re-run only the matching step against the rows already stored for a scan. */
+export async function rematchScan(scanId: string): Promise<MenuItemRow[]> {
+  const loaded = await loadMenuScan(scanId);
+  if (!loaded) throw new Error("That scan is no longer here");
+  return matchStoredItems(loaded.items);
 }
 
 export async function loadMenuScan(
@@ -386,35 +451,100 @@ export async function loadMenuScan(
 ): Promise<{ scan: MenuScanRow; items: MenuItemRow[] } | null> {
   const { data: scan } = await menuDb
     .from("menu_scans")
-    .select("id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories")
+    .select(SCAN_COLS)
     .eq("id", scanId)
     .maybeSingle();
   if (!scan) return null;
   const { data: items } = await menuDb
     .from("menu_items")
-    .select(
-      "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position",
-    )
+    .select(ITEM_COLS)
     .eq("menu_scan_id", scanId)
     .eq("rejected", false)
     .order("position", { ascending: true });
-  return { scan: scan as MenuScanRow, items: (items ?? []) as MenuItemRow[] };
+  return { scan: asScan(scan as Record<string, unknown>), items: (items ?? []) as MenuItemRow[] };
+}
+
+export async function updateMenuScanContext(
+  scanId: string,
+  patch: { restaurant_name?: string | null; city?: string | null; country?: string | null; venue_note?: string | null },
+): Promise<void> {
+  const { error } = await menuDb.from("menu_scans").update(patch).eq("id", scanId);
+  if (error) throw error;
 }
 
 export async function listMenuScans(): Promise<Array<MenuScanRow & { item_count: number }>> {
   const { data } = await menuDb
     .from("menu_scans")
-    .select("id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories, menu_items(count)")
+    .select(`${SCAN_COLS}, menu_items(count)`)
     .order("scanned_at", { ascending: false });
   return ((data ?? []) as Array<Record<string, unknown>>).map((s) => ({
-    id: s.id as string,
-    restaurant_name: (s.restaurant_name as string) ?? null,
-    photo_path: (s.photo_path as string) ?? null,
-    scanned_at: s.scanned_at as string,
-    skipped_count: Number(s.skipped_count ?? 0),
-    skipped_categories: (s.skipped_categories as string[] | null) ?? [],
-    item_count: Number(
-      (s.menu_items as Array<{ count: number }> | undefined)?.[0]?.count ?? 0,
-    ),
+    ...asScan(s),
+    item_count: Number((s.menu_items as Array<{ count: number }> | undefined)?.[0]?.count ?? 0),
   }));
 }
+
+function csvCell(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/**
+ * Every menu line this user has ever captured, as CSV. RLS scopes the query to
+ * their own scans, so it can never export anyone else's data.
+ */
+export async function exportMenuItemsCsv(): Promise<string> {
+  const { data, error } = await menuDb
+    .from("menu_items")
+    .select(
+      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, rejected, position, menu_scans!inner(restaurant_name, scanned_at, city, country, venue_note)",
+    )
+    .eq("rejected", false)
+    .order("position", { ascending: true });
+  if (error) throw error;
+
+  const header = [
+    "restaurant",
+    "date",
+    "city",
+    "country",
+    "venue_note",
+    "wine_name",
+    "producer",
+    "vintage",
+    "price",
+    "glass_price",
+    "currency",
+    "by_the_glass",
+  ];
+  const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const scan = (r.menu_scans ?? {}) as Record<string, unknown>;
+    return [
+      scan.restaurant_name,
+      scan.scanned_at ? String(scan.scanned_at).slice(0, 10) : "",
+      scan.city,
+      scan.country,
+      scan.venue_note,
+      r.parsed_name,
+      r.parsed_producer,
+      r.parsed_vintage,
+      r.price,
+      r.glass_price,
+      r.currency,
+      r.by_the_glass ? "yes" : "no",
+    ]
+      .map(csvCell)
+      .join(",");
+  });
+  return [header.join(","), ...rows].join("\n");
+}
+
+export function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+

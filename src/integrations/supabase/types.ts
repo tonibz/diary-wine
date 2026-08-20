@@ -319,37 +319,52 @@ export type Database = {
       }
       menu_scans: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
+          currency: string | null
           id: string
           photo_path: string | null
           raw_response: Json | null
           restaurant_name: string | null
           scanned_at: string
+          scanned_by: string | null
           skipped_categories: Json
           skipped_count: number
           user_id: string
+          venue_note: string | null
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
+          currency?: string | null
           id?: string
           photo_path?: string | null
           raw_response?: Json | null
           restaurant_name?: string | null
           scanned_at?: string
+          scanned_by?: string | null
           skipped_categories?: Json
           skipped_count?: number
           user_id: string
+          venue_note?: string | null
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
+          currency?: string | null
           id?: string
           photo_path?: string | null
           raw_response?: Json | null
           restaurant_name?: string | null
           scanned_at?: string
+          scanned_by?: string | null
           skipped_categories?: Json
           skipped_count?: number
           user_id?: string
+          venue_note?: string | null
         }
         Relationships: []
       }

@@ -66,3 +66,26 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string |
     return null;
   }
 }
+
+/**
+ * City and country from GPS, for price comparability. Same Nominatim call as
+ * reverseGeocode but returns the administrative fields rather than a label.
+ */
+export async function reverseGeocodeCity(
+  lat: number,
+  lon: number,
+): Promise<{ city: string | null; country: string | null }> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`;
+    const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+    if (!res.ok) return { city: null, country: null };
+    const json = (await res.json()) as { address?: Record<string, string> };
+    const a = json.address ?? {};
+    return {
+      city: a.city || a.town || a.village || a.municipality || a.county || null,
+      country: a.country || null,
+    };
+  } catch {
+    return { city: null, country: null };
+  }
+}

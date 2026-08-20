@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { ArrowLeft, ScrollText, ChevronRight } from "lucide-react";
+import { ArrowLeft, ScrollText, ChevronRight, Download } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { listMenuScans, type MenuScanRow } from "@/lib/menu-match";
+import { downloadCsv, exportMenuItemsCsv, listMenuScans, type MenuScanRow } from "@/lib/menu-match";
 
 export const Route = createFileRoute("/_authenticated/menus")({
   head: () => ({
@@ -24,6 +25,21 @@ export const Route = createFileRoute("/_authenticated/menus")({
 
 function MenuHistoryPage() {
   const [scans, setScans] = useState<Array<MenuScanRow & { item_count: number }> | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  /** Own data only: RLS scopes the export to this user's scans. */
+  async function onExport() {
+    setExporting(true);
+    try {
+      const csv = await exportMenuItemsCsv();
+      downloadCsv(`wine-diary-menu-prices-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    } catch (err) {
+      console.error("Export failed", err);
+      toast.error("Couldn't build that export. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     listMenuScans().then(setScans).catch(() => setScans([]));
@@ -40,6 +56,11 @@ function MenuHistoryPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Places you've scanned, newest first.
         </p>
+        {!!scans?.length && (
+          <Button variant="outline" size="sm" className="mt-4" disabled={exporting} onClick={onExport}>
+            <Download size={14} /> {exporting ? "Preparing…" : "Export prices (CSV)"}
+          </Button>
+        )}
       </header>
 
       {scans === null ? (
@@ -72,7 +93,8 @@ function MenuHistoryPage() {
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {format(new Date(s.scanned_at), "d MMM yyyy")} · {s.item_count}{" "}
-                    {s.item_count === 1 ? "wine" : "wines"}
+                    {s.item_count === 1 ? "wine" : "wines"} captured
+                    {s.city ? ` · ${s.city}` : ""}
                   </p>
                 </div>
                 <ChevronRight size={18} className="text-muted-foreground flex-shrink-0" />
