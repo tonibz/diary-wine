@@ -99,7 +99,7 @@ export function MenuResults({
     }
   }
 
-  if (!enriched || !ctx) {
+  if (!enriched) {
     return <p className="text-center text-sm text-muted-foreground py-10">Reading the list…</p>;
   }
 
