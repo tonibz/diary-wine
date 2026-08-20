@@ -831,10 +831,39 @@ function AddPage() {
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm">
                 <p className="text-muted-foreground">
-                  We already have a wine that looks very close. Should we log this bottle against
-                  the existing one, or is it actually different? Different years of the same wine
-                  belong together.
+                  Compare the two labels. Should we log this bottle against the existing wine, or is
+                  it actually different? Different years of the same wine belong together.
                 </p>
+                {mergePrompt && (mergePrompt.candidatePhotoUrl || mergePrompt.newPhotoUrl) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Already in the catalogue", url: mergePrompt.candidatePhotoUrl },
+                      { label: "This bottle", url: mergePrompt.newPhotoUrl },
+                    ].map((p) => (
+                      <div key={p.label} className="space-y-1">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {p.label}
+                        </p>
+                        {p.url ? (
+                          <img
+                            src={p.url}
+                            alt={`${p.label} wine label`}
+                            className="w-full h-56 object-cover rounded-lg border border-border bg-parchment"
+                          />
+                        ) : (
+                          <div className="w-full h-56 rounded-lg border border-dashed border-border bg-parchment flex items-center justify-center text-xs text-muted-foreground px-2 text-center">
+                            No photo
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {mergePrompt?.visual?.comparison.reason && (
+                  <p className="text-xs text-foreground rounded-lg bg-primary/5 border border-primary/20 p-2">
+                    {mergePrompt.visual.comparison.reason}
+                  </p>
+                )}
                 {mergePrompt && (
                   <div className="rounded-lg border border-border bg-parchment p-3 space-y-0.5">
                     <p className="font-serif text-base text-foreground">{mergePrompt.candidate.name}</p>
