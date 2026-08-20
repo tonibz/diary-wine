@@ -55,10 +55,18 @@ function MenuScanDetail() {
         <ArrowLeft size={16} /> Past scans
       </Link>
 
-      {missing ? (
+      {failure ? (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
+          <p className="text-sm text-foreground">{failure}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => window.location.reload()}>
+            Try again
+          </Button>
+        </div>
+      ) : missing ? (
         <p className="text-center text-sm text-muted-foreground py-16">That scan is no longer here.</p>
       ) : !scan || !items || !user ? (
         <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
+
       ) : (
         <>
           <header className="mb-6">
