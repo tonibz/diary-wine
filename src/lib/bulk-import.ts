@@ -56,8 +56,21 @@ export type BulkItem = {
   place: string;
   placeFromPhoto: boolean;
   notes: string;
+  rating: number;
   entryStatus: "tasted" | "interested";
   discarded: boolean;
+  /** EXIF capture time in ms, used to find front/back pairs */
+  takenAtMs: number | null;
+  /** classifier verdict for this photo */
+  side: "front" | "back";
+  sideReason: string | null;
+  /** back label attached to this bottle */
+  backPhotoPath: string | null;
+  backThumbUrl: string | null;
+  /** the item whose photo became this bottle's back label */
+  pairedBackId: string | null;
+  /** set on a back-label item that has been folded into another row */
+  pairedIntoId: string | null;
   /** existing catalogue candidate in the ambiguous 0.6–0.85 band */
   candidate: (WineCandidate & { vintage?: number | null }) | null;
   candidateScore: number | null;
@@ -87,8 +100,16 @@ export function newItem(id: string): BulkItem {
     place: "",
     placeFromPhoto: false,
     notes: "",
+    rating: 0,
     entryStatus: "tasted",
     discarded: false,
+    takenAtMs: null,
+    side: "front",
+    sideReason: null,
+    backPhotoPath: null,
+    backThumbUrl: null,
+    pairedBackId: null,
+    pairedIntoId: null,
     candidate: null,
     candidateScore: null,
     mergeChoice: "different",
@@ -97,6 +118,7 @@ export function newItem(id: string): BulkItem {
     dupChoice: "different",
   };
 }
+
 
 /* ---------- persistence: survives leaving the screen ---------- */
 
