@@ -222,6 +222,7 @@ function AddPage() {
         });
         setInferredFields(result.data.inferred_fields ?? []);
         setDataSource(result.data.inferred_fields?.length ? "inferred" : "label");
+        await runReferenceCheck(result.recognition_id ?? null, result.data);
       } else {
         toast("Couldn't read that one clearly, fill it in below.");
         setDataSource("user");
