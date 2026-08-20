@@ -558,6 +558,18 @@ export type Database = {
           score: number
         }[]
       }
+      find_wine_matches: {
+        Args: { _names: string[]; _producers: string[] }
+        Returns: {
+          country: string
+          id: string
+          idx: number
+          name: string
+          producer: string
+          region: string
+          score: number
+        }[]
+      }
       normalize_wine_text: { Args: { t: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
