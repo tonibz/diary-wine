@@ -126,6 +126,117 @@ export type Database = {
           },
         ]
       }
+      menu_items: {
+        Row: {
+          by_the_glass: boolean
+          created_at: string
+          currency: string | null
+          glass_price: number | null
+          grapes: Json | null
+          id: string
+          item_confidence: number | null
+          match_score: number | null
+          matched_wine_id: string | null
+          menu_scan_id: string
+          parsed_name: string | null
+          parsed_producer: string | null
+          parsed_vintage: number | null
+          position: number | null
+          price: number | null
+          raw_text: string | null
+          section_heading: string | null
+          truncated: boolean
+          wine_type: string | null
+        }
+        Insert: {
+          by_the_glass?: boolean
+          created_at?: string
+          currency?: string | null
+          glass_price?: number | null
+          grapes?: Json | null
+          id?: string
+          item_confidence?: number | null
+          match_score?: number | null
+          matched_wine_id?: string | null
+          menu_scan_id: string
+          parsed_name?: string | null
+          parsed_producer?: string | null
+          parsed_vintage?: number | null
+          position?: number | null
+          price?: number | null
+          raw_text?: string | null
+          section_heading?: string | null
+          truncated?: boolean
+          wine_type?: string | null
+        }
+        Update: {
+          by_the_glass?: boolean
+          created_at?: string
+          currency?: string | null
+          glass_price?: number | null
+          grapes?: Json | null
+          id?: string
+          item_confidence?: number | null
+          match_score?: number | null
+          matched_wine_id?: string | null
+          menu_scan_id?: string
+          parsed_name?: string | null
+          parsed_producer?: string | null
+          parsed_vintage?: number | null
+          position?: number | null
+          price?: number | null
+          raw_text?: string | null
+          section_heading?: string | null
+          truncated?: boolean
+          wine_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_matched_wine_id_fkey"
+            columns: ["matched_wine_id"]
+            isOneToOne: false
+            referencedRelation: "wines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_menu_scan_id_fkey"
+            columns: ["menu_scan_id"]
+            isOneToOne: false
+            referencedRelation: "menu_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_scans: {
+        Row: {
+          created_at: string
+          id: string
+          photo_path: string | null
+          raw_response: Json | null
+          restaurant_name: string | null
+          scanned_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          photo_path?: string | null
+          raw_response?: Json | null
+          restaurant_name?: string | null
+          scanned_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          photo_path?: string | null
+          raw_response?: Json | null
+          restaurant_name?: string | null
+          scanned_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
