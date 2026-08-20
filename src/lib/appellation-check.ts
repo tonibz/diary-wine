@@ -65,7 +65,7 @@ export async function lookupAppellation(appellation: string | null | undefined):
   const name = (appellation ?? "").trim();
   if (!name) return null;
   const { data, error } = await withTimeout(
-    supabase.rpc("lookup_appellation", { _name: name }),
+    (async () => await supabase.rpc("lookup_appellation", { _name: name }))(),
     15_000,
     "Appellation lookup timed out",
   );
