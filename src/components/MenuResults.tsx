@@ -29,20 +29,41 @@ export function MenuResults({
   const navigate = useNavigate();
   const [ctx, setCtx] = useState<TasteContext | null>(null);
   const [enriched, setEnriched] = useState<EnrichedItem[] | null>(null);
+  const [matchingFailed, setMatchingFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, "wishlist" | "tasted">>({});
   const [showOther, setShowOther] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      const taste = await loadTasteContext(userId);
-      const linked = await loadLinkedWines(
-        items.map((i) => i.matched_wine_id).filter((x): x is string => !!x),
-      );
-      setCtx(taste);
-      setEnriched(enrichItems(items, taste, linked));
+      setMatchingFailed(false);
+      setEnriched(null);
+      try {
+        const taste = await withTimeout(loadTasteContext(userId));
+        const linked = await withTimeout(
+          loadLinkedWines(items.map((i) => i.matched_wine_id).filter((x): x is string => !!x)),
+        );
+        if (cancelled) return;
+        setCtx(taste);
+        setEnriched(enrichItems(items, taste, linked));
+      } catch (err) {
+        console.error("Menu matching against diary failed", err);
+        if (cancelled) return;
+        // The wines were read fine — show them all rather than nothing.
+        setCtx(null);
+        setMatchingFailed(true);
+        setEnriched(
+          items.map((item) => ({ item, group: "other" as const, diary: null, reason: null })),
+        );
+      }
     })();
-  }, [items, userId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [items, userId, reloadKey]);
+
 
   const groups = useMemo(() => {
     const had = (enriched ?? []).filter((e) => e.group === "had");
