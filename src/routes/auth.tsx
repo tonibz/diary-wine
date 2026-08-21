@@ -9,6 +9,13 @@ import { toast } from "sonner";
 import { Wine } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  // Preserve where the user was heading (e.g. an OAuth consent screen) so they
+  // land back there after signing in.
+  validateSearch: (s: Record<string, unknown>): { next?: string } =>
+    typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//")
+      ? { next: s.next }
+      : {},
+
   head: () => ({
     meta: [
       { title: "Sign in — Wine Diary" },
@@ -41,16 +48,27 @@ function AuthPage() {
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState<null | "google" | "apple" | "password" | "magic">(null);
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  // Computed lazily: this route is server-rendered, so `window` is absent at render.
+  const returnTo = () => (next ? `${window.location.origin}${next}` : window.location.origin);
+
+  function goAfterAuth() {
+    if (next) {
+      window.location.href = returnTo();
+      return;
+    }
+    navigate({ to: "/diary" });
+  }
 
   async function withProvider(provider: "google" | "apple") {
     setBusy(provider);
     try {
       const result = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: window.location.origin,
+        redirect_uri: returnTo(),
       });
       if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
       if (result.redirected) return;
-      navigate({ to: "/diary" });
+      goAfterAuth();
     } catch (err) {
       toast.error(humanizeAuthError(err instanceof Error ? err.message : "Sign-in failed"));
     } finally {
@@ -67,7 +85,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: returnTo(),
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
@@ -77,7 +95,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: "/diary" });
+      goAfterAuth();
     } catch (err) {
       toast.error(humanizeAuthError(err instanceof Error ? err.message : "Something went wrong"));
     } finally {
@@ -94,7 +112,7 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: returnTo() },
       });
       if (error) throw error;
       toast.success("Check your inbox for a sign-in link.");
