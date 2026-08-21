@@ -343,6 +343,7 @@ export async function saveMenuScan(args: {
   userId: string;
   photoPath: string | null;
   restaurantName: string | null;
+  restaurantUnknown?: boolean;
   raw: unknown;
   items: MenuParsedItem[];
   currency: string | null;
@@ -351,14 +352,23 @@ export async function saveMenuScan(args: {
   venueNote?: string | null;
   skippedCount?: number;
   skippedCategories?: string[];
+  /** an earlier scan of the same list, marked superseded once this one is saved */
+  supersedeScanId?: string | null;
 }): Promise<{ scan: MenuScanRow; items: MenuItemRow[] }> {
+  // A price without a venue cannot be compared with anything, so the venue is
+  // required: either a name, or an explicit "not sure".
+  if (!args.restaurantName?.trim() && !args.restaurantUnknown) {
+    throw new Error("Add the restaurant name, or choose “Not sure”, before saving");
+  }
+
   const { data: scan, error } = await menuDb
     .from("menu_scans")
     .insert({
       user_id: args.userId,
       scanned_by: args.userId,
       photo_path: args.photoPath,
-      restaurant_name: args.restaurantName,
+      restaurant_name: args.restaurantUnknown ? null : args.restaurantName?.trim() ?? null,
+      restaurant_unknown: args.restaurantUnknown === true,
       raw_response: args.raw,
       currency: args.currency,
       city: args.city ?? null,
@@ -370,6 +380,15 @@ export async function saveMenuScan(args: {
     .select(SCAN_COLS)
     .single();
   if (error) throw error;
+
+  if (args.supersedeScanId) {
+    // Kept, not deleted: the earlier reading is still evidence of what was read.
+    await menuDb
+      .from("menu_scans")
+      .update({ superseded: true, superseded_by: (scan as { id: string }).id })
+      .eq("id", args.supersedeScanId);
+  }
+
 
   const rows = args.items.map((it, i) => ({
     menu_scan_id: (scan as { id: string }).id,
