@@ -77,6 +77,91 @@ export type TasteContext = {
   topType: string | null;
 };
 
+/** Same normalisation idea as the wine deduplication: lowercase, strip accents and punctuation. */
+export function normalise(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * The user's tasting history, loaded once per scan view. Recommendation scoring
+ * is built from this alone — it never reads the shared wines catalogue.
+ */
+export async function loadTasteContext(userId: string): Promise<TasteContext> {
+  const { data } = await supabase
+    .from("entries")
+    .select(
+      "id, rating, notes, tasted_on, vintage_row:wine_vintages(wine:wines(id, name, producer, region, country, wine_type, grapes))",
+    )
+    .eq("user_id", userId)
+    .eq("status", "tasted")
+    .order("tasted_on", { ascending: false });
+
+  const rows = (data ?? []) as unknown as Array<{
+    id: string;
+    rating: number | null;
+    notes: string | null;
+    tasted_on: string;
+    vintage_row: {
+      wine: {
+        id: string;
+        name: string;
+        producer: string | null;
+        region: string | null;
+        country: string | null;
+        wine_type: string | null;
+        grapes: string[] | null;
+      } | null;
+    } | null;
+  }>;
+
+  const entries: DiaryWine[] = [];
+  for (const r of rows) {
+    const w = r.vintage_row?.wine;
+    if (!w) continue;
+    entries.push({
+      entryId: r.id,
+      wineId: w.id,
+      name: w.name,
+      producer: w.producer,
+      region: w.region,
+      country: w.country,
+      wine_type: w.wine_type,
+      grapes: w.grapes ?? [],
+      rating: r.rating,
+      notes: r.notes,
+      tasted_on: r.tasted_on,
+    });
+  }
+
+  const count = (vals: string[]) => {
+    const m = new Map<string, number>();
+    for (const v of vals) {
+      const k = v.trim();
+      if (!k) continue;
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  };
+
+  const liked = entries.filter((e) => (e.rating ?? 0) >= 4);
+  const pool = liked.length >= 3 ? liked : entries;
+
+  return {
+    entries,
+    topGrapes: count(pool.flatMap((e) => e.grapes)).slice(0, 6),
+    topCountries: count(pool.map((e) => e.country ?? "")).slice(0, 4),
+    topRegions: count(pool.map((e) => e.region ?? "")).slice(0, 5),
+    topType: count(pool.map((e) => e.wine_type ?? ""))[0] ?? null,
+  };
+}
+
 const SCAN_COLS =
   "id, restaurant_name, restaurant_unknown, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note, superseded";
 const ITEM_COLS =
