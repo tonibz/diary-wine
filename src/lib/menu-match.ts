@@ -41,6 +41,8 @@ export type MenuItemRow = {
 export type MenuScanRow = {
   id: string;
   restaurant_name: string | null;
+  /** the user explicitly said they don't know the venue — different from blank */
+  restaurant_unknown: boolean;
   photo_path: string | null;
   scanned_at: string;
   skipped_count: number;
@@ -50,7 +52,10 @@ export type MenuScanRow = {
   city: string | null;
   country: string | null;
   venue_note: string | null;
+  /** replaced by a later scan of the same list; excluded from prices and export */
+  superseded: boolean;
 };
+
 
 
 export type DiaryWine = {
