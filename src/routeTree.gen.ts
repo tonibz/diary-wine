@@ -26,6 +26,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as AuthenticatedMenuIdRouteImport } from './routes/_authenticated/menu.$id'
 import { Route as AuthenticatedEntryIdRouteImport } from './routes/_authenticated/entry.$id'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
@@ -114,6 +115,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/taste': typeof AuthenticatedTasteRoute
   '/wishlist': typeof AuthenticatedWishlistRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/taste': typeof AuthenticatedTasteRoute
   '/wishlist': typeof AuthenticatedWishlistRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/taste': typeof AuthenticatedTasteRoute
   '/_authenticated/wishlist': typeof AuthenticatedWishlistRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/entry/$id': typeof AuthenticatedEntryIdRoute
   '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/taste'
     | '/wishlist'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/entry/$id'
     | '/menu/$id'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/taste'
     | '/wishlist'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/entry/$id'
     | '/menu/$id'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/taste'
     | '/_authenticated/wishlist'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/entry/$id'
     | '/_authenticated/menu/$id'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -409,6 +429,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport
