@@ -181,9 +181,12 @@ export async function fillFromAppellations(
 
   const { data, error } = await withTimeout(
     (async () =>
-      await supabase.rpc("lookup_appellations" as never, {
-        _names: probes.map((p) => p.text),
-      } as never))(),
+      await supabase.rpc(
+        "lookup_appellations" as never,
+        {
+          _names: probes.map((p) => p.text),
+        } as never,
+      ))(),
     20_000,
     "Appellation lookup timed out",
   );
@@ -230,9 +233,7 @@ function lineText(item: MenuItemRow) {
 
 function monthOf(date: string) {
   const d = new Date(date);
-  return Number.isNaN(d.getTime())
-    ? null
-    : d.toLocaleDateString("en-GB", { month: "long" });
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString("en-GB", { month: "long" });
 }
 
 function praise(e: DiaryWine) {

@@ -58,7 +58,12 @@ export function MenuResults({
         .map((i) => {
           const fix = fixes[i.id];
           return fix
-            ? { ...i, parsed_name: fix.name, parsed_producer: fix.producer || null, truncated: false }
+            ? {
+                ...i,
+                parsed_name: fix.name,
+                parsed_producer: fix.producer || null,
+                truncated: false,
+              }
             : i;
         }),
     [items, fixes, discarded],
@@ -137,7 +142,10 @@ export function MenuResults({
   }, [scored, enoughData]);
 
   async function onFix(item: MenuItemRow) {
-    const draft = drafts[item.id] ?? { name: item.parsed_name ?? "", producer: item.parsed_producer ?? "" };
+    const draft = drafts[item.id] ?? {
+      name: item.parsed_name ?? "",
+      producer: item.parsed_producer ?? "",
+    };
     if (draft.name.trim().length < 3) {
       toast.error("Give it at least three characters");
       return;
@@ -149,7 +157,10 @@ export function MenuResults({
         parsed_producer: draft.producer.trim() || null,
         truncated: false,
       });
-      setFixes((f) => ({ ...f, [item.id]: { name: draft.name.trim(), producer: draft.producer.trim() } }));
+      setFixes((f) => ({
+        ...f,
+        [item.id]: { name: draft.name.trim(), producer: draft.producer.trim() },
+      }));
       toast.success("Fixed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save that");
@@ -225,7 +236,11 @@ export function MenuResults({
       key={s.item.id}
       className={cn(
         "rounded-2xl border p-4 bg-card shadow-notebook",
-        tone === "recommended" ? "border-primary" : tone === "had" ? "border-primary/40" : "border-border",
+        tone === "recommended"
+          ? "border-primary"
+          : tone === "had"
+            ? "border-primary/40"
+            : "border-border",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -233,7 +248,10 @@ export function MenuResults({
           <h3 className="font-serif text-lg leading-tight text-foreground">
             {s.item.parsed_name ?? s.item.raw_text ?? "Unnamed wine"}
             {s.item.parsed_vintage && (
-              <span className="text-sm font-sans text-muted-foreground"> · {s.item.parsed_vintage}</span>
+              <span className="text-sm font-sans text-muted-foreground">
+                {" "}
+                · {s.item.parsed_vintage}
+              </span>
             )}
           </h3>
           {s.item.parsed_producer && (
@@ -365,14 +383,21 @@ export function MenuResults({
           >
             <span className="font-serif text-xl text-foreground">
               Everything else{" "}
-              <span className="text-sm font-sans text-muted-foreground">({groups.other.length})</span>
+              <span className="text-sm font-sans text-muted-foreground">
+                ({groups.other.length})
+              </span>
             </span>
             <ChevronDown
               size={18}
-              className={cn("transition-transform text-muted-foreground", showOther && "rotate-180")}
+              className={cn(
+                "transition-transform text-muted-foreground",
+                showOther && "rotate-180",
+              )}
             />
           </button>
-          {showOther && <ul className="space-y-3 mt-3">{groups.other.map((s) => row(s, "other"))}</ul>}
+          {showOther && (
+            <ul className="space-y-3 mt-3">{groups.other.map((s) => row(s, "other"))}</ul>
+          )}
         </section>
       )}
 
@@ -382,17 +407,20 @@ export function MenuResults({
             <ScanLine size={18} className="text-muted-foreground" /> Couldn't read these properly
           </h2>
           <p className="text-sm text-muted-foreground mb-3">
-            The photo cut these off, so they aren't saved as wines yet. Fix the name or discard them.
+            The photo cut these off, so they aren't saved as wines yet. Fix the name or discard
+            them.
           </p>
           <ul className="space-y-3">
             {unreadable.map((item) => {
-              const draft =
-                drafts[item.id] ?? {
-                  name: item.parsed_name ?? "",
-                  producer: item.parsed_producer ?? "",
-                };
+              const draft = drafts[item.id] ?? {
+                name: item.parsed_name ?? "",
+                producer: item.parsed_producer ?? "",
+              };
               return (
-                <li key={item.id} className="rounded-2xl border border-dashed border-border bg-card p-4">
+                <li
+                  key={item.id}
+                  className="rounded-2xl border border-dashed border-border bg-card p-4"
+                >
                   <p className="text-xs text-muted-foreground mb-2">
                     Read as “{item.parsed_name ?? item.raw_text ?? "—"}”
                     {item.price != null ? ` · ${item.currency ?? ""} ${item.price}` : ""}
@@ -409,7 +437,10 @@ export function MenuResults({
                     <Input
                       value={draft.producer}
                       onChange={(e) =>
-                        setDrafts((d) => ({ ...d, [item.id]: { ...draft, producer: e.target.value } }))
+                        setDrafts((d) => ({
+                          ...d,
+                          [item.id]: { ...draft, producer: e.target.value },
+                        }))
                       }
                       placeholder="Producer (optional)"
                       className="bg-background"

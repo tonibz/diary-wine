@@ -17,10 +17,17 @@ async function resolveVintageId(item: MenuItemRow, userId: string): Promise<stri
 
   if (item.matched_wine_id) {
     await logAlias(item.matched_wine_id, name, producer, "user", userId);
-    await logDecision(userId, name, producer, item.parsed_vintage ?? null, {
-      id: item.matched_wine_id,
-      score: item.match_score ?? null,
-    }, "auto_merge");
+    await logDecision(
+      userId,
+      name,
+      producer,
+      item.parsed_vintage ?? null,
+      {
+        id: item.matched_wine_id,
+        score: item.match_score ?? null,
+      },
+      "auto_merge",
+    );
     return findOrCreateVintage(item.matched_wine_id, item.parsed_vintage ?? null, null);
   }
 
