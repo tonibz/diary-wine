@@ -9,32 +9,39 @@ import { StarRating } from "@/components/StarRating";
 import { cn } from "@/lib/utils";
 import {
   deleteMenuItem,
-  enrichItems,
-  loadLinkedWines,
   loadTasteContext,
-  MIN_ENTRIES_FOR_SUGGESTIONS,
   updateMenuItem,
-  type EnrichedItem,
   type MenuItemRow,
-  type TasteContext,
 } from "@/lib/menu-match";
+import {
+  attachDiary,
+  buildTasteProfile,
+  logRecommendations,
+  recommendMenu,
+  MIN_RATED_FOR_SUGGESTIONS,
+  type ScoredItem,
+} from "@/lib/menu-recommend";
 import { addMenuItemAsTasted, addMenuItemToWishlist } from "@/lib/menu-actions";
 import { withTimeout } from "@/lib/with-timeout";
 
+const MIN_RECOMMEND_SCORE = 0.15;
+const MAX_RECOMMENDATIONS = 5;
 
 export function MenuResults({
   items,
   restaurantName,
   userId,
+  scanId,
 }: {
   items: MenuItemRow[];
   restaurantName: string | null;
   userId: string;
+  scanId: string;
 }) {
   const navigate = useNavigate();
-  const [ctx, setCtx] = useState<TasteContext | null>(null);
-  const [enriched, setEnriched] = useState<EnrichedItem[] | null>(null);
-  const [matchingFailed, setMatchingFailed] = useState(false);
+  const [scored, setScored] = useState<ScoredItem[] | null>(null);
+  const [ratedCount, setRatedCount] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, "wishlist" | "tasted">>({});
@@ -65,39 +72,69 @@ export function MenuResults({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setMatchingFailed(false);
-      setEnriched(null);
+      setFailed(false);
+      setScored(null);
       try {
         const taste = await withTimeout(loadTasteContext(userId));
-        const linked = await withTimeout(
-          loadLinkedWines(readable.map((i) => i.matched_wine_id).filter((x): x is string => !!x)),
-        );
+        const profile = buildTasteProfile(taste.entries);
+        // Scoring is against the profile only — no lookup in the wines table.
+        const result = await recommendMenu(readable, profile);
         if (cancelled) return;
-        setCtx(taste);
-        setEnriched(enrichItems(readable, taste, linked));
+        const withDiary = attachDiary(result, taste.entries);
+        setRatedCount(profile.ratedCount);
+        setScored(withDiary);
+        if (profile.ratedCount >= MIN_RATED_FOR_SUGGESTIONS) {
+          // Every scored item is logged, not only the ones shown.
+          void logRecommendations({
+            userId,
+            scanId,
+            scored: withDiary,
+            ratedCount: profile.ratedCount,
+          });
+        }
       } catch (err) {
-        console.error("Menu matching against diary failed", err);
+        console.error("Scoring this list against your taste failed", err);
         if (cancelled) return;
         // The wines were read fine — show them all rather than nothing.
-        setCtx(null);
-        setMatchingFailed(true);
-        setEnriched(
-          readable.map((item) => ({ item, group: "other" as const, diary: null, reason: null })),
+        setFailed(true);
+        setRatedCount(null);
+        setScored(
+          readable.map((item) => ({
+            item,
+            grapes: item.grapes ?? [],
+            wine_type: item.wine_type,
+            region: null,
+            country: null,
+            filled: null,
+            score: 0,
+            reason: null,
+            diary: null,
+          })),
         );
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [readable, userId, reloadKey]);
+  }, [readable, userId, scanId, reloadKey]);
 
+  const enoughData = ratedCount != null && ratedCount >= MIN_RATED_FOR_SUGGESTIONS;
 
   const groups = useMemo(() => {
-    const had = (enriched ?? []).filter((e) => e.group === "had");
-    const similar = (enriched ?? []).filter((e) => e.group === "similar");
-    const other = (enriched ?? []).filter((e) => e.group === "other");
-    return { had, similar, other };
-  }, [enriched]);
+    const all = scored ?? [];
+    const had = all.filter((s) => s.diary);
+    const rest = all.filter((s) => !s.diary);
+    if (!enoughData) {
+      // Menu order, no weak suggestions.
+      return { had, recommended: [] as ScoredItem[], other: rest };
+    }
+    const ranked = [...rest].sort((a, b) => b.score - a.score);
+    const recommended = ranked
+      .filter((s) => s.reason && s.score >= MIN_RECOMMEND_SCORE)
+      .slice(0, MAX_RECOMMENDATIONS);
+    const chosen = new Set(recommended.map((s) => s.item.id));
+    return { had, recommended, other: ranked.filter((s) => !chosen.has(s.item.id)) };
+  }, [scored, enoughData]);
 
   async function onFix(item: MenuItemRow) {
     const draft = drafts[item.id] ?? { name: item.parsed_name ?? "", producer: item.parsed_producer ?? "" };
@@ -133,12 +170,11 @@ export function MenuResults({
     }
   }
 
-
-  async function onWishlist(e: EnrichedItem) {
+  async function onWishlist(s: ScoredItem) {
     try {
-      setBusy(e.item.id);
-      await addMenuItemToWishlist(e.item, userId);
-      setDone((d) => ({ ...d, [e.item.id]: "wishlist" }));
+      setBusy(s.item.id);
+      await addMenuItemToWishlist(s.item, userId);
+      setDone((d) => ({ ...d, [s.item.id]: "wishlist" }));
       toast.success("Added to your wishlist");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not add that");
@@ -147,10 +183,10 @@ export function MenuResults({
     }
   }
 
-  async function onOrdered(e: EnrichedItem) {
+  async function onOrdered(s: ScoredItem) {
     try {
-      setBusy(e.item.id);
-      const entryId = await addMenuItemAsTasted(e.item, userId, restaurantName);
+      setBusy(s.item.id);
+      const entryId = await addMenuItemAsTasted(s.item.item ? s.item : s.item, userId, restaurantName);
       toast.success("Logged — add your rating");
       navigate({ to: "/entry/$id", params: { id: entryId } });
     } catch (err) {
@@ -159,99 +195,109 @@ export function MenuResults({
     }
   }
 
-  if (!enriched) {
+  if (!scored) {
     return <p className="text-center text-sm text-muted-foreground py-10">Reading the list…</p>;
   }
 
-  const row = (e: EnrichedItem, tone: "had" | "similar" | "other") => (
+  const price = (item: MenuItemRow) =>
+    (item.price != null || item.glass_price != null) && (
+      <div className="text-right flex-shrink-0">
+        <p className="text-sm font-medium text-foreground">
+          {item.currency ? `${item.currency} ` : ""}
+          {item.price ?? item.glass_price}
+        </p>
+        {item.glass_price != null && (
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
+            <GlassWater size={11} /> {item.currency ? `${item.currency} ` : ""}
+            {item.glass_price} by the glass
+          </p>
+        )}
+        {item.glass_price == null && item.by_the_glass && (
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
+            <GlassWater size={11} /> by the glass
+          </p>
+        )}
+      </div>
+    );
+
+  const row = (s: ScoredItem, tone: "had" | "recommended" | "other") => (
     <li
-      key={e.item.id}
+      key={s.item.id}
       className={cn(
-        "rounded-2xl border p-4",
-        tone === "had"
-          ? "bg-card border-primary/40 shadow-notebook"
-          : "bg-card border-border shadow-notebook",
+        "rounded-2xl border p-4 bg-card shadow-notebook",
+        tone === "recommended" ? "border-primary" : tone === "had" ? "border-primary/40" : "border-border",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-serif text-lg leading-tight text-foreground">
-            {e.item.parsed_name ?? e.item.raw_text ?? "Unnamed wine"}
-            {e.item.parsed_vintage && (
-              <span className="text-sm font-sans text-muted-foreground"> · {e.item.parsed_vintage}</span>
+            {s.item.parsed_name ?? s.item.raw_text ?? "Unnamed wine"}
+            {s.item.parsed_vintage && (
+              <span className="text-sm font-sans text-muted-foreground"> · {s.item.parsed_vintage}</span>
             )}
           </h3>
-          {e.item.parsed_producer && (
-            <p className="text-sm text-muted-foreground">{e.item.parsed_producer}</p>
+          {s.item.parsed_producer && (
+            <p className="text-sm text-muted-foreground">{s.item.parsed_producer}</p>
           )}
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-            {e.item.wine_type && <span className="capitalize">{e.item.wine_type}</span>}
-            {e.item.section_heading && <span>· {e.item.section_heading}</span>}
-            {e.item.grapes?.length ? <span>· {e.item.grapes.join(", ")}</span> : null}
-            {e.item.truncated && (
+            {s.wine_type && <span className="capitalize">{s.wine_type}</span>}
+            {s.item.section_heading && <span>· {s.item.section_heading}</span>}
+            {s.grapes.length ? <span>· {s.grapes.join(", ")}</span> : null}
+            {s.item.truncated && (
               <span className="text-destructive">· text was cut off, please check</span>
             )}
           </p>
-        </div>
-        {(e.item.price != null || e.item.glass_price != null) && (
-          <div className="text-right flex-shrink-0">
-            <p className="text-sm font-medium text-foreground">
-              {e.item.currency ? `${e.item.currency} ` : ""}
-              {e.item.price ?? e.item.glass_price}
+          {s.filled && (
+            <p className="mt-1 text-[11px] italic text-muted-foreground">
+              {s.filled.grapes && s.filled.wine_type
+                ? "Grapes and colour"
+                : s.filled.grapes
+                  ? "Grapes"
+                  : "Colour"}{" "}
+              taken from {s.filled.appellation}, not printed on the list
             </p>
-            {e.item.glass_price != null && (
-              <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
-                <GlassWater size={11} /> {e.item.currency ? `${e.item.currency} ` : ""}
-                {e.item.glass_price} by the glass
-              </p>
-            )}
-            {e.item.glass_price == null && e.item.by_the_glass && (
-              <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
-                <GlassWater size={11} /> by the glass
-              </p>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+        {price(s.item)}
       </div>
 
-
-      {e.diary && (
+      {s.diary && (
         <div className="mt-3 rounded-xl bg-parchment/70 p-3">
           <div className="flex items-center gap-2">
-            <StarRating value={e.diary.rating ?? 0} size={14} />
+            <StarRating value={s.diary.rating ?? 0} size={14} />
             <span className="text-xs text-muted-foreground">
-              {format(new Date(e.diary.tasted_on), "d MMM yyyy")}
+              {format(new Date(s.diary.tasted_on), "d MMM yyyy")}
             </span>
           </div>
-          {e.diary.notes && (
-            <p className="mt-2 text-sm text-foreground/90 italic font-serif">“{e.diary.notes}”</p>
+          {s.diary.notes && (
+            <p className="mt-2 text-sm text-foreground/90 italic font-serif">“{s.diary.notes}”</p>
           )}
         </div>
       )}
 
-      {e.reason && (
+      {tone === "recommended" && s.reason && (
         <p className="mt-2 text-sm text-primary/90 flex gap-1.5">
           <Sparkles size={14} className="mt-0.5 flex-shrink-0" />
-          <span>{e.reason}</span>
+          <span>{s.reason}</span>
         </p>
       )}
 
       <div className="mt-3 flex gap-2">
-        {done[e.item.id] ? (
+        {done[s.item.id] ? (
           <p className="text-xs text-muted-foreground py-2">
-            {done[e.item.id] === "wishlist" ? "On your wishlist" : "Logged"}
+            {done[s.item.id] === "wishlist" ? "On your wishlist" : "Logged"}
           </p>
         ) : (
           <>
             <Button
               size="sm"
               variant="outline"
-              disabled={busy === e.item.id}
-              onClick={() => onWishlist(e)}
+              disabled={busy === s.item.id}
+              onClick={() => onWishlist(s)}
             >
               <Bookmark size={14} /> Add to wishlist
             </Button>
-            <Button size="sm" disabled={busy === e.item.id} onClick={() => onOrdered(e)}>
+            <Button size="sm" disabled={busy === s.item.id} onClick={() => onOrdered(s)}>
               <Wine size={14} /> I ordered this
             </Button>
           </>
@@ -262,11 +308,11 @@ export function MenuResults({
 
   return (
     <div className="space-y-8">
-      {matchingFailed && (
+      {failed && (
         <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
           <p className="text-sm text-foreground">
-            Couldn't match these against your diary. The wines were read fine — the full list is
-            below.
+            Couldn't work out what you'd like from this list. The wines were read fine — the full
+            list is below.
           </p>
           <Button
             size="sm"
@@ -274,37 +320,40 @@ export function MenuResults({
             className="mt-3"
             onClick={() => setReloadKey((k) => k + 1)}
           >
-            Retry matching
+            Try again
           </Button>
+        </section>
+      )}
+
+      {!failed && ratedCount != null && !enoughData && (
+        <section className="rounded-2xl border border-border bg-parchment/60 p-4">
+          <h2 className="font-serif text-xl text-foreground">Not enough to go on yet</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            I need a few more rated wines before I can suggest things. Rate the wines in your diary
+            and I'll get better at this.
+          </p>
+        </section>
+      )}
+
+      {groups.recommended.length > 0 && (
+        <section>
+          <h2 className="font-serif text-2xl text-primary mb-1">You'd probably like these</h2>
+          <p className="text-sm text-muted-foreground mb-3">
+            Based on the {ratedCount} wines you've rated.
+          </p>
+          <ul className="space-y-3">{groups.recommended.map((s) => row(s, "recommended"))}</ul>
         </section>
       )}
 
       {groups.had.length > 0 && (
         <section>
-          <h2 className="font-serif text-2xl text-primary mb-1">You've had this</h2>
+          <h2 className="font-serif text-2xl text-foreground mb-1">You've had this</h2>
           <p className="text-sm text-muted-foreground mb-3">
             {groups.had.length === 1 ? "One wine" : `${groups.had.length} wines`} on this list are
             already in your diary.
           </p>
-          <ul className="space-y-3">{groups.had.map((e) => row(e, "had"))}</ul>
+          <ul className="space-y-3">{groups.had.map((s) => row(s, "had"))}</ul>
         </section>
-      )}
-
-      {ctx && ctx.entries.length < MIN_ENTRIES_FOR_SUGGESTIONS ? (
-
-        <section className="rounded-2xl border border-border bg-parchment/60 p-4">
-          <h2 className="font-serif text-xl text-foreground">No suggestions yet</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Log a few more wines and I'll be able to suggest things from lists like this.
-          </p>
-        </section>
-      ) : (
-        groups.similar.length > 0 && (
-          <section>
-            <h2 className="font-serif text-2xl text-primary mb-3">Similar to wines you like</h2>
-            <ul className="space-y-3">{groups.similar.map((e) => row(e, "similar"))}</ul>
-          </section>
-        )
       )}
 
       {groups.other.length > 0 && (
@@ -323,7 +372,7 @@ export function MenuResults({
               className={cn("transition-transform text-muted-foreground", showOther && "rotate-180")}
             />
           </button>
-          {showOther && <ul className="space-y-3 mt-3">{groups.other.map((e) => row(e, "other"))}</ul>}
+          {showOther && <ul className="space-y-3 mt-3">{groups.other.map((s) => row(s, "other"))}</ul>}
         </section>
       )}
 
@@ -387,7 +436,6 @@ export function MenuResults({
       )}
 
       {items.length === 0 && (
-
         <p className="text-center text-sm text-muted-foreground py-10">
           No wines could be read from those photos.
         </p>
