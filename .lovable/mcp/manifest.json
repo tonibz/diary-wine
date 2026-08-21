@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ldmafpgraohyvhailhxw.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "my-wine-journal",
+      "version": "0.1.0",
+      "title": "My Wine Journal"
+    },
+    "tools": [
+      {
+        "name": "list_diary_entries",
+        "title": "List diary entries",
+        "description": "List the signed-in user's wine diary entries (or wishlist items), newest first. Optionally filter by a search term matching the wine name or producer.",
+        "annotations": {
+          "readOnlyHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "'tasted' for diary entries, 'interested' for wishlist items. Defaults to tasted.",
+              "type": "string",
+              "enum": [
+                "tasted",
+                "interested"
+              ]
+            },
+            "search": {
+              "description": "Text to match against wine name or producer.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "How many entries to return (1-100, default 20).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_taste_profile",
+        "title": "Get taste profile",
+        "description": "Get the signed-in user's taste profile: how many wines they've logged, their top grapes and countries, red/white split, and average alcohol and vintage age.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_to_wishlist",
+        "title": "Add a wine to the wishlist",
+        "description": "Add a wine the user wants to try to their Wine Diary wishlist. Reuses an existing catalogue wine when the name and producer already match.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Wine name as written on the label or wine list."
+            },
+            "producer": {
+              "description": "Producer or winery, when known.",
+              "type": "string"
+            },
+            "vintage": {
+              "description": "Vintage year, when known.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "notes": {
+              "description": "Why the user wants to try it, or where they saw it.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_menu_scans",
+        "title": "List scanned wine lists",
+        "description": "List the restaurant wine lists the signed-in user has scanned, newest first, with venue and location details.",
+        "annotations": {
+          "readOnlyHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "How many scans to return (1-50, default 10).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_menu_scan",
+        "title": "Get a scanned wine list",
+        "description": "Get every wine parsed from one of the signed-in user's scanned restaurant wine lists, with prices, section headings and any diary matches.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "menu_scan_id": {
+              "type": "string",
+              "description": "The id of the menu scan, from list_menu_scans."
+            }
+          },
+          "required": [
+            "menu_scan_id"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
