@@ -372,6 +372,23 @@ export function MenuResults({
 
   return (
     <div className="space-y-8">
+      {scanBasis && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-parchment/60 px-4 py-3">
+          <p className="text-sm text-foreground flex items-center gap-1.5">
+            <GlassWater size={14} className="text-muted-foreground" />
+            {scanBasis === "glass" ? "Read as glass prices" : "Read as bottle prices"}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={servingBusy}
+            onClick={() => onSwitchServing(scanBasis === "glass" ? "bottle" : "glass")}
+          >
+            {scanBasis === "glass" ? "These are bottles" : "These are glasses"}
+          </Button>
+        </div>
+      )}
+
       {failed && (
         <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
           <p className="text-sm text-foreground">
