@@ -93,7 +93,7 @@ function MenuScanDetail() {
         <>
           <header className="mb-6">
             <h1 className="text-3xl font-serif text-primary">
-              {scan.restaurant_name ?? "Wine list"}
+              {scan.restaurant_name ?? (scan.restaurant_unknown ? "Venue not sure" : "Wine list")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {format(new Date(scan.scanned_at), "d MMM yyyy")} · {items.length}{" "}
