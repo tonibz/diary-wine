@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -13,28 +13,18 @@ import {
   History,
   AlertTriangle,
   RotateCcw,
-  Save,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { compressImage } from "@/lib/image-compress";
 import { readMenuPage } from "@/lib/read-menu.functions";
 import type { JsonValue } from "@/lib/read-menu.functions";
 import type { MenuParsedItem } from "@/lib/menu-parse";
-import {
-  findDuplicateScan,
-  listRecentRestaurants,
-  matchStoredItems,
-  saveMenuScan,
-  type DuplicateScan,
-} from "@/lib/menu-match";
+import { findDuplicateScan, matchStoredItems, saveMenuScan } from "@/lib/menu-match";
 import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -63,7 +53,7 @@ export const Route = createFileRoute("/_authenticated/menu")({
 
 type Page = { file: File; preview: string };
 
-/** What was read, held in memory until the user names the venue and saves. */
+/** Everything read off the photos, held only long enough to save it. */
 type Draft = {
   paths: string[];
   raws: JsonValue[];
@@ -74,32 +64,24 @@ type Draft = {
   skippedCategories: string[];
 };
 
+type Duplicate = Awaited<ReturnType<typeof findDuplicateScan>>;
+
 function MenuScanPage() {
   const navigate = useNavigate();
   const readPage = useServerFn(readMenuPage);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  // Read from the photo's GPS in the background: never asked for, never blocking.
+  const placeRef = useRef<{ city: string | null; country: string | null }>({
+    city: null,
+    country: null,
+  });
   const [pages, setPages] = useState<Page[]>([]);
-  const [restaurant, setRestaurant] = useState("");
-  const [restaurantUnknown, setRestaurantUnknown] = useState(false);
-  const [restaurantFromMenu, setRestaurantFromMenu] = useState(false);
-  const [recent, setRecent] = useState<string[]>([]);
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("");
-  const [venueNote, setVenueNote] = useState("");
-  const [placeFromPhoto, setPlaceFromPhoto] = useState(false);
   const [reading, setReading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [duplicate, setDuplicate] = useState<DuplicateScan | null>(null);
-
-  useEffect(() => {
-    listRecentRestaurants()
-      .then(setRecent)
-      .catch(() => setRecent([]));
-  }, []);
+  const [duplicate, setDuplicate] = useState<Duplicate>(null);
+  const [pending, setPending] = useState<Draft | null>(null);
 
   function addFiles(files: FileList | null) {
     if (!files) return;
@@ -110,7 +92,7 @@ function MenuScanPage() {
 
   /** City/country from the photo's GPS, only when the user opted in. */
   async function prefillPlace(file: File) {
-    if (city || country) return;
+    if (placeRef.current.city || placeRef.current.country) return;
     try {
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
@@ -124,16 +106,13 @@ function MenuScanPage() {
       const meta = await readPhotoMeta(file);
       if (!meta.gps) return;
       const place = await reverseGeocodeCity(meta.gps.lat, meta.gps.lon);
-      if (!place.city && !place.country) return;
-      setCity((c) => c || place.city || "");
-      setCountry((c) => c || place.country || "");
-      setPlaceFromPhoto(true);
+      placeRef.current = { city: place.city ?? null, country: place.country ?? null };
     } catch {
       // A missing location is never a reason to block a scan.
     }
   }
 
-  /** Read the photos. Nothing is saved yet: the venue is asked for afterwards. */
+  /** Read the photos, then save straight away — the venue is asked for later. */
   async function onRead() {
     if (!pages.length) return;
     setReading(true);
@@ -200,13 +179,7 @@ function MenuScanPage() {
         toast.error(`${pageErrors.length} page(s) couldn't be read: ${pageErrors[0]}`);
       }
 
-      // Prefill the venue from the name printed on the menu itself.
-      if (!restaurant.trim() && readRestaurant) {
-        setRestaurant(readRestaurant);
-        setRestaurantFromMenu(true);
-      }
-
-      setDraft({
+      const draft: Draft = {
         paths,
         raws,
         items,
@@ -214,9 +187,28 @@ function MenuScanPage() {
         restaurantFromMenu: readRestaurant,
         skippedCount: skippedCount + rejectedCount,
         skippedCategories: [...skippedCategories],
-      });
-      setReading(false);
-      setProgress(null);
+      };
+
+      // Repeat scans of one list distort the price data, so ask — but only when
+      // there really is an earlier scan of the same list today.
+      const dup = await withTimeout(
+        findDuplicateScan({
+          userId: uid,
+          restaurantName: readRestaurant,
+          names: wines.map((i) => i.name ?? ""),
+        }),
+        15_000,
+      ).catch(() => null);
+
+      if (dup) {
+        setPending(draft);
+        setDuplicate(dup);
+        setReading(false);
+        setProgress(null);
+        return;
+      }
+
+      await persist(draft, null);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not read that wine list";
       setFailure(message);
@@ -227,10 +219,10 @@ function MenuScanPage() {
   }
 
   /** Save, then check the diary — matching is enrichment and can never block. */
-  async function persist(supersedeScanId: string | null) {
-    if (!draft) return;
-    setSaving(true);
+  async function persist(draft: Draft, supersedeScanId: string | null) {
     setDuplicate(null);
+    setPending(null);
+    setReading(true);
     try {
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user!.id;
@@ -239,14 +231,12 @@ function MenuScanPage() {
       const { scan, items: stored } = await saveMenuScan({
         userId: uid,
         photoPath: draft.paths[0] ?? null,
-        restaurantName: restaurantUnknown ? null : restaurant.trim() || null,
-        restaurantUnknown,
+        restaurantName: draft.restaurantFromMenu,
         raw: { pages: draft.raws } as unknown,
         items: draft.items,
         currency: draft.currency,
-        city: city.trim() || null,
-        country: country.trim() || null,
-        venueNote: venueNote.trim() || null,
+        city: placeRef.current.city,
+        country: placeRef.current.country,
         skippedCount: draft.skippedCount,
         skippedCategories: draft.skippedCategories,
         supersedeScanId,
@@ -267,40 +257,10 @@ function MenuScanPage() {
       const message = e instanceof Error ? e.message : "Could not save that wine list";
       setFailure(message);
       toast.error(message);
-      setSaving(false);
+      setPending(draft);
+      setReading(false);
       setProgress(null);
     }
-  }
-
-  async function onSave() {
-    if (!draft) return;
-    if (!restaurant.trim() && !restaurantUnknown) {
-      toast.error("Add the restaurant name, or choose “Not sure”.");
-      return;
-    }
-    setFailure(null);
-    setSaving(true);
-    try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user!.id;
-      const dup = await withTimeout(
-        findDuplicateScan({
-          userId: uid,
-          restaurantName: restaurantUnknown ? null : restaurant.trim() || null,
-          names: draft.items.filter((i) => !i.rejected).map((i) => i.name ?? ""),
-        }),
-        15_000,
-      ).catch(() => null);
-      if (dup) {
-        setDuplicate(dup);
-        setSaving(false);
-        return;
-      }
-    } catch {
-      // A duplicate check that fails must never stop the list being saved.
-    }
-    setSaving(false);
-    await persist(null);
   }
 
   /** Never let a page failure escape as a swallowed exception. */
@@ -325,9 +285,7 @@ function MenuScanPage() {
     }
   }
 
-  const wines = (draft?.items ?? []).filter((i) => !i.rejected);
-  const unreadable = wines.filter((i) => i.truncated);
-  const busy = reading || saving;
+  const busy = reading;
 
   return (
     <div className="px-5 pt-6 pb-8">
@@ -341,138 +299,14 @@ function MenuScanPage() {
       </div>
 
       <header className="mb-6">
-        <h1 className="text-3xl font-serif text-primary">
-          {draft ? "Where was this list?" : "Scan a wine list"}
-        </h1>
+        <h1 className="text-3xl font-serif text-primary">Scan a wine list</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {draft
-            ? `I read ${wines.length} ${wines.length === 1 ? "wine" : "wines"}. A price only means something with a venue attached, so tell me where this was.`
-            : "Photograph the list — every page if it's long — and I'll tell you which ones you already know."}
+          Photograph the list — every page if it's long — and I'll tell you which ones you already
+          know.
         </p>
       </header>
 
-      {draft && (
-        <div className="space-y-4 mb-5">
-          <div className="space-y-2">
-            <Label htmlFor="restaurant">Restaurant</Label>
-            <Input
-              id="restaurant"
-              value={restaurant}
-              onChange={(e) => {
-                setRestaurant(e.target.value);
-                setRestaurantUnknown(false);
-                setRestaurantFromMenu(false);
-              }}
-              placeholder="Where were you?"
-              className="bg-card"
-              disabled={restaurantUnknown}
-            />
-            {restaurantFromMenu && restaurant.trim() && (
-              <p className="text-xs text-muted-foreground">
-                Read off the menu — edit it if that's not the name.
-              </p>
-            )}
-            {recent.length > 0 && !restaurantUnknown && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {recent.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => {
-                      setRestaurant(name);
-                      setRestaurantFromMenu(false);
-                    }}
-                    className="rounded-full border border-border bg-card px-3 py-1 text-xs text-foreground"
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setRestaurantUnknown((v) => !v);
-                setRestaurantFromMenu(false);
-              }}
-              className="text-xs underline text-muted-foreground pt-1"
-            >
-              {restaurantUnknown
-                ? "Actually, I know where this was"
-                : "I'm not sure where this was"}
-            </button>
-            {restaurantUnknown && (
-              <p className="text-xs text-muted-foreground">
-                Recorded as “not sure”, so these prices are kept out of venue comparisons.
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => {
-                  setCity(e.target.value);
-                  setPlaceFromPhoto(false);
-                }}
-                placeholder="Optional"
-                className="bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                value={country}
-                onChange={(e) => {
-                  setCountry(e.target.value);
-                  setPlaceFromPhoto(false);
-                }}
-                placeholder="Optional"
-                className="bg-card"
-              />
-            </div>
-          </div>
-          {placeFromPhoto && (
-            <p className="text-xs text-muted-foreground">
-              From the photo's location — edit if wrong.
-            </p>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="venue-note">Kind of place</Label>
-            <Input
-              id="venue-note"
-              value={venueNote}
-              onChange={(e) => setVenueNote(e.target.value)}
-              placeholder="Wine bar, fine dining, trattoria…"
-              className="bg-card"
-            />
-          </div>
-
-          <div className="rounded-2xl border border-border bg-parchment/60 p-4 text-sm text-muted-foreground space-y-1">
-            <p>
-              {wines.length} {wines.length === 1 ? "wine" : "wines"} ready to save.
-            </p>
-            {draft.skippedCount > 0 && (
-              <p>
-                Skipped {draft.skippedCount} non-wine item{draft.skippedCount === 1 ? "" : "s"}
-                {draft.skippedCategories.length ? ` (${draft.skippedCategories.join(", ")})` : ""}.
-              </p>
-            )}
-            {unreadable.length > 0 && (
-              <p>
-                {unreadable.length} line{unreadable.length === 1 ? "" : "s"} came out cut off — you
-                can fix or discard {unreadable.length === 1 ? "it" : "them"} on the next screen.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!draft && pages.length > 0 && (
+      {pages.length > 0 && (
         <ul className="grid grid-cols-3 gap-2 mb-5">
           {pages.map((p, i) => (
             <li
@@ -499,34 +333,30 @@ function MenuScanPage() {
         </ul>
       )}
 
-      {!draft && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" disabled={busy} onClick={() => cameraRef.current?.click()}>
-              <Camera size={16} /> Take a photo
-            </Button>
-            <Button variant="outline" disabled={busy} onClick={() => galleryRef.current?.click()}>
-              <Images size={16} /> Choose photos
-            </Button>
-          </div>
-          <input
-            ref={cameraRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => addFiles(e.target.files)}
-          />
-          <input
-            ref={galleryRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => addFiles(e.target.files)}
-          />
-        </>
-      )}
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="outline" disabled={busy} onClick={() => cameraRef.current?.click()}>
+          <Camera size={16} /> Take a photo
+        </Button>
+        <Button variant="outline" disabled={busy} onClick={() => galleryRef.current?.click()}>
+          <Images size={16} /> Choose photos
+        </Button>
+      </div>
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => addFiles(e.target.files)}
+      />
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => addFiles(e.target.files)}
+      />
 
       {failure && (
         <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
@@ -538,54 +368,46 @@ function MenuScanPage() {
             variant="outline"
             size="sm"
             className="mt-3"
-            onClick={() => (draft ? onSave() : onRead())}
+            onClick={() => (pending ? void persist(pending, null) : void onRead())}
           >
             <RotateCcw size={14} /> Try again
           </Button>
         </div>
       )}
 
-      {draft ? (
-        <Button className="w-full mt-6" disabled={saving} onClick={onSave}>
-          {saving ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              {progress ?? "Saving…"}
-            </>
-          ) : (
-            <>
-              <Save size={16} /> Save this list
-            </>
-          )}
-        </Button>
-      ) : (
-        <Button className="w-full mt-6" disabled={!pages.length || busy} onClick={onRead}>
-          {reading ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              {progress ?? "Reading the list…"}
-            </>
-          ) : (
-            <>
-              <ScrollText size={16} /> {failure ? "Read this list again" : "Read this list"}
-              {pages.length > 1 ? ` (${pages.length} pages)` : ""}
-            </>
-          )}
-        </Button>
-      )}
+      <Button className="w-full mt-6" disabled={!pages.length || busy} onClick={onRead}>
+        {reading ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            {progress ?? "Reading the list…"}
+          </>
+        ) : (
+          <>
+            <ScrollText size={16} /> {failure ? "Read this list again" : "Read this list"}
+            {pages.length > 1 ? ` (${pages.length} pages)` : ""}
+          </>
+        )}
+      </Button>
 
       <p className="text-xs text-muted-foreground mt-3 text-center">
         Nothing here goes into your diary until you say you ordered something.
       </p>
 
-      <AlertDialog open={!!duplicate} onOpenChange={(o) => !o && setDuplicate(null)}>
+      <AlertDialog
+        open={!!duplicate}
+        onOpenChange={(o) => {
+          if (!o) setDuplicate(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>This looks like the same list</AlertDialogTitle>
             <AlertDialogDescription>
               This looks like the same list you scanned earlier today
               {duplicate?.scan.restaurant_name ? ` at ${duplicate.scan.restaurant_name}` : ""}
-              {duplicate ? ` (${format(new Date(duplicate.scan.scanned_at), "HH:mm")}, ${duplicate.itemCount} wines` : ""}
+              {duplicate
+                ? ` (${format(new Date(duplicate.scan.scanned_at), "HH:mm")}, ${duplicate.itemCount} wines`
+                : ""}
               {duplicate && duplicate.reason === "items"
                 ? `, ${Math.round(duplicate.overlap * 100)}% the same wines)`
                 : duplicate
@@ -596,15 +418,18 @@ function MenuScanPage() {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
             <AlertDialogAction
-              onClick={() => void persist(duplicate?.scan.id ?? null)}
+              onClick={() => pending && void persist(pending, duplicate?.scan.id ?? null)}
               className="w-full"
             >
               Replace that scan
             </AlertDialogAction>
-            <Button variant="outline" className="w-full" onClick={() => void persist(null)}>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => pending && void persist(pending, null)}
+            >
               Save as a new scan
             </Button>
-            <AlertDialogCancel className="w-full">Cancel</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
