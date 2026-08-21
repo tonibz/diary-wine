@@ -37,20 +37,43 @@ function MenuScanDetail() {
   const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     (async () => {
       try {
         const res = await withTimeout(loadMenuScan(id));
+        if (!active) return;
         if (!res) {
           setMissing(true);
           return;
         }
         setScan(res.scan);
         setItems(res.items);
+
+        // The scan and every price are already persisted. Enrichment starts only
+        // after the stored results are visible and can never affect that save.
+        if (res.items.length > 0 && res.items.every((item) => item.match_score == null)) {
+          setRematching(true);
+          void rematchScan(id)
+            .then((updated) => {
+              if (active) setItems(updated);
+            })
+            .catch((err) => {
+              console.error("Menu matching failed", err);
+              if (active) toast.error("Couldn't match these. The list and its prices are safe.");
+            })
+            .finally(() => {
+              if (active) setRematching(false);
+            });
+        }
       } catch (err) {
+        if (!active) return;
         console.error("Could not load menu scan", err);
         setFailure(err instanceof Error ? err.message : "Could not load that scan");
       }
     })();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   // Nothing matched at all: the list is stored, matching simply never landed.

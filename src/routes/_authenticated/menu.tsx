@@ -19,7 +19,7 @@ import { compressImage } from "@/lib/image-compress";
 import { readMenuPage } from "@/lib/read-menu.functions";
 import type { JsonValue } from "@/lib/read-menu.functions";
 import type { MenuParsedItem } from "@/lib/menu-parse";
-import { findDuplicateScan, matchStoredItems, saveMenuScan } from "@/lib/menu-match";
+import { saveMenuScan } from "@/lib/menu-match";
 import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,8 +64,6 @@ type Draft = {
   skippedCategories: string[];
 };
 
-type Duplicate = Awaited<ReturnType<typeof findDuplicateScan>>;
-
 function MenuScanPage() {
   const navigate = useNavigate();
   const readPage = useServerFn(readMenuPage);
@@ -80,7 +78,6 @@ function MenuScanPage() {
   const [reading, setReading] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [duplicate, setDuplicate] = useState<Duplicate>(null);
   const [pending, setPending] = useState<Draft | null>(null);
 
   function addFiles(files: FileList | null) {
@@ -189,25 +186,6 @@ function MenuScanPage() {
         skippedCategories: [...skippedCategories],
       };
 
-      // Repeat scans of one list distort the price data, so ask — but only when
-      // there really is an earlier scan of the same list today.
-      const dup = await withTimeout(
-        findDuplicateScan({
-          userId: uid,
-          restaurantName: readRestaurant,
-          names: wines.map((i) => i.name ?? ""),
-        }),
-        15_000,
-      ).catch(() => null);
-
-      if (dup) {
-        setPending(draft);
-        setDuplicate(dup);
-        setReading(false);
-        setProgress(null);
-        return;
-      }
-
       await persist(draft, null);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not read that wine list";
@@ -218,9 +196,8 @@ function MenuScanPage() {
     }
   }
 
-  /** Save, then check the diary — matching is enrichment and can never block. */
+  /** Save and leave immediately. The results route enriches the stored rows later. */
   async function persist(draft: Draft, supersedeScanId: string | null) {
-    setDuplicate(null);
     setPending(null);
     setReading(true);
     try {
@@ -228,7 +205,7 @@ function MenuScanPage() {
       const uid = userRes.user!.id;
 
       setProgress("Saving the list");
-      const { scan, items: stored } = await saveMenuScan({
+      const { scan } = await saveMenuScan({
         userId: uid,
         photoPath: draft.paths[0] ?? null,
         restaurantName: draft.restaurantFromMenu,
@@ -241,16 +218,6 @@ function MenuScanPage() {
         skippedCategories: draft.skippedCategories,
         supersedeScanId,
       });
-
-      setProgress(`Matching ${stored.length} wines to your diary`);
-      try {
-        await matchStoredItems(stored);
-      } catch (err) {
-        console.error("Menu matching failed", err);
-        toast.error(
-          "Couldn't match these against your diary. The list and its prices are saved — you can try matching again.",
-        );
-      }
 
       navigate({ to: "/menu/$id", params: { id: scan.id } });
     } catch (e) {
@@ -383,7 +350,7 @@ function MenuScanPage() {
           </>
         ) : (
           <>
-            <ScrollText size={16} /> {failure ? "Read this list again" : "Read this list"}
+            <ScrollText size={16} /> Read this list
             {pages.length > 1 ? ` (${pages.length} pages)` : ""}
           </>
         )}
@@ -393,46 +360,6 @@ function MenuScanPage() {
         Nothing here goes into your diary until you say you ordered something.
       </p>
 
-      <AlertDialog
-        open={!!duplicate}
-        onOpenChange={(o) => {
-          if (!o) setDuplicate(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>This looks like the same list</AlertDialogTitle>
-            <AlertDialogDescription>
-              This looks like the same list you scanned earlier today
-              {duplicate?.scan.restaurant_name ? ` at ${duplicate.scan.restaurant_name}` : ""}
-              {duplicate
-                ? ` (${format(new Date(duplicate.scan.scanned_at), "HH:mm")}, ${duplicate.itemCount} wines`
-                : ""}
-              {duplicate && duplicate.reason === "items"
-                ? `, ${Math.round(duplicate.overlap * 100)}% the same wines)`
-                : duplicate
-                  ? ")"
-                  : ""}
-              . Replace that scan, or save as a new one?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
-            <AlertDialogAction
-              onClick={() => pending && void persist(pending, duplicate?.scan.id ?? null)}
-              className="w-full"
-            >
-              Replace that scan
-            </AlertDialogAction>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => pending && void persist(pending, null)}
-            >
-              Save as a new scan
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

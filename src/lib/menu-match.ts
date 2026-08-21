@@ -355,19 +355,13 @@ export async function saveMenuScan(args: {
   /** an earlier scan of the same list, marked superseded once this one is saved */
   supersedeScanId?: string | null;
 }): Promise<{ scan: MenuScanRow; items: MenuItemRow[] }> {
-  // A price without a venue cannot be compared with anything, so the venue is
-  // required: either a name, or an explicit "not sure".
-  if (!args.restaurantName?.trim() && !args.restaurantUnknown) {
-    throw new Error("Add the restaurant name, or choose “Not sure”, before saving");
-  }
-
   const { data: scan, error } = await menuDb
     .from("menu_scans")
     .insert({
       user_id: args.userId,
       scanned_by: args.userId,
       photo_path: args.photoPath,
-      restaurant_name: args.restaurantUnknown ? null : args.restaurantName?.trim() ?? null,
+      restaurant_name: args.restaurantName?.trim() || null,
       restaurant_unknown: args.restaurantUnknown === true,
       raw_response: args.raw,
       currency: args.currency,
@@ -651,7 +645,7 @@ export async function exportMenuItemsCsv(): Promise<string> {
   const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
     const scan = (r.menu_scans ?? {}) as Record<string, unknown>;
     return [
-      scan.restaurant_name ?? (scan.restaurant_unknown ? "Not sure" : ""),
+      scan.restaurant_name ?? "",
       scan.scanned_at ? String(scan.scanned_at).slice(0, 10) : "",
       scan.city,
       scan.country,
