@@ -2,7 +2,7 @@ export const MENU_PROMPT = `You are reading a photograph of a restaurant wine li
 
 Return: { "restaurant_name": string or null, "currency": three-letter code or null, "skipped_count": integer, "skipped_categories": array of strings, "items": [ ... ] }
 
-Each item: { "raw_text": the line as printed, "name": the wine name, "producer": the winery or null, "vintage": integer year or null, "grapes": array of grape varieties mentioned on the line, "prices": array of { "size": "glass" | "carafe" | "half_bottle" | "bottle" | "unknown", "amount": number }, "price": number or null, "glass_price": number or null, "by_the_glass": boolean, "wine_type": one of red, white, rose, sparkling, dessert, fortified, "section_heading": the heading this wine appeared under, "confidence": 0 to 1, "truncated": boolean }
+Each item: { "raw_text": the line as printed, "name": the wine name, "producer": the winery or null, "vintage": integer year or null, "grapes": array of grape varieties mentioned on the line, "prices": array of { "size": "glass" | "carafe" | "half_bottle" | "bottle" | "unknown", "amount": number }, "price": number or null, "glass_price": number or null, "by_the_glass": boolean, "wine_type": one of red, white, rose, sparkling, dessert, fortified, "page_heading": the page-level heading in force, "section_heading": the heading this wine appeared under, "attributes": array of markers printed with the wine, from organic, biodynamic, natural, vegan, "confidence": 0 to 1, "truncated": boolean }
 
 Rules.
 Include every wine you can read. Wine lists are terse and often omit the producer.
