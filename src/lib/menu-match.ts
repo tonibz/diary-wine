@@ -437,8 +437,11 @@ export async function saveMenuScan(args: {
  * stored list anyway and offers a retry.
  */
 export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRow[]> {
-  const candidates = items.filter((i) => !i.rejected && i.parsed_name);
+  // A truncated line is a fragment of a name: matching it against the catalogue
+  // would produce a confident-looking link to the wrong wine.
+  const candidates = items.filter((i) => !i.rejected && !i.truncated && i.parsed_name);
   if (!candidates.length) return items;
+
 
   const results = await withTimeout(
     findBestMatches(
