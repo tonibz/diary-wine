@@ -624,11 +624,14 @@ export async function exportMenuItemsCsv(): Promise<string> {
   const { data, error } = await menuDb
     .from("menu_items")
     .select(
-      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, rejected, position, menu_scans!inner(restaurant_name, scanned_at, city, country, venue_note)",
+      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, rejected, truncated, position, menu_scans!inner(restaurant_name, restaurant_unknown, scanned_at, city, country, venue_note, superseded)",
     )
     .eq("rejected", false)
+    // Duplicate scans of one list would over-count that venue's prices.
+    .eq("menu_scans.superseded", false)
     .order("position", { ascending: true });
   if (error) throw error;
+
 
   const header = [
     "restaurant",
