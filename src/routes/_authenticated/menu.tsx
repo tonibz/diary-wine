@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import {
   ArrowLeft,
   Camera,
@@ -22,15 +21,6 @@ import type { MenuParsedItem } from "@/lib/menu-parse";
 import { saveMenuScan } from "@/lib/menu-match";
 import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { withTimeout } from "@/lib/with-timeout";
 
 
