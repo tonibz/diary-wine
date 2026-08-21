@@ -176,7 +176,7 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
 const SCAN_COLS =
   "id, restaurant_name, restaurant_unknown, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note, superseded";
 const ITEM_COLS =
-  "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
+  "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, page_heading, serving_basis, attributes, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
 
 function asScan(row: Record<string, unknown>): MenuScanRow {
   return {
@@ -261,6 +261,10 @@ export async function saveMenuScan(args: {
     rejected: it.rejected,
     by_the_glass: it.by_the_glass,
     section_heading: it.section_heading,
+    page_heading: it.page_heading,
+    // 'unknown' when nothing on the page says what the price buys.
+    serving_basis: it.serving_basis,
+    attributes: it.attributes,
     wine_type: it.wine_type,
     grapes: it.grapes.length ? it.grapes : null,
     item_confidence: it.confidence,
