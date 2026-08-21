@@ -51,6 +51,13 @@ export function looksNonWine(item: MenuParsedItem): boolean {
  * Words that are never a wine name on their own: an angled photo with a cut-off
  * column produces fragments such as "at" or "la Figuera".
  */
+/** Articles and prepositions a cut-off name is often left starting with. */
+const LEADING_PARTICLES = new Set([
+  "a", "al", "at", "the", "and", "of", "or", "by", "de", "del", "della", "delle", "di", "du",
+  "des", "da", "do", "la", "le", "les", "el", "els", "lo", "los", "las", "il", "i", "y", "e",
+  "en", "con", "und", "van", "von",
+]);
+
 const FRAGMENT_WORDS = new Set([
   "a", "al", "at", "the", "and", "of", "or", "by", "de", "del", "della", "delle", "di", "du",
   "des", "da", "do", "la", "le", "les", "el", "els", "lo", "los", "las", "il", "i", "y", "e",
