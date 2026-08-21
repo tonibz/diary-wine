@@ -28,6 +28,16 @@ Some headings cover several drink types, for example 'SAKE, WHITE & ROSÉ BY THE
 Only set wine_type from the heading when the heading is unambiguous, such as TINTO, LES VINS ROUGES, or RED BY THE GLASS. Otherwise take the colour from the grape variety or the appellation, and if still unclear return null.
 
 Unambiguous headings: BLANCO, BLANCS, LES VINS BLANCS, WHITE mean white. TINTO, NEGRE, VINS NEGRES, LES VINS ROUGES, ROSSO, RED mean red. ROSADO, ROSAT, ROSE mean rose; "ROSADO & ORANGE" covers both and orange wine counts as rose unless the item says otherwise. BURBUJAS, CAVA, CHAMPAGNE, ESPUMOSOS, SPARKLING mean sparkling. DULCE, DOLC, DESSERT mean dessert. Do not return headings as items.
+
+Wine lists have headings at two levels. A page-level heading such as 'WINE BY THE GLASS', 'BY THE GLASS', 'BOTTLES', 'BY THE BOTTLE', 'HALF BOTTLES', 'MAGNUMS' or 'COPAS' applies to every wine below it until another page-level heading appears, including across colour sub-headings. A section heading such as ROSÉ, WHITE, RED, SPARKLING, TINTO or BLANCO tells you the colour.
+
+Return both: page_heading and section_heading on every item.
+
+If the page-level heading says the wines are by the glass, then a single price on a line is a GLASS price, not a bottle price. Put it in glass_price and leave price null. If it says bottles, or there is no page-level heading at all, a single price is a bottle price.
+
+Never guess the serving size from how large or small the number is.
+
+Menus often annotate wines with markers such as (organic), (biodynamic), (natural), (vegan), or their equivalents like ecologico, biologico, biodinamico, vin naturel. Return these in the attributes array and REMOVE them from the name. The name must contain only the wine's own name.
 Prices may use a decimal comma: 20,00 means 20.00 and 24,50 means 24.50.
 Currency symbols: EUR for the euro sign, USD for the dollar sign, GBP for the pound sign. If no symbol appears anywhere, infer the currency from the language and region of the menu; if still unclear return null rather than guessing.
 Some lists print no prices at all. That is fine, return null.
