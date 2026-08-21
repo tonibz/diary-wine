@@ -13,7 +13,6 @@ type LooseClient = { from: (table: string) => any }; // eslint-disable-line @typ
 export const menuDb = supabase as unknown as LooseClient;
 
 export const CONFIDENT_MATCH = 0.85;
-export const MIN_ENTRIES_FOR_SUGGESTIONS = 5;
 
 export type MenuItemRow = {
   id: string;
@@ -78,14 +77,6 @@ export type TasteContext = {
   topType: string | null;
 };
 
-export type EnrichedItem = {
-  item: MenuItemRow;
-  group: "had" | "similar" | "other";
-  /** the user's own tasting of this wine, when they have had it */
-  diary: DiaryWine | null;
-  reason: string | null;
-};
-
 /** Same normalisation idea as the wine deduplication: lowercase, strip accents and punctuation. */
 export function normalise(text: string | null | undefined): string {
   if (!text) return "";
@@ -98,20 +89,10 @@ export function normalise(text: string | null | undefined): string {
     .trim();
 }
 
-function titleCase(s: string) {
-  return s.replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-const COLOUR_WORDS: Record<string, string> = {
-  red: "red",
-  white: "white",
-  rose: "rosé",
-  sparkling: "sparkling",
-  dessert: "dessert",
-  fortified: "fortified",
-};
-
-/** Everything we know about the user's palate, loaded once per scan view. */
+/**
+ * The user's tasting history, loaded once per scan view. Recommendation scoring
+ * is built from this alone — it never reads the shared wines catalogue.
+ */
 export async function loadTasteContext(userId: string): Promise<TasteContext> {
   const { data } = await supabase
     .from("entries")
@@ -169,7 +150,6 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
     return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
   };
 
-  // Weight by rating: a 4 or 5 star wine says more about taste than a 2.
   const liked = entries.filter((e) => (e.rating ?? 0) >= 4);
   const pool = liked.length >= 3 ? liked : entries;
 
@@ -180,131 +160,6 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
     topRegions: count(pool.map((e) => e.region ?? "")).slice(0, 5),
     topType: count(pool.map((e) => e.wine_type ?? ""))[0] ?? null,
   };
-}
-
-function textOf(item: MenuItemRow) {
-  return normalise(
-    `${item.parsed_name ?? ""} ${item.parsed_producer ?? ""} ${item.raw_text ?? ""}`,
-  );
-}
-
-/**
- * Sort every menu line into "You've had this", "Similar to wines you like" and
- * "Everything else". A recommendation is only ever produced with a reason.
- */
-export function enrichItems(
-  items: MenuItemRow[],
-  ctx: TasteContext,
-  catalogue: Map<string, DiaryWine | null>,
-): EnrichedItem[] {
-  const byWineId = new Map<string, DiaryWine>();
-  for (const e of ctx.entries) {
-    const prev = byWineId.get(e.wineId);
-    if (!prev || (e.rating ?? 0) > (prev.rating ?? 0)) byWineId.set(e.wineId, e);
-  }
-
-  const enoughHistory = ctx.entries.length >= MIN_ENTRIES_FOR_SUGGESTIONS;
-
-  return items.map((item) => {
-    // 1. Have they had it? Either the confident catalogue link is in their diary,
-    //    or the printed name closely matches something they logged.
-    let diary: DiaryWine | null = item.matched_wine_id
-      ? (byWineId.get(item.matched_wine_id) ?? null)
-      : null;
-    if (!diary) {
-      const t = textOf(item);
-      for (const e of ctx.entries) {
-        const n = normalise(e.name);
-        if (n.length >= 6 && t.includes(n)) {
-          if (!diary || (e.rating ?? 0) > (diary.rating ?? 0)) diary = e;
-        }
-      }
-    }
-    if (diary) return { item, group: "had" as const, diary, reason: null };
-
-    if (!enoughHistory) return { item, group: "other" as const, diary: null, reason: null };
-
-    // 2. Close to their taste? Attributes come from a matched catalogue wine when
-    //    there is one, otherwise from the words printed on the list.
-    const linked = item.matched_wine_id ? (catalogue.get(item.matched_wine_id) ?? null) : null;
-    const t = textOf(item);
-    const has = (v: string | null | undefined) => {
-      if (!v) return false;
-      const n = normalise(v);
-      return n.length >= 3 && t.includes(n);
-    };
-
-    const grape =
-      ctx.topGrapes.find((g) => linked?.grapes.some((x) => normalise(x) === normalise(g))) ??
-      ctx.topGrapes.find((g) => has(g)) ??
-      null;
-    const region =
-      ctx.topRegions.find((r) => linked?.region && normalise(linked.region) === normalise(r)) ??
-      ctx.topRegions.find((r) => has(r)) ??
-      null;
-    const country =
-      ctx.topCountries.find((c) => linked?.country && normalise(linked.country) === normalise(c)) ??
-      ctx.topCountries.find((c) => has(c)) ??
-      null;
-    const colour =
-      ctx.topType && (linked?.wine_type === ctx.topType || has(COLOUR_WORDS[ctx.topType] ?? ""))
-        ? ctx.topType
-        : null;
-
-    let score = 0;
-    if (grape) score += 3;
-    if (region) score += 2;
-    if (country) score += 2;
-    if (colour) score += 1;
-    if (score < 3) return { item, group: "other" as const, diary: null, reason: null };
-
-    // The exemplar: their best-loved wine sharing the strongest attribute.
-    const shares = (e: DiaryWine) => {
-      if (grape) return e.grapes.some((x) => normalise(x) === normalise(grape));
-      if (region) return !!e.region && normalise(e.region) === normalise(region);
-      if (country) return !!e.country && normalise(e.country) === normalise(country);
-      return e.wine_type === colour;
-    };
-    const exemplar = ctx.entries
-      .filter(shares)
-      .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
-    if (!exemplar) return { item, group: "other" as const, diary: null, reason: null };
-
-    const what = grape ? titleCase(grape) : titleCase(COLOUR_WORDS[colour ?? ""] ?? "wine");
-    const where = region ?? country;
-    const stars = exemplar.rating
-      ? ` you rated ${exemplar.rating} star${exemplar.rating === 1 ? "" : "s"}`
-      : " you logged";
-    const reason = `${what}${where ? ` from ${where}` : ""}, like the ${exemplar.name}${stars}`;
-    return { item, group: "similar" as const, diary: null, reason };
-  });
-}
-
-/** Full wine rows for confident links, so reasons can use grape/region/colour. */
-export async function loadLinkedWines(ids: string[]): Promise<Map<string, DiaryWine | null>> {
-  const map = new Map<string, DiaryWine | null>();
-  const unique = [...new Set(ids.filter(Boolean))];
-  if (!unique.length) return map;
-  const { data } = await supabase
-    .from("wines")
-    .select("id, name, producer, region, country, wine_type, grapes")
-    .in("id", unique);
-  for (const w of data ?? []) {
-    map.set(w.id, {
-      entryId: "",
-      wineId: w.id,
-      name: w.name,
-      producer: w.producer,
-      region: w.region,
-      country: w.country,
-      wine_type: w.wine_type,
-      grapes: w.grapes ?? [],
-      rating: null,
-      notes: null,
-      tasted_on: "",
-    });
-  }
-  return map;
 }
 
 const SCAN_COLS =

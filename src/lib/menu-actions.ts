@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { findOrCreateVintage, logAlias, logDecision } from "@/lib/wine-match";
 import type { MenuItemRow } from "@/lib/menu-match";
+import { markRecommendationActedOn } from "@/lib/menu-recommend";
 
 /**
  * The only two paths from a menu into the diary, both explicitly chosen by the
@@ -16,10 +17,17 @@ async function resolveVintageId(item: MenuItemRow, userId: string): Promise<stri
 
   if (item.matched_wine_id) {
     await logAlias(item.matched_wine_id, name, producer, "user", userId);
-    await logDecision(userId, name, producer, item.parsed_vintage ?? null, {
-      id: item.matched_wine_id,
-      score: item.match_score ?? null,
-    }, "auto_merge");
+    await logDecision(
+      userId,
+      name,
+      producer,
+      item.parsed_vintage ?? null,
+      {
+        id: item.matched_wine_id,
+        score: item.match_score ?? null,
+      },
+      "auto_merge",
+    );
     return findOrCreateVintage(item.matched_wine_id, item.parsed_vintage ?? null, null);
   }
 
@@ -89,5 +97,7 @@ export async function addMenuItemAsTasted(
     .select("id")
     .single();
   if (error) throw error;
+  // Whether a suggestion was actually ordered is the only real measure of it.
+  await markRecommendationActedOn(item.id);
   return (data as { id: string }).id;
 }

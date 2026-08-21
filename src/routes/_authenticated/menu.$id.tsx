@@ -167,7 +167,12 @@ function MenuScanDetail() {
             )}
           </header>
 
-          <MenuResults items={items} restaurantName={scan.restaurant_name} userId={user.id} />
+          <MenuResults
+            items={items}
+            restaurantName={scan.restaurant_name}
+            userId={user.id}
+            scanId={scan.id}
+          />
         </>
       )}
     </div>
