@@ -362,3 +362,30 @@ export async function markRecommendationActedOn(menuItemId: string): Promise<voi
     .eq("menu_item_id", menuItemId);
   if (error) console.error("recommendation acted_on failed", error);
 }
+
+/**
+ * The "you've had this" note. This is the ONLY part that depends on catalogue
+ * matching, and it is layered on top of already-scored items.
+ */
+export function attachDiary(scored: ScoredItem[], entries: DiaryWine[]): ScoredItem[] {
+  const byWineId = new Map<string, DiaryWine>();
+  for (const e of entries) {
+    const prev = byWineId.get(e.wineId);
+    if (!prev || (e.rating ?? 0) > (prev.rating ?? 0)) byWineId.set(e.wineId, e);
+  }
+  return scored.map((s) => {
+    let diary: DiaryWine | null = s.item.matched_wine_id
+      ? (byWineId.get(s.item.matched_wine_id) ?? null)
+      : null;
+    if (!diary) {
+      const t = lineText(s.item);
+      for (const e of entries) {
+        const n = normalise(e.name);
+        if (n.length >= 6 && t.includes(n)) {
+          if (!diary || (e.rating ?? 0) > (diary.rating ?? 0)) diary = e;
+        }
+      }
+    }
+    return diary ? { ...s, diary } : s;
+  });
+}
