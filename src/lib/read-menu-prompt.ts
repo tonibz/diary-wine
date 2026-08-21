@@ -23,6 +23,8 @@ Return all of them in a prices array, each as { "size": "glass" | "carafe" | "ha
 
 A heading may cover more than one kind of drink. Judge each item on its own description rather than assuming it matches the heading. Under a heading such as 'SAKE, WHITE & ROSÉ BY THE GLASS', the sake is still not wine, and each wine underneath may be white or rosé.
 
+Some headings cover several drink types, for example 'SAKE, WHITE & ROSÉ BY THE GLASS'. A heading can tell you the colour of a wine, but it can never make a non-wine into a wine. Sake, soju, spritzers, and anything described with spirits or mixers must be excluded no matter what heading they appear under. Sake styles include Junmai, Ginjo, Daiginjo, Honjozo and Nigori: these are always sake, never wine. Anything whose name contains 'spritzer', 'spritz', 'punch' or 'cooler' is a cocktail.
+
 Only set wine_type from the heading when the heading is unambiguous, such as TINTO, LES VINS ROUGES, or RED BY THE GLASS. Otherwise take the colour from the grape variety or the appellation, and if still unclear return null.
 
 Unambiguous headings: BLANCO, BLANCS, LES VINS BLANCS, WHITE mean white. TINTO, NEGRE, VINS NEGRES, LES VINS ROUGES, ROSSO, RED mean red. ROSADO, ROSAT, ROSE mean rose; "ROSADO & ORANGE" covers both and orange wine counts as rose unless the item says otherwise. BURBUJAS, CAVA, CHAMPAGNE, ESPUMOSOS, SPARKLING mean sparkling. DULCE, DOLC, DESSERT mean dessert. Do not return headings as items.
