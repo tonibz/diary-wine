@@ -23,7 +23,6 @@ import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/with-timeout";
 
-
 export const Route = createFileRoute("/_authenticated/menu")({
   head: () => ({
     meta: [
@@ -73,7 +72,10 @@ function MenuScanPage() {
   function addFiles(files: FileList | null) {
     if (!files) return;
     const chosen = Array.from(files).slice(0, 8 - pages.length);
-    setPages((p) => [...p, ...chosen.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+    setPages((p) => [
+      ...p,
+      ...chosen.map((file) => ({ file, preview: URL.createObjectURL(file) })),
+    ]);
     if (chosen[0]) void prefillPlace(chosen[0]);
   }
 
@@ -349,7 +351,6 @@ function MenuScanPage() {
       <p className="text-xs text-muted-foreground mt-3 text-center">
         Nothing here goes into your diary until you say you ordered something.
       </p>
-
     </div>
   );
 }

@@ -56,8 +56,6 @@ export type MenuScanRow = {
   superseded: boolean;
 };
 
-
-
 export type DiaryWine = {
   entryId: string;
   wineId: string;
@@ -184,12 +182,10 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
   };
 }
 
-
-
-
-
 function textOf(item: MenuItemRow) {
-  return normalise(`${item.parsed_name ?? ""} ${item.parsed_producer ?? ""} ${item.raw_text ?? ""}`);
+  return normalise(
+    `${item.parsed_name ?? ""} ${item.parsed_producer ?? ""} ${item.raw_text ?? ""}`,
+  );
 }
 
 /**
@@ -213,7 +209,7 @@ export function enrichItems(
     // 1. Have they had it? Either the confident catalogue link is in their diary,
     //    or the printed name closely matches something they logged.
     let diary: DiaryWine | null = item.matched_wine_id
-      ? byWineId.get(item.matched_wine_id) ?? null
+      ? (byWineId.get(item.matched_wine_id) ?? null)
       : null;
     if (!diary) {
       const t = textOf(item);
@@ -230,7 +226,7 @@ export function enrichItems(
 
     // 2. Close to their taste? Attributes come from a matched catalogue wine when
     //    there is one, otherwise from the words printed on the list.
-    const linked = item.matched_wine_id ? catalogue.get(item.matched_wine_id) ?? null : null;
+    const linked = item.matched_wine_id ? (catalogue.get(item.matched_wine_id) ?? null) : null;
     const t = textOf(item);
     const has = (v: string | null | undefined) => {
       if (!v) return false;
@@ -333,7 +329,6 @@ function asScan(row: Record<string, unknown>): MenuScanRow {
   };
 }
 
-
 /**
  * Persist the scan and every parsed line, prices included. This runs BEFORE any
  * matching: the prices on a list can only be captured at the moment it was
@@ -382,7 +377,6 @@ export async function saveMenuScan(args: {
       .update({ superseded: true, superseded_by: (scan as { id: string }).id })
       .eq("id", args.supersedeScanId);
   }
-
 
   const rows = args.items.map((it, i) => ({
     menu_scan_id: (scan as { id: string }).id,
@@ -435,7 +429,6 @@ export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRo
   // would produce a confident-looking link to the wrong wine.
   const candidates = items.filter((i) => !i.rejected && !i.truncated && i.parsed_name);
   if (!candidates.length) return items;
-
 
   const results = await withTimeout(
     findBestMatches(
@@ -604,7 +597,6 @@ export async function listMenuScans(): Promise<Array<MenuScanRow & { item_count:
   }));
 }
 
-
 function csvCell(v: unknown): string {
   const s = v == null ? "" : String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -625,7 +617,6 @@ export async function exportMenuItemsCsv(): Promise<string> {
     .eq("menu_scans.superseded", false)
     .order("position", { ascending: true });
   if (error) throw error;
-
 
   const header = [
     "restaurant",
@@ -675,4 +666,3 @@ export function downloadCsv(filename: string, csv: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
-

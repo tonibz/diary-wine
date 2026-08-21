@@ -10,8 +10,6 @@ import { ScanVenue } from "@/components/ScanVenue";
 import { withTimeout } from "@/lib/with-timeout";
 import { Button } from "@/components/ui/button";
 
-
-
 export const Route = createFileRoute("/_authenticated/menu/$id")({
   head: () => ({
     meta: [
@@ -93,8 +91,6 @@ function MenuScanDetail() {
     }
   }
 
-
-
   return (
     <div className="px-5 pt-6 pb-8">
       <Link to="/menus" className="flex items-center gap-1 text-sm text-muted-foreground mb-5">
@@ -104,15 +100,21 @@ function MenuScanDetail() {
       {failure ? (
         <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
           <p className="text-sm text-foreground">{failure}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => window.location.reload()}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => window.location.reload()}
+          >
             Try again
           </Button>
         </div>
       ) : missing ? (
-        <p className="text-center text-sm text-muted-foreground py-16">That scan is no longer here.</p>
+        <p className="text-center text-sm text-muted-foreground py-16">
+          That scan is no longer here.
+        </p>
       ) : !scan || !items || !user ? (
         <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
-
       ) : (
         <>
           <ScanVenue
@@ -136,9 +138,7 @@ function MenuScanDetail() {
               <p className="text-xs text-muted-foreground mt-2">
                 Skipped {scan.skipped_count} non-wine item
                 {scan.skipped_count === 1 ? "" : "s"}
-                {scan.skipped_categories.length
-                  ? ` (${scan.skipped_categories.join(", ")})`
-                  : ""}
+                {scan.skipped_categories.length ? ` (${scan.skipped_categories.join(", ")})` : ""}
               </p>
             )}
             {neverMatched && (
@@ -166,7 +166,6 @@ function MenuScanDetail() {
               </div>
             )}
           </header>
-
 
           <MenuResults items={items} restaurantName={scan.restaurant_name} userId={user.id} />
         </>
