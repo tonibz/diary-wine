@@ -223,6 +223,76 @@ function normalisePrices(value: unknown): MenuPrice[] {
   return out;
 }
 
+
+/**
+ * A page-level heading governs the serving of every wine below it. Nothing else
+ * may decide the serving — in particular never the size of the number, since a
+ * Barolo at 29 by the glass and a cheap bottle at 29 look identical.
+ */
+export function servingBasisFromHeading(heading: string | null | undefined): ServingBasis {
+  if (!heading) return "unknown";
+  const t = heading
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (/magnum/.test(t)) return "magnum";
+  if (/half\s*bottle|demi\s*bouteille|media\s*botella|mitja\s*ampolla|375/.test(t)) {
+    return "half_bottle";
+  }
+  if (/by the glass|\bglass(es)?\b|\bcopas?\b|\bverre\b|per bicchiere|al bicchiere/.test(t)) {
+    return "glass";
+  }
+  if (/bottle|botellas?|ampolles?|ampolla|bouteille/.test(t)) return "bottle";
+  return "unknown";
+}
+
+const ATTRIBUTE_PATTERNS: Array<[keyof MenuWineAttributes, RegExp]> = [
+  ["biodynamic", /\b(biodynamic|biodinamic\w*|biodynamique|demeter)\b/i],
+  ["organic", /\b(organic|ecologic\w*|ecol[oó]gico|biologic\w*|\bbio\b|\borg\b)\b/i],
+  ["natural", /\b(natural|natural wine|vin naturel|vino naturale|nat\b)\b/i],
+  ["vegan", /\b(vegan|vegano|veg[aà])\b/i],
+];
+
+/** Markers printed with the wine, taken from the model's list and the raw line. */
+export function readAttributes(value: unknown, texts: Array<string | null>): MenuWineAttributes {
+  const words: string[] = [];
+  if (Array.isArray(value)) {
+    for (const v of value) if (typeof v === "string") words.push(v);
+  } else if (typeof value === "string") {
+    words.push(value);
+  } else if (value && typeof value === "object") {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === true || v === "true") words.push(k);
+    }
+  }
+  // Bracketed annotations only, from the printed line: a Château "Bio" is a name.
+  for (const t of texts) {
+    if (!t) continue;
+    for (const m of t.matchAll(/[([{]([^)\]}]{2,40})[)\]}]/g)) words.push(m[1]!);
+  }
+  const joined = words.join(" | ");
+  const out: MenuWineAttributes = {};
+  for (const [key, re] of ATTRIBUTE_PATTERNS) if (re.test(joined)) out[key] = true;
+  return out;
+}
+
+/**
+ * "Clos Lentiscus (natural)" must be stored as "Clos Lentiscus": leaving the
+ * marker in the name makes the same wine look different across restaurants.
+ */
+export function stripAttributeMarkers(name: string | null): string | null {
+  if (!name) return name;
+  let out = name;
+  for (const m of [...name.matchAll(/\s*[([{]([^)\]}]{2,40})[)\]}]/g)]) {
+    if (ATTRIBUTE_PATTERNS.some(([, re]) => re.test(m[1]!))) out = out.replace(m[0], " ");
+  }
+  out = out
+    .replace(/\s*[-–,]?\s*\b(organic|biodynamic|biodynamique|natural wine|vegan)\b\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return out || null;
+}
+
 export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
   const vintageRaw = toNumber(it.vintage);
@@ -246,34 +316,64 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
   const bottle = prices.find((p) => p.size === "bottle")?.amount ?? null;
   const glassSized = prices.find((p) => p.size === "glass")?.amount ?? null;
 
+  const pageHeading = str(it.page_heading);
+  const headingBasis = servingBasisFromHeading(pageHeading);
+
   // The largest is the bottle and the smallest the glass, as printed.
-  const price = toNumber(it.price) ?? bottle ?? (amounts.length ? Math.max(...amounts) : null);
-  const glass =
+  let price = toNumber(it.price) ?? bottle ?? (amounts.length ? Math.max(...amounts) : null);
+  let glass =
     toNumber(it.glass_price) ??
     glassSized ??
     (amounts.length > 1 ? Math.min(...amounts) : null);
 
+  // A by-the-glass page means a lone price is a glass price. Recorded as a
+  // bottle price it is nonsense and would dominate any cross-venue comparison.
+  if (headingBasis === "glass" && glass === null && price !== null && amounts.length <= 1) {
+    glass = price;
+    price = null;
+  }
+
+  const servingBasis: ServingBasis =
+    headingBasis !== "unknown"
+      ? headingBasis
+      : bottle !== null
+        ? "bottle"
+        : glassSized !== null && price === null
+          ? "glass"
+          : "unknown";
+
   const confidence = toNumber(it.confidence);
+  const rawName = str(it.name);
 
   const item: MenuParsedItem = {
     raw_text: str(it.raw_text),
-    name: str(it.name),
+    name: stripAttributeMarkers(rawName),
     producer: str(it.producer),
     vintage,
     grapes,
-    prices: prices.length ? prices : price !== null ? [{ size: "unknown", amount: price }] : [],
+    prices: prices.length
+      ? prices
+      : glass !== null && price === null
+        ? [{ size: "glass", amount: glass }]
+        : price !== null
+          ? [{ size: servingBasis === "unknown" ? "unknown" : servingBasis, amount: price }]
+          : [],
     price,
     glass_price: glass,
-    by_the_glass: it.by_the_glass === true || glass !== null,
+    by_the_glass: it.by_the_glass === true || glass !== null || servingBasis === "glass",
     wine_type: normaliseWineType(it.wine_type) ?? headingWineType(it.section_heading),
     section_heading: str(it.section_heading),
+    page_heading: pageHeading,
+    serving_basis: servingBasis,
+    attributes: readAttributes(it.attributes, [rawName, str(it.raw_text)]),
     confidence: confidence !== null ? Math.min(1, Math.max(0, confidence)) : null,
     // The model's own truncated flag is kept, and we add our own judgement: a
     // fragment of a name is never saved as a confident wine.
-    truncated: it.truncated === true || looksTruncatedName(str(it.name), str(it.producer)),
+    truncated: it.truncated === true || looksTruncatedName(rawName, str(it.producer)),
     rejected: false,
   };
   item.rejected = looksNonWine(item);
   return item;
+
 
 }
