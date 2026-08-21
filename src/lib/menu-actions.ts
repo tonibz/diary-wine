@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { findOrCreateVintage, logAlias, logDecision } from "@/lib/wine-match";
 import type { MenuItemRow } from "@/lib/menu-match";
+import { markRecommendationActedOn } from "@/lib/menu-recommend";
 
 /**
  * The only two paths from a menu into the diary, both explicitly chosen by the
@@ -89,5 +90,7 @@ export async function addMenuItemAsTasted(
     .select("id")
     .single();
   if (error) throw error;
+  // Whether a suggestion was actually ordered is the only real measure of it.
+  await markRecommendationActedOn(item.id);
   return (data as { id: string }).id;
 }
