@@ -646,11 +646,12 @@ export async function exportMenuItemsCsv(): Promise<string> {
     "glass_price",
     "currency",
     "by_the_glass",
+    "text_cut_off",
   ];
   const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
     const scan = (r.menu_scans ?? {}) as Record<string, unknown>;
     return [
-      scan.restaurant_name,
+      scan.restaurant_name ?? (scan.restaurant_unknown ? "Not sure" : ""),
       scan.scanned_at ? String(scan.scanned_at).slice(0, 10) : "",
       scan.city,
       scan.country,
@@ -662,10 +663,12 @@ export async function exportMenuItemsCsv(): Promise<string> {
       r.glass_price,
       r.currency,
       r.by_the_glass ? "yes" : "no",
+      r.truncated ? "yes" : "no",
     ]
       .map(csvCell)
       .join(",");
   });
+
   return [header.join(","), ...rows].join("\n");
 }
 
