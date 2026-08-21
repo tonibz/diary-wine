@@ -3,6 +3,20 @@ export type MenuPriceSize = "glass" | "carafe" | "half_bottle" | "bottle" | "unk
 
 export type MenuPrice = { size: MenuPriceSize; amount: number };
 
+/**
+ * What one printed price actually buys. 'unknown' is deliberate: a price whose
+ * serving we cannot establish is honest, whereas assuming a bottle silently
+ * corrupts every later comparison between restaurants.
+ */
+export type ServingBasis = "glass" | "bottle" | "half_bottle" | "magnum" | "unknown";
+
+export type MenuWineAttributes = {
+  organic?: boolean;
+  biodynamic?: boolean;
+  natural?: boolean;
+  vegan?: boolean;
+};
+
 export type MenuParsedItem = {
   raw_text: string | null;
   name: string | null;
@@ -15,6 +29,11 @@ export type MenuParsedItem = {
   by_the_glass: boolean;
   wine_type: string | null;
   section_heading: string | null;
+  /** e.g. "WINE BY THE GLASS" — governs the serving, across colour sub-headings */
+  page_heading: string | null;
+  serving_basis: ServingBasis;
+  /** organic / biodynamic / natural / vegan markers, kept out of the wine name */
+  attributes: MenuWineAttributes;
   confidence: number | null;
   truncated: boolean;
   /** true when the line describes a cocktail, spirit, beer or other non-wine */
@@ -24,6 +43,7 @@ export type MenuParsedItem = {
 const WINE_TYPES = ["red", "white", "rose", "sparkling", "dessert", "fortified"];
 
 const PRICE_SIZES: MenuPriceSize[] = ["glass", "carafe", "half_bottle", "bottle", "unknown"];
+
 
 /**
  * Last line of defence: the model is told to skip non-wine, but a cocktail, a
