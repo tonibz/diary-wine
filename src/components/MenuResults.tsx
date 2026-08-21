@@ -327,7 +327,67 @@ export function MenuResults({
         </section>
       )}
 
+      {unreadable.length > 0 && (
+        <section>
+          <h2 className="font-serif text-2xl text-foreground mb-1 flex items-center gap-2">
+            <ScanLine size={18} className="text-muted-foreground" /> Couldn't read these properly
+          </h2>
+          <p className="text-sm text-muted-foreground mb-3">
+            The photo cut these off, so they aren't saved as wines yet. Fix the name or discard them.
+          </p>
+          <ul className="space-y-3">
+            {unreadable.map((item) => {
+              const draft =
+                drafts[item.id] ?? {
+                  name: item.parsed_name ?? "",
+                  producer: item.parsed_producer ?? "",
+                };
+              return (
+                <li key={item.id} className="rounded-2xl border border-dashed border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Read as “{item.parsed_name ?? item.raw_text ?? "—"}”
+                    {item.price != null ? ` · ${item.currency ?? ""} ${item.price}` : ""}
+                  </p>
+                  <div className="space-y-2">
+                    <Input
+                      value={draft.name}
+                      onChange={(e) =>
+                        setDrafts((d) => ({ ...d, [item.id]: { ...draft, name: e.target.value } }))
+                      }
+                      placeholder="Wine name"
+                      className="bg-background"
+                    />
+                    <Input
+                      value={draft.producer}
+                      onChange={(e) =>
+                        setDrafts((d) => ({ ...d, [item.id]: { ...draft, producer: e.target.value } }))
+                      }
+                      placeholder="Producer (optional)"
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" disabled={busy === item.id} onClick={() => onFix(item)}>
+                      Save this name
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy === item.id}
+                      onClick={() => onDiscard(item)}
+                    >
+                      <Trash2 size={14} /> Discard
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {items.length === 0 && (
+
         <p className="text-center text-sm text-muted-foreground py-10">
           No wines could be read from those photos.
         </p>
