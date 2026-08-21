@@ -300,6 +300,13 @@ export function MenuResults({
             {s.wine_type && <span className="capitalize">{s.wine_type}</span>}
             {s.item.section_heading && <span>· {s.item.section_heading}</span>}
             {s.grapes.length ? <span>· {s.grapes.join(", ")}</span> : null}
+            {Object.entries(s.item.attributes ?? {})
+              .filter(([, v]) => v === true)
+              .map(([k]) => (
+                <span key={k} className="capitalize text-primary/80">
+                  · {k}
+                </span>
+              ))}
             {s.item.truncated && (
               <span className="text-destructive">· text was cut off, please check</span>
             )}
