@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import {
   deleteMenuItem,
   loadTasteContext,
+  servingLabel,
+  setScanServingBasis,
   updateMenuItem,
   type MenuItemRow,
 } from "@/lib/menu-match";
