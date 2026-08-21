@@ -241,7 +241,9 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
     wine_type: normaliseWineType(it.wine_type) ?? headingWineType(it.section_heading),
     section_heading: str(it.section_heading),
     confidence: confidence !== null ? Math.min(1, Math.max(0, confidence)) : null,
-    truncated: it.truncated === true,
+    // The model's own truncated flag is kept, and we add our own judgement: a
+    // fragment of a name is never saved as a confident wine.
+    truncated: it.truncated === true || looksTruncatedName(str(it.name), str(it.producer)),
     rejected: false,
   };
   item.rejected = looksNonWine(item);
