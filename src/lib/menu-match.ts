@@ -312,7 +312,7 @@ export async function loadLinkedWines(ids: string[]): Promise<Map<string, DiaryW
 }
 
 const SCAN_COLS =
-  "id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note";
+  "id, restaurant_name, restaurant_unknown, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note, superseded";
 const ITEM_COLS =
   "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
 
@@ -320,6 +320,7 @@ function asScan(row: Record<string, unknown>): MenuScanRow {
   return {
     id: row.id as string,
     restaurant_name: (row.restaurant_name as string) ?? null,
+    restaurant_unknown: row.restaurant_unknown === true,
     photo_path: (row.photo_path as string) ?? null,
     scanned_at: row.scanned_at as string,
     skipped_count: Number(row.skipped_count ?? 0),
@@ -328,8 +329,10 @@ function asScan(row: Record<string, unknown>): MenuScanRow {
     city: (row.city as string) ?? null,
     country: (row.country as string) ?? null,
     venue_note: (row.venue_note as string) ?? null,
+    superseded: row.superseded === true,
   };
 }
+
 
 /**
  * Persist the scan and every parsed line, prices included. This runs BEFORE any
