@@ -2,7 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { findBestMatches } from "@/lib/wine-match";
 import { withTimeout } from "@/lib/with-timeout";
 
-import type { MenuParsedItem, MenuPrice } from "@/lib/menu-parse";
+import type {
+  MenuParsedItem,
+  MenuPrice,
+  MenuWineAttributes,
+  ServingBasis,
+} from "@/lib/menu-parse";
 
 /**
  * menu_scans / menu_items are user-private tables that hold what a restaurant
@@ -28,6 +33,11 @@ export type MenuItemRow = {
   rejected: boolean;
   by_the_glass: boolean;
   section_heading: string | null;
+  /** page-level heading, e.g. "WINE BY THE GLASS" — governs the serving */
+  page_heading: string | null;
+  /** what the price buys; 'unknown' is never treated as a bottle */
+  serving_basis: ServingBasis;
+  attributes: MenuWineAttributes | null;
   wine_type: string | null;
   grapes: string[] | null;
   item_confidence: number | null;
@@ -36,6 +46,7 @@ export type MenuItemRow = {
   match_score: number | null;
   position: number | null;
 };
+
 
 export type MenuScanRow = {
   id: string;
@@ -165,7 +176,7 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
 const SCAN_COLS =
   "id, restaurant_name, restaurant_unknown, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note, superseded";
 const ITEM_COLS =
-  "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
+  "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, page_heading, serving_basis, attributes, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
 
 function asScan(row: Record<string, unknown>): MenuScanRow {
   return {
@@ -250,6 +261,10 @@ export async function saveMenuScan(args: {
     rejected: it.rejected,
     by_the_glass: it.by_the_glass,
     section_heading: it.section_heading,
+    page_heading: it.page_heading,
+    // 'unknown' when nothing on the page says what the price buys.
+    serving_basis: it.serving_basis,
+    attributes: it.attributes,
     wine_type: it.wine_type,
     grapes: it.grapes.length ? it.grapes : null,
     item_confidence: it.confidence,
@@ -364,6 +379,67 @@ export async function deleteMenuItem(itemId: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * One tap fixes a whole page. When the parser read a by-the-glass page as
+ * bottles (or the reverse), every price on the scan moves to the right field
+ * rather than making the user edit 25 rows.
+ */
+export async function setScanServingBasis(
+  items: MenuItemRow[],
+  basis: Extract<ServingBasis, "glass" | "bottle">,
+): Promise<MenuItemRow[]> {
+  const changed: MenuItemRow[] = [];
+  for (const item of items) {
+    if (item.serving_basis === basis) continue;
+    // Only single-priced lines are moved: a line printing both a glass and a
+    // bottle price already states its own servings.
+    const both = item.price != null && item.glass_price != null;
+    const amount = item.price ?? item.glass_price;
+    const patch =
+      both || amount == null
+        ? { serving_basis: basis }
+        : basis === "glass"
+          ? { serving_basis: basis, price: null, glass_price: amount, by_the_glass: true }
+          : { serving_basis: basis, price: amount, glass_price: null, by_the_glass: false };
+    changed.push({ ...item, ...patch } as MenuItemRow);
+    const { error } = await menuDb.from("menu_items").update(patch).eq("id", item.id);
+    if (error) throw error;
+  }
+  const byId = new Map(changed.map((c) => [c.id, c]));
+  return items.map((i) => byId.get(i.id) ?? i);
+}
+
+/** What a line's single price buys, in words, e.g. "glass". */
+export function servingLabel(basis: ServingBasis): string {
+  return basis === "half_bottle"
+    ? "half bottle"
+    : basis === "unknown"
+      ? "serving unknown"
+      : basis;
+}
+
+/**
+ * Price comparison must compare like with like. A row whose serving we never
+ * established is excluded outright rather than assumed to be a bottle.
+ */
+export function comparablePrices(
+  items: MenuItemRow[],
+  basis: Exclude<ServingBasis, "unknown">,
+): Array<{ item: MenuItemRow; amount: number }> {
+  const out: Array<{ item: MenuItemRow; amount: number }> = [];
+  for (const item of items) {
+    if (item.rejected) continue;
+    if (basis === "glass") {
+      if (item.glass_price != null) out.push({ item, amount: item.glass_price });
+      continue;
+    }
+    if (item.serving_basis !== basis) continue;
+    if (item.price != null) out.push({ item, amount: item.price });
+  }
+  return out;
+}
+
+
 /** Restaurants this user has scanned before, newest first — a picklist. */
 export async function listRecentRestaurants(limit = 8): Promise<string[]> {
   const { data } = await menuDb
@@ -465,7 +541,7 @@ export async function exportMenuItemsCsv(): Promise<string> {
   const { data, error } = await menuDb
     .from("menu_items")
     .select(
-      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, rejected, truncated, position, menu_scans!inner(restaurant_name, restaurant_unknown, scanned_at, city, country, venue_note, superseded)",
+      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, serving_basis, page_heading, attributes, currency, by_the_glass, rejected, truncated, position, menu_scans!inner(restaurant_name, restaurant_unknown, scanned_at, city, country, venue_note, superseded)",
     )
     .eq("rejected", false)
     // Duplicate scans of one list would over-count that venue's prices.
@@ -484,12 +560,20 @@ export async function exportMenuItemsCsv(): Promise<string> {
     "vintage",
     "price",
     "glass_price",
+    // Comparisons must be like with like; 'unknown' rows are excluded, not guessed.
+    "serving_basis",
+    "page_heading",
+    "markers",
     "currency",
     "by_the_glass",
     "text_cut_off",
   ];
   const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
     const scan = (r.menu_scans ?? {}) as Record<string, unknown>;
+    const markers = Object.entries((r.attributes ?? {}) as Record<string, unknown>)
+      .filter(([, v]) => v === true)
+      .map(([k]) => k)
+      .join(", ");
     return [
       scan.restaurant_name ?? "",
       scan.scanned_at ? String(scan.scanned_at).slice(0, 10) : "",
@@ -501,6 +585,9 @@ export async function exportMenuItemsCsv(): Promise<string> {
       r.parsed_vintage,
       r.price,
       r.glass_price,
+      r.serving_basis ?? "unknown",
+      r.page_heading,
+      markers,
       r.currency,
       r.by_the_glass ? "yes" : "no",
       r.truncated ? "yes" : "no",

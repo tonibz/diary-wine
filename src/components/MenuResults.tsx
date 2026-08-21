@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import {
   deleteMenuItem,
   loadTasteContext,
+  servingLabel,
+  setScanServingBasis,
   updateMenuItem,
   type MenuItemRow,
 } from "@/lib/menu-match";
@@ -50,24 +52,29 @@ export function MenuResults({
   const [fixes, setFixes] = useState<Record<string, { name: string; producer: string }>>({});
   const [discarded, setDiscarded] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<Record<string, { name: string; producer: string }>>({});
+  // A whole page corrected in one tap, e.g. glass prices read as bottle prices.
+  const [servingFix, setServingFix] = useState<Record<string, MenuItemRow>>({});
+  const [servingBusy, setServingBusy] = useState(false);
 
   const visible = useMemo(
     () =>
       items
         .filter((i) => !discarded.includes(i.id))
         .map((i) => {
+          const base = servingFix[i.id] ?? i;
           const fix = fixes[i.id];
           return fix
             ? {
-                ...i,
+                ...base,
                 parsed_name: fix.name,
                 parsed_producer: fix.producer || null,
                 truncated: false,
               }
-            : i;
+            : base;
         }),
-    [items, fixes, discarded],
+    [items, fixes, discarded, servingFix],
   );
+
 
   // A truncated line is a fragment, never a wine: it is never matched and never
   // mixed in with the readable wines.
@@ -206,6 +213,30 @@ export function MenuResults({
     }
   }
 
+  /** The serving the page as a whole was read as, when most lines agree. */
+  const scanBasis = (() => {
+    const priced = readable.filter((i) => i.price != null || i.glass_price != null);
+    if (priced.length < 2) return null;
+    const glass = priced.filter((i) => i.serving_basis === "glass").length;
+    const bottle = priced.filter((i) => i.serving_basis === "bottle").length;
+    if (glass >= priced.length * 0.6) return "glass" as const;
+    if (bottle >= priced.length * 0.6) return "bottle" as const;
+    return null;
+  })();
+
+  async function onSwitchServing(basis: "glass" | "bottle") {
+    try {
+      setServingBusy(true);
+      const updated = await setScanServingBasis(readable, basis);
+      setServingFix(Object.fromEntries(updated.map((u) => [u.id, u])));
+      toast.success(basis === "glass" ? "Now read as glass prices" : "Now read as bottle prices");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not change that");
+    } finally {
+      setServingBusy(false);
+    }
+  }
+
   if (!scored) {
     return <p className="text-center text-sm text-muted-foreground py-10">Reading the list…</p>;
   }
@@ -213,23 +244,31 @@ export function MenuResults({
   const price = (item: MenuItemRow) =>
     (item.price != null || item.glass_price != null) && (
       <div className="text-right flex-shrink-0">
-        <p className="text-sm font-medium text-foreground">
-          {item.currency ? `${item.currency} ` : ""}
-          {item.price ?? item.glass_price}
-        </p>
-        {item.glass_price != null && (
-          <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
-            <GlassWater size={11} /> {item.currency ? `${item.currency} ` : ""}
-            {item.glass_price} by the glass
+        {item.price != null && (
+          <p className="text-sm font-medium text-foreground">
+            {item.currency ? `${item.currency} ` : ""}
+            {item.price}
+            <span className="text-[11px] font-normal text-muted-foreground">
+              {" "}
+              / {servingLabel(item.serving_basis)}
+            </span>
           </p>
         )}
-        {item.glass_price == null && item.by_the_glass && (
-          <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
-            <GlassWater size={11} /> by the glass
+        {item.glass_price != null && (
+          <p
+            className={cn(
+              "flex items-center gap-1 justify-end text-muted-foreground",
+              item.price == null ? "text-sm font-medium text-foreground" : "text-[11px]",
+            )}
+          >
+            <GlassWater size={11} /> {item.currency ? `${item.currency} ` : ""}
+            {item.glass_price} / glass
           </p>
         )}
       </div>
     );
+
+
 
   const row = (s: ScoredItem, tone: "had" | "recommended" | "other") => (
     <li
@@ -261,6 +300,13 @@ export function MenuResults({
             {s.wine_type && <span className="capitalize">{s.wine_type}</span>}
             {s.item.section_heading && <span>· {s.item.section_heading}</span>}
             {s.grapes.length ? <span>· {s.grapes.join(", ")}</span> : null}
+            {Object.entries(s.item.attributes ?? {})
+              .filter(([, v]) => v === true)
+              .map(([k]) => (
+                <span key={k} className="capitalize text-primary/80">
+                  · {k}
+                </span>
+              ))}
             {s.item.truncated && (
               <span className="text-destructive">· text was cut off, please check</span>
             )}
@@ -326,6 +372,23 @@ export function MenuResults({
 
   return (
     <div className="space-y-8">
+      {scanBasis && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-parchment/60 px-4 py-3">
+          <p className="text-sm text-foreground flex items-center gap-1.5">
+            <GlassWater size={14} className="text-muted-foreground" />
+            {scanBasis === "glass" ? "Read as glass prices" : "Read as bottle prices"}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={servingBusy}
+            onClick={() => onSwitchServing(scanBasis === "glass" ? "bottle" : "glass")}
+          >
+            {scanBasis === "glass" ? "These are bottles" : "These are glasses"}
+          </Button>
+        </div>
+      )}
+
       {failed && (
         <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
           <p className="text-sm text-foreground">
