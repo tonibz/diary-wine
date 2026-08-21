@@ -81,15 +81,15 @@ function MenuHistoryPage() {
       ) : (
         <ul className="space-y-3">
           {scans.map((s) => (
-            <li key={s.id}>
+            <li key={s.id} className="rounded-2xl bg-card shadow-notebook border border-border">
               <Link
                 to="/menu/$id"
                 params={{ id: s.id }}
-                className="flex items-center justify-between rounded-2xl bg-card p-4 shadow-notebook border border-border hover:border-primary/30 transition-colors"
+                className="flex items-center justify-between p-4 transition-colors hover:border-primary/30"
               >
                 <div className="min-w-0">
                   <h3 className="font-serif text-lg text-foreground truncate">
-                    {s.restaurant_name ?? (s.restaurant_unknown ? "Venue not sure" : "Unnamed list")}
+                    {s.restaurant_name ?? "Unnamed list"}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {format(new Date(s.scanned_at), "d MMM yyyy")} · {s.item_count}{" "}
@@ -99,6 +99,18 @@ function MenuHistoryPage() {
                 </div>
                 <ChevronRight size={18} className="text-muted-foreground flex-shrink-0" />
               </Link>
+              {!s.restaurant_name?.trim() && (
+                <AddPlace
+                  scanId={s.id}
+                  onSaved={(name) =>
+                    setScans(
+                      (list) =>
+                        list?.map((x) => (x.id === s.id ? { ...x, restaurant_name: name } : x)) ??
+                        list,
+                    )
+                  }
+                />
+              )}
             </li>
           ))}
         </ul>
