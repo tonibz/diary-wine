@@ -327,10 +327,13 @@ export type Database = {
           photo_path: string | null
           raw_response: Json | null
           restaurant_name: string | null
+          restaurant_unknown: boolean
           scanned_at: string
           scanned_by: string | null
           skipped_categories: Json
           skipped_count: number
+          superseded: boolean
+          superseded_by: string | null
           user_id: string
           venue_note: string | null
         }
@@ -343,10 +346,13 @@ export type Database = {
           photo_path?: string | null
           raw_response?: Json | null
           restaurant_name?: string | null
+          restaurant_unknown?: boolean
           scanned_at?: string
           scanned_by?: string | null
           skipped_categories?: Json
           skipped_count?: number
+          superseded?: boolean
+          superseded_by?: string | null
           user_id: string
           venue_note?: string | null
         }
@@ -359,14 +365,25 @@ export type Database = {
           photo_path?: string | null
           raw_response?: Json | null
           restaurant_name?: string | null
+          restaurant_unknown?: boolean
           scanned_at?: string
           scanned_by?: string | null
           skipped_categories?: Json
           skipped_count?: number
+          superseded?: boolean
+          superseded_by?: string | null
           user_id?: string
           venue_note?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "menu_scans_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "menu_scans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

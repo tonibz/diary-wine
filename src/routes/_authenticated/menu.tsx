@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   Camera,
@@ -12,17 +13,34 @@ import {
   History,
   AlertTriangle,
   RotateCcw,
+  Save,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { compressImage } from "@/lib/image-compress";
 import { readMenuPage } from "@/lib/read-menu.functions";
 import type { JsonValue } from "@/lib/read-menu.functions";
 import type { MenuParsedItem } from "@/lib/menu-parse";
-import { matchStoredItems, saveMenuScan } from "@/lib/menu-match";
+import {
+  findDuplicateScan,
+  listRecentRestaurants,
+  matchStoredItems,
+  saveMenuScan,
+  type DuplicateScan,
+} from "@/lib/menu-match";
 import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { withTimeout } from "@/lib/with-timeout";
 
 
@@ -45,6 +63,17 @@ export const Route = createFileRoute("/_authenticated/menu")({
 
 type Page = { file: File; preview: string };
 
+/** What was read, held in memory until the user names the venue and saves. */
+type Draft = {
+  paths: string[];
+  raws: JsonValue[];
+  items: MenuParsedItem[];
+  currency: string | null;
+  restaurantFromMenu: string | null;
+  skippedCount: number;
+  skippedCategories: string[];
+};
+
 function MenuScanPage() {
   const navigate = useNavigate();
   const readPage = useServerFn(readMenuPage);
@@ -52,13 +81,25 @@ function MenuScanPage() {
   const galleryRef = useRef<HTMLInputElement>(null);
   const [pages, setPages] = useState<Page[]>([]);
   const [restaurant, setRestaurant] = useState("");
+  const [restaurantUnknown, setRestaurantUnknown] = useState(false);
+  const [restaurantFromMenu, setRestaurantFromMenu] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [venueNote, setVenueNote] = useState("");
   const [placeFromPhoto, setPlaceFromPhoto] = useState(false);
   const [reading, setReading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [duplicate, setDuplicate] = useState<DuplicateScan | null>(null);
+
+  useEffect(() => {
+    listRecentRestaurants()
+      .then(setRecent)
+      .catch(() => setRecent([]));
+  }, []);
 
   function addFiles(files: FileList | null) {
     if (!files) return;
@@ -92,6 +133,7 @@ function MenuScanPage() {
     }
   }
 
+  /** Read the photos. Nothing is saved yet: the venue is asked for afterwards. */
   async function onRead() {
     if (!pages.length) return;
     setReading(true);
@@ -117,7 +159,7 @@ function MenuScanPage() {
       const items: MenuParsedItem[] = [];
       const raws: JsonValue[] = [];
       const pageErrors: string[] = [];
-      let restaurantFromMenu: string | null = null;
+      let readRestaurant: string | null = null;
       let currency: string | null = null;
       let salvagedPages = 0;
       let skippedCount = 0;
@@ -134,13 +176,11 @@ function MenuScanPage() {
         if (res.salvaged) salvagedPages++;
         skippedCount += res.skipped_count;
         for (const c of res.skipped_categories) skippedCategories.add(c);
-        restaurantFromMenu ??= res.restaurant_name;
+        readRestaurant ??= res.restaurant_name;
         currency ??= res.currency;
         items.push(...res.items);
       }
 
-      // Anything the model returned that clearly describes a cocktail is counted
-      // as skipped too, but still saved flagged.
       const rejectedCount = items.filter((it) => it.rejected).length;
       const wines = items.filter((it) => !it.rejected);
 
@@ -151,24 +191,67 @@ function MenuScanPage() {
         );
       }
 
-      // Save FIRST. The prices on this list exist nowhere else, so storage must
-      // not depend on the diary, on find_wine_match, or on anything downstream.
-      setProgress("Saving the list");
-      const { scan, items: stored } = await saveMenuScan({
-        userId: uid,
-        photoPath: paths[0] ?? null,
-        restaurantName: restaurant.trim() || restaurantFromMenu,
-        raw: { pages: raws } as unknown,
+      if (salvagedPages > 0) {
+        toast.warning(
+          `One page was very long — I read the ${wines.length} wines I could. Photograph fewer pages at once for the rest.`,
+        );
+      }
+      if (pageErrors.length) {
+        toast.error(`${pageErrors.length} page(s) couldn't be read: ${pageErrors[0]}`);
+      }
+
+      // Prefill the venue from the name printed on the menu itself.
+      if (!restaurant.trim() && readRestaurant) {
+        setRestaurant(readRestaurant);
+        setRestaurantFromMenu(true);
+      }
+
+      setDraft({
+        paths,
+        raws,
         items,
         currency,
-        city: city.trim() || null,
-        country: country.trim() || null,
-        venueNote: venueNote.trim() || null,
+        restaurantFromMenu: readRestaurant,
         skippedCount: skippedCount + rejectedCount,
         skippedCategories: [...skippedCategories],
       });
+      setReading(false);
+      setProgress(null);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Could not read that wine list";
+      setFailure(message);
+      toast.error(message);
+      setReading(false);
+      setProgress(null);
+    }
+  }
 
-      // Matching second, purely as enrichment over rows that already exist.
+  /** Save, then check the diary — matching is enrichment and can never block. */
+  async function persist(supersedeScanId: string | null) {
+    if (!draft) return;
+    setSaving(true);
+    setDuplicate(null);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user!.id;
+
+      setProgress("Saving the list");
+      const { scan, items: stored } = await saveMenuScan({
+        userId: uid,
+        photoPath: draft.paths[0] ?? null,
+        restaurantName: restaurantUnknown ? null : restaurant.trim() || null,
+        restaurantUnknown,
+        raw: { pages: draft.raws } as unknown,
+        items: draft.items,
+        currency: draft.currency,
+        city: city.trim() || null,
+        country: country.trim() || null,
+        venueNote: venueNote.trim() || null,
+        skippedCount: draft.skippedCount,
+        skippedCategories: draft.skippedCategories,
+        supersedeScanId,
+      });
+
       setProgress(`Matching ${stored.length} wines to your diary`);
       try {
         await matchStoredItems(stored);
@@ -179,25 +262,46 @@ function MenuScanPage() {
         );
       }
 
-      if (salvagedPages > 0) {
-        toast.warning(
-          `One page was very long — I saved the ${wines.length} wines I could read. Photograph fewer pages at once for the rest.`,
-        );
-      }
-      if (pageErrors.length) {
-        toast.error(`${pageErrors.length} page(s) couldn't be read: ${pageErrors[0]}`);
-      }
-
       navigate({ to: "/menu/$id", params: { id: scan.id } });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not read that wine list";
+      const message = e instanceof Error ? e.message : "Could not save that wine list";
       setFailure(message);
       toast.error(message);
-      setReading(false);
+      setSaving(false);
       setProgress(null);
     }
   }
 
+  async function onSave() {
+    if (!draft) return;
+    if (!restaurant.trim() && !restaurantUnknown) {
+      toast.error("Add the restaurant name, or choose “Not sure”.");
+      return;
+    }
+    setFailure(null);
+    setSaving(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user!.id;
+      const dup = await withTimeout(
+        findDuplicateScan({
+          userId: uid,
+          restaurantName: restaurantUnknown ? null : restaurant.trim() || null,
+          names: draft.items.filter((i) => !i.rejected).map((i) => i.name ?? ""),
+        }),
+        15_000,
+      ).catch(() => null);
+      if (dup) {
+        setDuplicate(dup);
+        setSaving(false);
+        return;
+      }
+    } catch {
+      // A duplicate check that fails must never stop the list being saved.
+    }
+    setSaving(false);
+    await persist(null);
+  }
 
   /** Never let a page failure escape as a swallowed exception. */
   async function readMenuPageSafe(pageNumber: number, path: string) {
@@ -221,6 +325,9 @@ function MenuScanPage() {
     }
   }
 
+  const wines = (draft?.items ?? []).filter((i) => !i.rejected);
+  const unreadable = wines.filter((i) => i.truncated);
+  const busy = reading || saving;
 
   return (
     <div className="px-5 pt-6 pb-8">
@@ -234,74 +341,150 @@ function MenuScanPage() {
       </div>
 
       <header className="mb-6">
-        <h1 className="text-3xl font-serif text-primary">Scan a wine list</h1>
+        <h1 className="text-3xl font-serif text-primary">
+          {draft ? "Where was this list?" : "Scan a wine list"}
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Photograph the list — every page if it's long — and I'll tell you which ones you already
-          know.
+          {draft
+            ? `I read ${wines.length} ${wines.length === 1 ? "wine" : "wines"}. A price only means something with a venue attached, so tell me where this was.`
+            : "Photograph the list — every page if it's long — and I'll tell you which ones you already know."}
         </p>
       </header>
 
-      <div className="space-y-4 mb-5">
-        <div className="space-y-2">
-          <Label htmlFor="restaurant">Restaurant (optional)</Label>
-          <Input
-            id="restaurant"
-            value={restaurant}
-            onChange={(e) => setRestaurant(e.target.value)}
-            placeholder="Where are you?"
-            className="bg-card"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
+      {draft && (
+        <div className="space-y-4 mb-5">
           <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
+            <Label htmlFor="restaurant">Restaurant</Label>
             <Input
-              id="city"
-              value={city}
+              id="restaurant"
+              value={restaurant}
               onChange={(e) => {
-                setCity(e.target.value);
-                setPlaceFromPhoto(false);
+                setRestaurant(e.target.value);
+                setRestaurantUnknown(false);
+                setRestaurantFromMenu(false);
               }}
-              placeholder="Optional"
+              placeholder="Where were you?"
+              className="bg-card"
+              disabled={restaurantUnknown}
+            />
+            {restaurantFromMenu && restaurant.trim() && (
+              <p className="text-xs text-muted-foreground">
+                Read off the menu — edit it if that's not the name.
+              </p>
+            )}
+            {recent.length > 0 && !restaurantUnknown && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {recent.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setRestaurant(name);
+                      setRestaurantFromMenu(false);
+                    }}
+                    className="rounded-full border border-border bg-card px-3 py-1 text-xs text-foreground"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setRestaurantUnknown((v) => !v);
+                setRestaurantFromMenu(false);
+              }}
+              className="text-xs underline text-muted-foreground pt-1"
+            >
+              {restaurantUnknown
+                ? "Actually, I know where this was"
+                : "I'm not sure where this was"}
+            </button>
+            {restaurantUnknown && (
+              <p className="text-xs text-muted-foreground">
+                Recorded as “not sure”, so these prices are kept out of venue comparisons.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                  setPlaceFromPhoto(false);
+                }}
+                placeholder="Optional"
+                className="bg-card"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={country}
+                onChange={(e) => {
+                  setCountry(e.target.value);
+                  setPlaceFromPhoto(false);
+                }}
+                placeholder="Optional"
+                className="bg-card"
+              />
+            </div>
+          </div>
+          {placeFromPhoto && (
+            <p className="text-xs text-muted-foreground">
+              From the photo's location — edit if wrong.
+            </p>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="venue-note">Kind of place</Label>
+            <Input
+              id="venue-note"
+              value={venueNote}
+              onChange={(e) => setVenueNote(e.target.value)}
+              placeholder="Wine bar, fine dining, trattoria…"
               className="bg-card"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
-            <Input
-              id="country"
-              value={country}
-              onChange={(e) => {
-                setCountry(e.target.value);
-                setPlaceFromPhoto(false);
-              }}
-              placeholder="Optional"
-              className="bg-card"
-            />
+
+          <div className="rounded-2xl border border-border bg-parchment/60 p-4 text-sm text-muted-foreground space-y-1">
+            <p>
+              {wines.length} {wines.length === 1 ? "wine" : "wines"} ready to save.
+            </p>
+            {draft.skippedCount > 0 && (
+              <p>
+                Skipped {draft.skippedCount} non-wine item{draft.skippedCount === 1 ? "" : "s"}
+                {draft.skippedCategories.length ? ` (${draft.skippedCategories.join(", ")})` : ""}.
+              </p>
+            )}
+            {unreadable.length > 0 && (
+              <p>
+                {unreadable.length} line{unreadable.length === 1 ? "" : "s"} came out cut off — you
+                can fix or discard {unreadable.length === 1 ? "it" : "them"} on the next screen.
+              </p>
+            )}
           </div>
         </div>
-        {placeFromPhoto && (
-          <p className="text-xs text-muted-foreground">From the photo's location — edit if wrong.</p>
-        )}
-        <div className="space-y-2">
-          <Label htmlFor="venue-note">Kind of place</Label>
-          <Input
-            id="venue-note"
-            value={venueNote}
-            onChange={(e) => setVenueNote(e.target.value)}
-            placeholder="Wine bar, fine dining, trattoria…"
-            className="bg-card"
-          />
-        </div>
-      </div>
+      )}
 
-
-      {pages.length > 0 && (
+      {!draft && pages.length > 0 && (
         <ul className="grid grid-cols-3 gap-2 mb-5">
           {pages.map((p, i) => (
-            <li key={p.preview} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-parchment">
-              <img src={p.preview} alt={`Menu page ${i + 1}`} className="h-full w-full object-cover" />
-              {!reading && (
+            <li
+              key={p.preview}
+              className="relative aspect-[3/4] rounded-xl overflow-hidden bg-parchment"
+            >
+              <img
+                src={p.preview}
+                alt={`Menu page ${i + 1}`}
+                className="h-full w-full object-cover"
+              />
+              {!busy && (
                 <button
                   type="button"
                   onClick={() => setPages((ps) => ps.filter((_, k) => k !== i))}
@@ -316,30 +499,34 @@ function MenuScanPage() {
         </ul>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" disabled={reading} onClick={() => cameraRef.current?.click()}>
-          <Camera size={16} /> Take a photo
-        </Button>
-        <Button variant="outline" disabled={reading} onClick={() => galleryRef.current?.click()}>
-          <Images size={16} /> Choose photos
-        </Button>
-      </div>
-      <input
-        ref={cameraRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => addFiles(e.target.files)}
-      />
-      <input
-        ref={galleryRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => addFiles(e.target.files)}
-      />
+      {!draft && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" disabled={busy} onClick={() => cameraRef.current?.click()}>
+              <Camera size={16} /> Take a photo
+            </Button>
+            <Button variant="outline" disabled={busy} onClick={() => galleryRef.current?.click()}>
+              <Images size={16} /> Choose photos
+            </Button>
+          </div>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => addFiles(e.target.files)}
+          />
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => addFiles(e.target.files)}
+          />
+        </>
+      )}
 
       {failure && (
         <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
@@ -347,29 +534,80 @@ function MenuScanPage() {
             <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-destructive" />
             <span>{failure}</span>
           </p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={onRead}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => (draft ? onSave() : onRead())}
+          >
             <RotateCcw size={14} /> Try again
           </Button>
         </div>
       )}
 
-      <Button className="w-full mt-6" disabled={!pages.length || reading} onClick={onRead}>
-        {reading ? (
-          <>
-            <Loader2 size={16} className="animate-spin" />
-            {progress ?? "Reading the list…"}
-          </>
-        ) : (
-          <>
-            <ScrollText size={16} /> {failure ? "Read this list again" : "Read this list"}
-            {pages.length > 1 ? ` (${pages.length} pages)` : ""}
-          </>
-        )}
-      </Button>
+      {draft ? (
+        <Button className="w-full mt-6" disabled={saving} onClick={onSave}>
+          {saving ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              {progress ?? "Saving…"}
+            </>
+          ) : (
+            <>
+              <Save size={16} /> Save this list
+            </>
+          )}
+        </Button>
+      ) : (
+        <Button className="w-full mt-6" disabled={!pages.length || busy} onClick={onRead}>
+          {reading ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              {progress ?? "Reading the list…"}
+            </>
+          ) : (
+            <>
+              <ScrollText size={16} /> {failure ? "Read this list again" : "Read this list"}
+              {pages.length > 1 ? ` (${pages.length} pages)` : ""}
+            </>
+          )}
+        </Button>
+      )}
 
       <p className="text-xs text-muted-foreground mt-3 text-center">
         Nothing here goes into your diary until you say you ordered something.
       </p>
+
+      <AlertDialog open={!!duplicate} onOpenChange={(o) => !o && setDuplicate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This looks like the same list</AlertDialogTitle>
+            <AlertDialogDescription>
+              This looks like the same list you scanned earlier today
+              {duplicate?.scan.restaurant_name ? ` at ${duplicate.scan.restaurant_name}` : ""}
+              {duplicate ? ` (${format(new Date(duplicate.scan.scanned_at), "HH:mm")}, ${duplicate.itemCount} wines` : ""}
+              {duplicate && duplicate.reason === "items"
+                ? `, ${Math.round(duplicate.overlap * 100)}% the same wines)`
+                : duplicate
+                  ? ")"
+                  : ""}
+              . Replace that scan, or save as a new one?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              onClick={() => void persist(duplicate?.scan.id ?? null)}
+              className="w-full"
+            >
+              Replace that scan
+            </AlertDialogAction>
+            <Button variant="outline" className="w-full" onClick={() => void persist(null)}>
+              Save as a new scan
+            </Button>
+            <AlertDialogCancel className="w-full">Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

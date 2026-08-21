@@ -89,7 +89,7 @@ function MenuHistoryPage() {
               >
                 <div className="min-w-0">
                   <h3 className="font-serif text-lg text-foreground truncate">
-                    {s.restaurant_name ?? "Unnamed list"}
+                    {s.restaurant_name ?? (s.restaurant_unknown ? "Venue not sure" : "Unnamed list")}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {format(new Date(s.scanned_at), "d MMM yyyy")} · {s.item_count}{" "}

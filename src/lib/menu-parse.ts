@@ -26,23 +26,72 @@ const WINE_TYPES = ["red", "white", "rose", "sparkling", "dessert", "fortified"]
 const PRICE_SIZES: MenuPriceSize[] = ["glass", "carafe", "half_bottle", "bottle", "unknown"];
 
 /**
- * Last line of defence: the model is told to skip non-wine, but a cocktail that
- * slipped through is recognisable from the spirits and mixers in its description.
+ * Last line of defence: the model is told to skip non-wine, but a cocktail, a
+ * sake or a beer that slipped through is recognisable from its own words. A
+ * section heading never counts here — a heading can never make a non-wine into
+ * a wine, and mixed headings such as "SAKE, WHITE & ROSÉ BY THE GLASS" would
+ * otherwise reject the wines printed underneath.
  */
 const NON_WINE_WORDS =
-  /\b(vodka|gin|rum|rhum|tequila|mezcal|whisk(?:e)?y|bourbon|rye|scotch|cognac|armagnac|brandy|absinthe|aperol|campari|bitters?|amaro|liqueu?r|schnapps|sake|soju|cachaca|cachaça|pisco|triple sec|curacao|curaçao|soda|tonic|juice|puree|purée|syrup|sirop|cordial|lager|pilsner|\bipa\b|stout|ale\b|cerveza|birra|cider|seltzer|kombucha|espresso|coffee|cold brew)\b/i;
+  /\b(vodka|gin|rum|rhum|tequila|mezcal|whisk(?:e)?y|bourbon|rye|scotch|cognac|armagnac|brandy|absinthe|aperol|campari|bitters?|amaro|liqueu?r|schnapps|sake|saké|junmai|ginjo|daiginjo|honjozo|nigori|soju|shochu|makgeolli|cachaca|cachaça|pisco|triple sec|curacao|curaçao|soda|tonic|juice|puree|purée|syrup|sirop|cordial|spritzer|spritz|punch|cooler|beer|lager|pilsner|\bipa\b|stout|porter|ale\b|cerveza|birra|bier|cider|cidre|sidra|seltzer|kombucha|espresso|coffee|cold brew)\b/i;
 
 export function isNonWineText(text: string | null | undefined): boolean {
   if (!text) return false;
   return NON_WINE_WORDS.test(text);
 }
 
-/** Any of the printed text that could betray a cocktail. */
+/** Any of the printed text that could betray a cocktail, sake or beer. */
 export function looksNonWine(item: MenuParsedItem): boolean {
   return (
     isNonWineText(item.raw_text) || isNonWineText(item.name) || isNonWineText(item.producer)
   );
 }
+
+/**
+ * Words that are never a wine name on their own: an angled photo with a cut-off
+ * column produces fragments such as "at" or "la Figuera".
+ */
+/** Articles and prepositions a cut-off name is often left starting with. */
+const LEADING_PARTICLES = new Set([
+  "a", "al", "at", "the", "and", "of", "or", "by", "de", "del", "della", "delle", "di", "du",
+  "des", "da", "do", "la", "le", "les", "el", "els", "lo", "los", "las", "il", "i", "y", "e",
+  "en", "con", "und", "van", "von",
+]);
+
+const FRAGMENT_WORDS = new Set([
+  "a", "al", "at", "the", "and", "of", "or", "by", "de", "del", "della", "delle", "di", "du",
+  "des", "da", "do", "la", "le", "les", "el", "els", "lo", "los", "las", "il", "i", "y", "e",
+  "en", "con", "und", "van", "von", "st", "ste", "san", "santa", "chateau", "château", "domaine",
+  "bodega", "bodegas", "cantina", "celler", "cellers", "vino", "vin", "vins", "vi", "wine",
+  "wines", "glass", "bottle", "copa", "botella", "ampolla", "cl", "ml", "nv",
+]);
+
+/**
+ * A truncated line is not a wine we can trust. Reject names shorter than three
+ * characters, and short fragments that are only common label filler or start
+ * with an article, unless a producer was also read off the line.
+ */
+export function looksTruncatedName(
+  name: string | null | undefined,
+  producer: string | null | undefined,
+): boolean {
+  const n = (name ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!n) return true;
+  if (producer && producer.trim()) return false;
+  if (n.replace(/\s/g, "").length < 3) return true;
+  const words = n.split(" ");
+  if (words.every((w) => FRAGMENT_WORDS.has(w))) return true;
+  // "la Figuera": an article or preposition plus one word is a cut-off name.
+  if (words.length <= 2 && LEADING_PARTICLES.has(words[0]!)) return true;
+  return false;
+}
+
 
 
 const SYMBOL_CURRENCY: Record<string, string> = {
@@ -199,7 +248,9 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
     wine_type: normaliseWineType(it.wine_type) ?? headingWineType(it.section_heading),
     section_heading: str(it.section_heading),
     confidence: confidence !== null ? Math.min(1, Math.max(0, confidence)) : null,
-    truncated: it.truncated === true,
+    // The model's own truncated flag is kept, and we add our own judgement: a
+    // fragment of a name is never saved as a confident wine.
+    truncated: it.truncated === true || looksTruncatedName(str(it.name), str(it.producer)),
     rejected: false,
   };
   item.rejected = looksNonWine(item);

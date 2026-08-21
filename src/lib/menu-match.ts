@@ -41,6 +41,8 @@ export type MenuItemRow = {
 export type MenuScanRow = {
   id: string;
   restaurant_name: string | null;
+  /** the user explicitly said they don't know the venue — different from blank */
+  restaurant_unknown: boolean;
   photo_path: string | null;
   scanned_at: string;
   skipped_count: number;
@@ -50,7 +52,10 @@ export type MenuScanRow = {
   city: string | null;
   country: string | null;
   venue_note: string | null;
+  /** replaced by a later scan of the same list; excluded from prices and export */
+  superseded: boolean;
 };
+
 
 
 export type DiaryWine = {
@@ -307,7 +312,7 @@ export async function loadLinkedWines(ids: string[]): Promise<Map<string, DiaryW
 }
 
 const SCAN_COLS =
-  "id, restaurant_name, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note";
+  "id, restaurant_name, restaurant_unknown, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note, superseded";
 const ITEM_COLS =
   "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
 
@@ -315,6 +320,7 @@ function asScan(row: Record<string, unknown>): MenuScanRow {
   return {
     id: row.id as string,
     restaurant_name: (row.restaurant_name as string) ?? null,
+    restaurant_unknown: row.restaurant_unknown === true,
     photo_path: (row.photo_path as string) ?? null,
     scanned_at: row.scanned_at as string,
     skipped_count: Number(row.skipped_count ?? 0),
@@ -323,8 +329,10 @@ function asScan(row: Record<string, unknown>): MenuScanRow {
     city: (row.city as string) ?? null,
     country: (row.country as string) ?? null,
     venue_note: (row.venue_note as string) ?? null,
+    superseded: row.superseded === true,
   };
 }
+
 
 /**
  * Persist the scan and every parsed line, prices included. This runs BEFORE any
@@ -335,6 +343,7 @@ export async function saveMenuScan(args: {
   userId: string;
   photoPath: string | null;
   restaurantName: string | null;
+  restaurantUnknown?: boolean;
   raw: unknown;
   items: MenuParsedItem[];
   currency: string | null;
@@ -343,14 +352,23 @@ export async function saveMenuScan(args: {
   venueNote?: string | null;
   skippedCount?: number;
   skippedCategories?: string[];
+  /** an earlier scan of the same list, marked superseded once this one is saved */
+  supersedeScanId?: string | null;
 }): Promise<{ scan: MenuScanRow; items: MenuItemRow[] }> {
+  // A price without a venue cannot be compared with anything, so the venue is
+  // required: either a name, or an explicit "not sure".
+  if (!args.restaurantName?.trim() && !args.restaurantUnknown) {
+    throw new Error("Add the restaurant name, or choose “Not sure”, before saving");
+  }
+
   const { data: scan, error } = await menuDb
     .from("menu_scans")
     .insert({
       user_id: args.userId,
       scanned_by: args.userId,
       photo_path: args.photoPath,
-      restaurant_name: args.restaurantName,
+      restaurant_name: args.restaurantUnknown ? null : args.restaurantName?.trim() ?? null,
+      restaurant_unknown: args.restaurantUnknown === true,
       raw_response: args.raw,
       currency: args.currency,
       city: args.city ?? null,
@@ -362,6 +380,15 @@ export async function saveMenuScan(args: {
     .select(SCAN_COLS)
     .single();
   if (error) throw error;
+
+  if (args.supersedeScanId) {
+    // Kept, not deleted: the earlier reading is still evidence of what was read.
+    await menuDb
+      .from("menu_scans")
+      .update({ superseded: true, superseded_by: (scan as { id: string }).id })
+      .eq("id", args.supersedeScanId);
+  }
+
 
   const rows = args.items.map((it, i) => ({
     menu_scan_id: (scan as { id: string }).id,
@@ -410,8 +437,11 @@ export async function saveMenuScan(args: {
  * stored list anyway and offers a retry.
  */
 export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRow[]> {
-  const candidates = items.filter((i) => !i.rejected && i.parsed_name);
+  // A truncated line is a fragment of a name: matching it against the catalogue
+  // would produce a confident-looking link to the wrong wine.
+  const candidates = items.filter((i) => !i.rejected && !i.truncated && i.parsed_name);
   if (!candidates.length) return items;
+
 
   const results = await withTimeout(
     findBestMatches(
@@ -466,22 +496,120 @@ export async function loadMenuScan(
 
 export async function updateMenuScanContext(
   scanId: string,
-  patch: { restaurant_name?: string | null; city?: string | null; country?: string | null; venue_note?: string | null },
+  patch: {
+    restaurant_name?: string | null;
+    restaurant_unknown?: boolean;
+    city?: string | null;
+    country?: string | null;
+    venue_note?: string | null;
+  },
 ): Promise<void> {
   const { error } = await menuDb.from("menu_scans").update(patch).eq("id", scanId);
   if (error) throw error;
+}
+
+/** Fix or discard a line the photo cut off. */
+export async function updateMenuItem(
+  itemId: string,
+  patch: { parsed_name?: string | null; parsed_producer?: string | null; truncated?: boolean },
+): Promise<void> {
+  const { error } = await menuDb.from("menu_items").update(patch).eq("id", itemId);
+  if (error) throw error;
+}
+
+export async function deleteMenuItem(itemId: string): Promise<void> {
+  const { error } = await menuDb.from("menu_items").delete().eq("id", itemId);
+  if (error) throw error;
+}
+
+/** Restaurants this user has scanned before, newest first — a picklist. */
+export async function listRecentRestaurants(limit = 8): Promise<string[]> {
+  const { data } = await menuDb
+    .from("menu_scans")
+    .select("restaurant_name, scanned_at")
+    .eq("superseded", false)
+    .not("restaurant_name", "is", null)
+    .order("scanned_at", { ascending: false })
+    .limit(60);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of (data ?? []) as Array<{ restaurant_name: string | null }>) {
+    const name = r.restaurant_name?.trim();
+    if (!name) continue;
+    const key = normalise(name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export type DuplicateScan = {
+  scan: MenuScanRow;
+  itemCount: number;
+  overlap: number;
+  reason: "restaurant" | "items";
+};
+
+/**
+ * The price dataset counts how many different venues charge what, so several
+ * scans of one list from one venue distort it. A repeat is either the same
+ * restaurant name or more than 70% of the same item names, within 24 hours.
+ */
+export async function findDuplicateScan(args: {
+  userId: string;
+  restaurantName: string | null;
+  names: string[];
+}): Promise<DuplicateScan | null> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await menuDb
+    .from("menu_scans")
+    .select(`${SCAN_COLS}, menu_items(parsed_name)`)
+    .eq("user_id", args.userId)
+    .eq("superseded", false)
+    .gte("scanned_at", since)
+    .order("scanned_at", { ascending: false })
+    .limit(20);
+
+  const fresh = new Set(args.names.map((n) => normalise(n)).filter((n) => n.length >= 4));
+  const wanted = normalise(args.restaurantName);
+
+  let best: DuplicateScan | null = null;
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const scan = asScan(row);
+    const names = ((row.menu_items as Array<{ parsed_name: string | null }> | null) ?? [])
+      .map((i) => normalise(i.parsed_name))
+      .filter((n) => n.length >= 4);
+    const sameRestaurant = !!wanted && normalise(scan.restaurant_name) === wanted;
+    const overlap = fresh.size
+      ? [...new Set(names)].filter((n) => fresh.has(n)).length / fresh.size
+      : 0;
+    if (!sameRestaurant && overlap <= 0.7) continue;
+    const candidate: DuplicateScan = {
+      scan,
+      itemCount: names.length,
+      overlap,
+      reason: sameRestaurant ? "restaurant" : "items",
+    };
+    if (!best || candidate.overlap > best.overlap) best = candidate;
+  }
+  return best;
 }
 
 export async function listMenuScans(): Promise<Array<MenuScanRow & { item_count: number }>> {
   const { data } = await menuDb
     .from("menu_scans")
     .select(`${SCAN_COLS}, menu_items(count)`)
+    // Superseded scans are duplicates of a list already captured.
+    .eq("superseded", false)
     .order("scanned_at", { ascending: false });
   return ((data ?? []) as Array<Record<string, unknown>>).map((s) => ({
     ...asScan(s),
     item_count: Number((s.menu_items as Array<{ count: number }> | undefined)?.[0]?.count ?? 0),
   }));
 }
+
 
 function csvCell(v: unknown): string {
   const s = v == null ? "" : String(v);
@@ -496,11 +624,14 @@ export async function exportMenuItemsCsv(): Promise<string> {
   const { data, error } = await menuDb
     .from("menu_items")
     .select(
-      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, rejected, position, menu_scans!inner(restaurant_name, scanned_at, city, country, venue_note)",
+      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, rejected, truncated, position, menu_scans!inner(restaurant_name, restaurant_unknown, scanned_at, city, country, venue_note, superseded)",
     )
     .eq("rejected", false)
+    // Duplicate scans of one list would over-count that venue's prices.
+    .eq("menu_scans.superseded", false)
     .order("position", { ascending: true });
   if (error) throw error;
+
 
   const header = [
     "restaurant",
@@ -515,11 +646,12 @@ export async function exportMenuItemsCsv(): Promise<string> {
     "glass_price",
     "currency",
     "by_the_glass",
+    "text_cut_off",
   ];
   const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
     const scan = (r.menu_scans ?? {}) as Record<string, unknown>;
     return [
-      scan.restaurant_name,
+      scan.restaurant_name ?? (scan.restaurant_unknown ? "Not sure" : ""),
       scan.scanned_at ? String(scan.scanned_at).slice(0, 10) : "",
       scan.city,
       scan.country,
@@ -531,10 +663,12 @@ export async function exportMenuItemsCsv(): Promise<string> {
       r.glass_price,
       r.currency,
       r.by_the_glass ? "yes" : "no",
+      r.truncated ? "yes" : "no",
     ]
       .map(csvCell)
       .join(",");
   });
+
   return [header.join(","), ...rows].join("\n");
 }
 
