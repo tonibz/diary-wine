@@ -379,6 +379,67 @@ export async function deleteMenuItem(itemId: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * One tap fixes a whole page. When the parser read a by-the-glass page as
+ * bottles (or the reverse), every price on the scan moves to the right field
+ * rather than making the user edit 25 rows.
+ */
+export async function setScanServingBasis(
+  items: MenuItemRow[],
+  basis: Extract<ServingBasis, "glass" | "bottle">,
+): Promise<MenuItemRow[]> {
+  const changed: MenuItemRow[] = [];
+  for (const item of items) {
+    if (item.serving_basis === basis) continue;
+    // Only single-priced lines are moved: a line printing both a glass and a
+    // bottle price already states its own servings.
+    const both = item.price != null && item.glass_price != null;
+    const amount = item.price ?? item.glass_price;
+    const patch =
+      both || amount == null
+        ? { serving_basis: basis }
+        : basis === "glass"
+          ? { serving_basis: basis, price: null, glass_price: amount, by_the_glass: true }
+          : { serving_basis: basis, price: amount, glass_price: null, by_the_glass: false };
+    changed.push({ ...item, ...patch } as MenuItemRow);
+    const { error } = await menuDb.from("menu_items").update(patch).eq("id", item.id);
+    if (error) throw error;
+  }
+  const byId = new Map(changed.map((c) => [c.id, c]));
+  return items.map((i) => byId.get(i.id) ?? i);
+}
+
+/** What a line's single price buys, in words, e.g. "glass". */
+export function servingLabel(basis: ServingBasis): string {
+  return basis === "half_bottle"
+    ? "half bottle"
+    : basis === "unknown"
+      ? "serving unknown"
+      : basis;
+}
+
+/**
+ * Price comparison must compare like with like. A row whose serving we never
+ * established is excluded outright rather than assumed to be a bottle.
+ */
+export function comparablePrices(
+  items: MenuItemRow[],
+  basis: Exclude<ServingBasis, "unknown">,
+): Array<{ item: MenuItemRow; amount: number }> {
+  const out: Array<{ item: MenuItemRow; amount: number }> = [];
+  for (const item of items) {
+    if (item.rejected) continue;
+    if (basis === "glass") {
+      if (item.glass_price != null) out.push({ item, amount: item.glass_price });
+      continue;
+    }
+    if (item.serving_basis !== basis) continue;
+    if (item.price != null) out.push({ item, amount: item.price });
+  }
+  return out;
+}
+
+
 /** Restaurants this user has scanned before, newest first — a picklist. */
 export async function listRecentRestaurants(limit = 8): Promise<string[]> {
   const { data } = await menuDb
