@@ -52,24 +52,29 @@ export function MenuResults({
   const [fixes, setFixes] = useState<Record<string, { name: string; producer: string }>>({});
   const [discarded, setDiscarded] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<Record<string, { name: string; producer: string }>>({});
+  // A whole page corrected in one tap, e.g. glass prices read as bottle prices.
+  const [servingFix, setServingFix] = useState<Record<string, MenuItemRow>>({});
+  const [servingBusy, setServingBusy] = useState(false);
 
   const visible = useMemo(
     () =>
       items
         .filter((i) => !discarded.includes(i.id))
         .map((i) => {
+          const base = servingFix[i.id] ?? i;
           const fix = fixes[i.id];
           return fix
             ? {
-                ...i,
+                ...base,
                 parsed_name: fix.name,
                 parsed_producer: fix.producer || null,
                 truncated: false,
               }
-            : i;
+            : base;
         }),
-    [items, fixes, discarded],
+    [items, fixes, discarded, servingFix],
   );
+
 
   // A truncated line is a fragment, never a wine: it is never matched and never
   // mixed in with the readable wines.
