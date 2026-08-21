@@ -10,8 +10,6 @@ import { ScanVenue } from "@/components/ScanVenue";
 import { withTimeout } from "@/lib/with-timeout";
 import { Button } from "@/components/ui/button";
 
-
-
 export const Route = createFileRoute("/_authenticated/menu/$id")({
   head: () => ({
     meta: [
@@ -37,20 +35,43 @@ function MenuScanDetail() {
   const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     (async () => {
       try {
         const res = await withTimeout(loadMenuScan(id));
+        if (!active) return;
         if (!res) {
           setMissing(true);
           return;
         }
         setScan(res.scan);
         setItems(res.items);
+
+        // The scan and every price are already persisted. Enrichment starts only
+        // after the stored results are visible and can never affect that save.
+        if (res.items.length > 0 && res.items.every((item) => item.match_score == null)) {
+          setRematching(true);
+          void rematchScan(id)
+            .then((updated) => {
+              if (active) setItems(updated);
+            })
+            .catch((err) => {
+              console.error("Menu matching failed", err);
+              if (active) toast.error("Couldn't match these. The list and its prices are safe.");
+            })
+            .finally(() => {
+              if (active) setRematching(false);
+            });
+        }
       } catch (err) {
+        if (!active) return;
         console.error("Could not load menu scan", err);
         setFailure(err instanceof Error ? err.message : "Could not load that scan");
       }
     })();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   // Nothing matched at all: the list is stored, matching simply never landed.
@@ -70,8 +91,6 @@ function MenuScanDetail() {
     }
   }
 
-
-
   return (
     <div className="px-5 pt-6 pb-8">
       <Link to="/menus" className="flex items-center gap-1 text-sm text-muted-foreground mb-5">
@@ -81,15 +100,21 @@ function MenuScanDetail() {
       {failure ? (
         <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
           <p className="text-sm text-foreground">{failure}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => window.location.reload()}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => window.location.reload()}
+          >
             Try again
           </Button>
         </div>
       ) : missing ? (
-        <p className="text-center text-sm text-muted-foreground py-16">That scan is no longer here.</p>
+        <p className="text-center text-sm text-muted-foreground py-16">
+          That scan is no longer here.
+        </p>
       ) : !scan || !items || !user ? (
         <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
-
       ) : (
         <>
           <ScanVenue
@@ -113,9 +138,7 @@ function MenuScanDetail() {
               <p className="text-xs text-muted-foreground mt-2">
                 Skipped {scan.skipped_count} non-wine item
                 {scan.skipped_count === 1 ? "" : "s"}
-                {scan.skipped_categories.length
-                  ? ` (${scan.skipped_categories.join(", ")})`
-                  : ""}
+                {scan.skipped_categories.length ? ` (${scan.skipped_categories.join(", ")})` : ""}
               </p>
             )}
             {neverMatched && (
@@ -143,7 +166,6 @@ function MenuScanDetail() {
               </div>
             )}
           </header>
-
 
           <MenuResults items={items} restaurantName={scan.restaurant_name} userId={user.id} />
         </>

@@ -672,7 +672,7 @@ function AddPage() {
         <span className="min-w-0">
           <span className="block text-sm font-medium">Import several photos</span>
           <span className="block text-xs text-muted-foreground">
-            Read a whole gallery of labels at once, review before saving.
+            Read a whole gallery of labels at once, then review and save.
           </span>
         </span>
       </button>
