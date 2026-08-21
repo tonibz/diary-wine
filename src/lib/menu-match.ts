@@ -2,7 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { findBestMatches } from "@/lib/wine-match";
 import { withTimeout } from "@/lib/with-timeout";
 
-import type { MenuParsedItem, MenuPrice } from "@/lib/menu-parse";
+import type {
+  MenuParsedItem,
+  MenuPrice,
+  MenuWineAttributes,
+  ServingBasis,
+} from "@/lib/menu-parse";
 
 /**
  * menu_scans / menu_items are user-private tables that hold what a restaurant
