@@ -43,25 +43,13 @@ export default defineTool({
     }
 
     const vintageValue = vintage ?? null;
-    const vintageMatch = await supabase
-      .from("wine_vintages")
-      .select("id")
-      .eq("wine_id", wineId)
-      .is("vintage", vintageValue === null ? null : (null as never))
-      .limit(1);
-    let vintageId: string | undefined =
-      vintageValue === null && !vintageMatch.error ? vintageMatch.data?.[0]?.id : undefined;
+    const vintageQuery = supabase.from("wine_vintages").select("id").eq("wine_id", wineId).limit(1);
+    const vintageMatch = await (vintageValue === null
+      ? vintageQuery.is("vintage", null)
+      : vintageQuery.eq("vintage", vintageValue));
+    if (vintageMatch.error) throw new ToolError(vintageMatch.error.message);
+    let vintageId: string | undefined = vintageMatch.data?.[0]?.id;
 
-    if (!vintageId && vintageValue !== null) {
-      const byYear = await supabase
-        .from("wine_vintages")
-        .select("id")
-        .eq("wine_id", wineId)
-        .eq("vintage", vintageValue)
-        .limit(1);
-      if (byYear.error) throw new ToolError(byYear.error.message);
-      vintageId = byYear.data?.[0]?.id;
-    }
 
     if (!vintageId) {
       const createdVintage = await supabase
