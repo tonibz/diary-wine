@@ -250,7 +250,7 @@ export function MenuResults({
             {item.price}
             <span className="text-[11px] font-normal text-muted-foreground">
               {" "}
-              / {servingLabel(item.serving_basis === "glass" ? "bottle" : item.serving_basis)}
+              / {servingLabel(item.serving_basis)}
             </span>
           </p>
         )}
