@@ -26,7 +26,7 @@ export default defineTool({
     const items = await supabase
       .from("menu_items")
       .select(
-        "id, parsed_name, parsed_producer, parsed_vintage, wine_type, section_heading, grapes, price, glass_price, prices, currency, by_the_glass, matched_wine_id, match_score, item_confidence, rejected",
+        "id, parsed_name, parsed_producer, parsed_vintage, wine_type, section_heading, page_heading, serving_basis, attributes, grapes, price, glass_price, prices, currency, by_the_glass, matched_wine_id, match_score, item_confidence, rejected",
       )
       .eq("menu_scan_id", menu_scan_id)
       .eq("rejected", false);
