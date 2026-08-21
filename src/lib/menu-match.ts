@@ -496,22 +496,120 @@ export async function loadMenuScan(
 
 export async function updateMenuScanContext(
   scanId: string,
-  patch: { restaurant_name?: string | null; city?: string | null; country?: string | null; venue_note?: string | null },
+  patch: {
+    restaurant_name?: string | null;
+    restaurant_unknown?: boolean;
+    city?: string | null;
+    country?: string | null;
+    venue_note?: string | null;
+  },
 ): Promise<void> {
   const { error } = await menuDb.from("menu_scans").update(patch).eq("id", scanId);
   if (error) throw error;
+}
+
+/** Fix or discard a line the photo cut off. */
+export async function updateMenuItem(
+  itemId: string,
+  patch: { parsed_name?: string | null; parsed_producer?: string | null; truncated?: boolean },
+): Promise<void> {
+  const { error } = await menuDb.from("menu_items").update(patch).eq("id", itemId);
+  if (error) throw error;
+}
+
+export async function deleteMenuItem(itemId: string): Promise<void> {
+  const { error } = await menuDb.from("menu_items").delete().eq("id", itemId);
+  if (error) throw error;
+}
+
+/** Restaurants this user has scanned before, newest first — a picklist. */
+export async function listRecentRestaurants(limit = 8): Promise<string[]> {
+  const { data } = await menuDb
+    .from("menu_scans")
+    .select("restaurant_name, scanned_at")
+    .eq("superseded", false)
+    .not("restaurant_name", "is", null)
+    .order("scanned_at", { ascending: false })
+    .limit(60);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of (data ?? []) as Array<{ restaurant_name: string | null }>) {
+    const name = r.restaurant_name?.trim();
+    if (!name) continue;
+    const key = normalise(name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export type DuplicateScan = {
+  scan: MenuScanRow;
+  itemCount: number;
+  overlap: number;
+  reason: "restaurant" | "items";
+};
+
+/**
+ * The price dataset counts how many different venues charge what, so several
+ * scans of one list from one venue distort it. A repeat is either the same
+ * restaurant name or more than 70% of the same item names, within 24 hours.
+ */
+export async function findDuplicateScan(args: {
+  userId: string;
+  restaurantName: string | null;
+  names: string[];
+}): Promise<DuplicateScan | null> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await menuDb
+    .from("menu_scans")
+    .select(`${SCAN_COLS}, menu_items(parsed_name)`)
+    .eq("user_id", args.userId)
+    .eq("superseded", false)
+    .gte("scanned_at", since)
+    .order("scanned_at", { ascending: false })
+    .limit(20);
+
+  const fresh = new Set(args.names.map((n) => normalise(n)).filter((n) => n.length >= 4));
+  const wanted = normalise(args.restaurantName);
+
+  let best: DuplicateScan | null = null;
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const scan = asScan(row);
+    const names = ((row.menu_items as Array<{ parsed_name: string | null }> | null) ?? [])
+      .map((i) => normalise(i.parsed_name))
+      .filter((n) => n.length >= 4);
+    const sameRestaurant = !!wanted && normalise(scan.restaurant_name) === wanted;
+    const overlap = fresh.size
+      ? [...new Set(names)].filter((n) => fresh.has(n)).length / fresh.size
+      : 0;
+    if (!sameRestaurant && overlap <= 0.7) continue;
+    const candidate: DuplicateScan = {
+      scan,
+      itemCount: names.length,
+      overlap,
+      reason: sameRestaurant ? "restaurant" : "items",
+    };
+    if (!best || candidate.overlap > best.overlap) best = candidate;
+  }
+  return best;
 }
 
 export async function listMenuScans(): Promise<Array<MenuScanRow & { item_count: number }>> {
   const { data } = await menuDb
     .from("menu_scans")
     .select(`${SCAN_COLS}, menu_items(count)`)
+    // Superseded scans are duplicates of a list already captured.
+    .eq("superseded", false)
     .order("scanned_at", { ascending: false });
   return ((data ?? []) as Array<Record<string, unknown>>).map((s) => ({
     ...asScan(s),
     item_count: Number((s.menu_items as Array<{ count: number }> | undefined)?.[0]?.count ?? 0),
   }));
 }
+
 
 function csvCell(v: unknown): string {
   const s = v == null ? "" : String(v);
