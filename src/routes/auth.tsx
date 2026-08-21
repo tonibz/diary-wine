@@ -49,11 +49,12 @@ function AuthPage() {
   const [busy, setBusy] = useState<null | "google" | "apple" | "password" | "magic">(null);
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const returnTo = next ? `${window.location.origin}${next}` : window.location.origin;
+  // Computed lazily: this route is server-rendered, so `window` is absent at render.
+  const returnTo = () => (next ? `${window.location.origin}${next}` : window.location.origin);
 
   function goAfterAuth() {
     if (next) {
-      window.location.href = returnTo;
+      window.location.href = returnTo();
       return;
     }
     navigate({ to: "/diary" });
@@ -63,7 +64,7 @@ function AuthPage() {
     setBusy(provider);
     try {
       const result = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: returnTo,
+        redirect_uri: returnTo(),
       });
       if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
       if (result.redirected) return;
@@ -84,7 +85,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: returnTo,
+            emailRedirectTo: returnTo(),
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
@@ -111,7 +112,7 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: returnTo },
+        options: { emailRedirectTo: returnTo() },
       });
       if (error) throw error;
       toast.success("Check your inbox for a sign-in link.");
