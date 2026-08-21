@@ -356,7 +356,7 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
       : glass !== null && price === null
         ? [{ size: "glass", amount: glass }]
         : price !== null
-          ? [{ size: servingBasis === "unknown" ? "unknown" : servingBasis, amount: price }]
+          ? [{ size: servingBasis === "bottle" || servingBasis === "half_bottle" || servingBasis === "glass" ? servingBasis : "unknown", amount: price }]
           : [],
     price,
     glass_price: glass,
