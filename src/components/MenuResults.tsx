@@ -186,7 +186,7 @@ export function MenuResults({
   async function onOrdered(s: ScoredItem) {
     try {
       setBusy(s.item.id);
-      const entryId = await addMenuItemAsTasted(s.item.item ? s.item : s.item, userId, restaurantName);
+      const entryId = await addMenuItemAsTasted(s.item, userId, restaurantName);
       toast.success("Logged — add your rating");
       navigate({ to: "/entry/$id", params: { id: entryId } });
     } catch (err) {
