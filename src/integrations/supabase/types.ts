@@ -232,6 +232,7 @@ export type Database = {
       }
       menu_items: {
         Row: {
+          attributes: Json
           by_the_glass: boolean
           created_at: string
           currency: string | null
@@ -242,6 +243,7 @@ export type Database = {
           match_score: number | null
           matched_wine_id: string | null
           menu_scan_id: string
+          page_heading: string | null
           parsed_name: string | null
           parsed_producer: string | null
           parsed_vintage: number | null
@@ -251,10 +253,12 @@ export type Database = {
           raw_text: string | null
           rejected: boolean
           section_heading: string | null
+          serving_basis: string
           truncated: boolean
           wine_type: string | null
         }
         Insert: {
+          attributes?: Json
           by_the_glass?: boolean
           created_at?: string
           currency?: string | null
@@ -265,6 +269,7 @@ export type Database = {
           match_score?: number | null
           matched_wine_id?: string | null
           menu_scan_id: string
+          page_heading?: string | null
           parsed_name?: string | null
           parsed_producer?: string | null
           parsed_vintage?: number | null
@@ -274,10 +279,12 @@ export type Database = {
           raw_text?: string | null
           rejected?: boolean
           section_heading?: string | null
+          serving_basis?: string
           truncated?: boolean
           wine_type?: string | null
         }
         Update: {
+          attributes?: Json
           by_the_glass?: boolean
           created_at?: string
           currency?: string | null
@@ -288,6 +295,7 @@ export type Database = {
           match_score?: number | null
           matched_wine_id?: string | null
           menu_scan_id?: string
+          page_heading?: string | null
           parsed_name?: string | null
           parsed_producer?: string | null
           parsed_vintage?: number | null
@@ -297,6 +305,7 @@ export type Database = {
           raw_text?: string | null
           rejected?: boolean
           section_heading?: string | null
+          serving_basis?: string
           truncated?: boolean
           wine_type?: string | null
         }
