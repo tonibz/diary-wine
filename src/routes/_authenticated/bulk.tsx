@@ -55,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/bulk")({
       { title: "Import several photos — Wine Diary" },
       { name: "description", content: "Import a backlog of bottle photos from your gallery in one go." },
       { property: "og:title", content: "Import several photos — Wine Diary" },
-      { property: "og:description", content: "Read a whole gallery of wine labels at once, then review before saving." },
+      { property: "og:description", content: "Read a whole gallery of wine labels at once, then review and save." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
