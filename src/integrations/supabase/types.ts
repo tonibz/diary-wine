@@ -453,6 +453,63 @@ export type Database = {
           },
         ]
       }
+      recommendations: {
+        Row: {
+          acted_on: boolean
+          created_at: string
+          id: string
+          menu_item_id: string
+          menu_scan_id: string
+          profile_entry_count: number
+          rank: number | null
+          reason: string | null
+          score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acted_on?: boolean
+          created_at?: string
+          id?: string
+          menu_item_id: string
+          menu_scan_id: string
+          profile_entry_count?: number
+          rank?: number | null
+          reason?: string | null
+          score?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acted_on?: boolean
+          created_at?: string
+          id?: string
+          menu_item_id?: string
+          menu_scan_id?: string
+          profile_entry_count?: number
+          rank?: number | null
+          reason?: string | null
+          score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendations_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendations_menu_scan_id_fkey"
+            columns: ["menu_scan_id"]
+            isOneToOne: false
+            referencedRelation: "menu_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       taste_profiles: {
         Row: {
           avg_alcohol: number | null
@@ -683,6 +740,20 @@ export type Database = {
           grape_count: number
           grapes: Json
           id: string
+          name: string
+          region: string
+          score: number
+          typical_colour: string
+        }[]
+      }
+      lookup_appellations: {
+        Args: { _names: string[] }
+        Returns: {
+          country: string
+          grape_count: number
+          grapes: Json
+          id: string
+          idx: number
           name: string
           region: string
           score: number
