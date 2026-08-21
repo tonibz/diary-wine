@@ -80,8 +80,8 @@ export function looksTruncatedName(
   if (n.replace(/\s/g, "").length < 3) return true;
   const words = n.split(" ");
   if (words.every((w) => FRAGMENT_WORDS.has(w))) return true;
-  // "la Figuera": an article plus one word is almost always a cut-off name.
-  if (words.length <= 2 && FRAGMENT_WORDS.has(words[0]!)) return true;
+  // "la Figuera": an article or preposition plus one word is a cut-off name.
+  if (words.length <= 2 && LEADING_PARTICLES.has(words[0]!)) return true;
   return false;
 }
 
