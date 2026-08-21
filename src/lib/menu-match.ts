@@ -541,7 +541,7 @@ export async function exportMenuItemsCsv(): Promise<string> {
   const { data, error } = await menuDb
     .from("menu_items")
     .select(
-      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, currency, by_the_glass, rejected, truncated, position, menu_scans!inner(restaurant_name, restaurant_unknown, scanned_at, city, country, venue_note, superseded)",
+      "parsed_name, parsed_producer, parsed_vintage, price, glass_price, serving_basis, page_heading, attributes, currency, by_the_glass, rejected, truncated, position, menu_scans!inner(restaurant_name, restaurant_unknown, scanned_at, city, country, venue_note, superseded)",
     )
     .eq("rejected", false)
     // Duplicate scans of one list would over-count that venue's prices.
@@ -560,12 +560,20 @@ export async function exportMenuItemsCsv(): Promise<string> {
     "vintage",
     "price",
     "glass_price",
+    // Comparisons must be like with like; 'unknown' rows are excluded, not guessed.
+    "serving_basis",
+    "page_heading",
+    "markers",
     "currency",
     "by_the_glass",
     "text_cut_off",
   ];
   const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
     const scan = (r.menu_scans ?? {}) as Record<string, unknown>;
+    const markers = Object.entries((r.attributes ?? {}) as Record<string, unknown>)
+      .filter(([, v]) => v === true)
+      .map(([k]) => k)
+      .join(", ");
     return [
       scan.restaurant_name ?? "",
       scan.scanned_at ? String(scan.scanned_at).slice(0, 10) : "",
@@ -577,6 +585,9 @@ export async function exportMenuItemsCsv(): Promise<string> {
       r.parsed_vintage,
       r.price,
       r.glass_price,
+      r.serving_basis ?? "unknown",
+      r.page_heading,
+      markers,
       r.currency,
       r.by_the_glass ? "yes" : "no",
       r.truncated ? "yes" : "no",
