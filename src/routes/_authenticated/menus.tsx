@@ -1,10 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { ArrowLeft, ScrollText, ChevronRight, Download } from "lucide-react";
+import { ArrowLeft, ScrollText, ChevronRight, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { downloadCsv, exportMenuItemsCsv, listMenuScans, type MenuScanRow } from "@/lib/menu-match";
+import { Input } from "@/components/ui/input";
+import {
+  downloadCsv,
+  exportMenuItemsCsv,
+  listMenuScans,
+  updateMenuScanContext,
+  type MenuScanRow,
+} from "@/lib/menu-match";
 
 export const Route = createFileRoute("/_authenticated/menus")({
   head: () => ({
@@ -115,6 +122,55 @@ function MenuHistoryPage() {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** A quiet chip: the place can be added straight from the list, inline. */
+function AddPlace({ scanId, onSaved }: { scanId: string; onSaved: (name: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await updateMenuScanContext(scanId, { restaurant_name: name.trim() });
+      onSaved(name.trim());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save the place");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="px-4 pb-4">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-parchment/60 px-3 py-1 text-xs text-muted-foreground"
+        >
+          <MapPin size={11} /> Add place
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2 px-4 pb-4">
+      <Input
+        value={name}
+        autoFocus
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Restaurant or wine bar"
+        className="bg-background h-9"
+      />
+      <Button size="sm" disabled={saving || !name.trim()} onClick={() => void save()}>
+        Save
+      </Button>
     </div>
   );
 }
