@@ -213,6 +213,30 @@ export function MenuResults({
     }
   }
 
+  /** The serving the page as a whole was read as, when most lines agree. */
+  const scanBasis = (() => {
+    const priced = readable.filter((i) => i.price != null || i.glass_price != null);
+    if (priced.length < 2) return null;
+    const glass = priced.filter((i) => i.serving_basis === "glass").length;
+    const bottle = priced.filter((i) => i.serving_basis === "bottle").length;
+    if (glass >= priced.length * 0.6) return "glass" as const;
+    if (bottle >= priced.length * 0.6) return "bottle" as const;
+    return null;
+  })();
+
+  async function onSwitchServing(basis: "glass" | "bottle") {
+    try {
+      setServingBusy(true);
+      const updated = await setScanServingBasis(readable, basis);
+      setServingFix(Object.fromEntries(updated.map((u) => [u.id, u])));
+      toast.success(basis === "glass" ? "Now read as glass prices" : "Now read as bottle prices");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not change that");
+    } finally {
+      setServingBusy(false);
+    }
+  }
+
   if (!scored) {
     return <p className="text-center text-sm text-muted-foreground py-10">Reading the list…</p>;
   }
@@ -220,23 +244,31 @@ export function MenuResults({
   const price = (item: MenuItemRow) =>
     (item.price != null || item.glass_price != null) && (
       <div className="text-right flex-shrink-0">
-        <p className="text-sm font-medium text-foreground">
-          {item.currency ? `${item.currency} ` : ""}
-          {item.price ?? item.glass_price}
-        </p>
-        {item.glass_price != null && (
-          <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
-            <GlassWater size={11} /> {item.currency ? `${item.currency} ` : ""}
-            {item.glass_price} by the glass
+        {item.price != null && (
+          <p className="text-sm font-medium text-foreground">
+            {item.currency ? `${item.currency} ` : ""}
+            {item.price}
+            <span className="text-[11px] font-normal text-muted-foreground">
+              {" "}
+              / {servingLabel(item.serving_basis === "glass" ? "bottle" : item.serving_basis)}
+            </span>
           </p>
         )}
-        {item.glass_price == null && item.by_the_glass && (
-          <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
-            <GlassWater size={11} /> by the glass
+        {item.glass_price != null && (
+          <p
+            className={cn(
+              "flex items-center gap-1 justify-end text-muted-foreground",
+              item.price == null ? "text-sm font-medium text-foreground" : "text-[11px]",
+            )}
+          >
+            <GlassWater size={11} /> {item.currency ? `${item.currency} ` : ""}
+            {item.glass_price} / glass
           </p>
         )}
       </div>
     );
+
+
 
   const row = (s: ScoredItem, tone: "had" | "recommended" | "other") => (
     <li
