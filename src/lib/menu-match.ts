@@ -33,6 +33,11 @@ export type MenuItemRow = {
   rejected: boolean;
   by_the_glass: boolean;
   section_heading: string | null;
+  /** page-level heading, e.g. "WINE BY THE GLASS" — governs the serving */
+  page_heading: string | null;
+  /** what the price buys; 'unknown' is never treated as a bottle */
+  serving_basis: ServingBasis;
+  attributes: MenuWineAttributes | null;
   wine_type: string | null;
   grapes: string[] | null;
   item_confidence: number | null;
@@ -41,6 +46,7 @@ export type MenuItemRow = {
   match_score: number | null;
   position: number | null;
 };
+
 
 export type MenuScanRow = {
   id: string;
