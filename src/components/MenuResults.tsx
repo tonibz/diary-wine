@@ -2,15 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ChevronDown, Bookmark, Wine, Sparkles, GlassWater } from "lucide-react";
+import { ChevronDown, Bookmark, Wine, Sparkles, GlassWater, ScanLine, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StarRating } from "@/components/StarRating";
 import { cn } from "@/lib/utils";
 import {
+  deleteMenuItem,
   enrichItems,
   loadLinkedWines,
   loadTasteContext,
   MIN_ENTRIES_FOR_SUGGESTIONS,
+  updateMenuItem,
   type EnrichedItem,
   type MenuItemRow,
   type TasteContext,
@@ -36,6 +39,28 @@ export function MenuResults({
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, "wishlist" | "tasted">>({});
   const [showOther, setShowOther] = useState(false);
+  // Lines the photo cut off: fixed here, or discarded, before they count as wines.
+  const [fixes, setFixes] = useState<Record<string, { name: string; producer: string }>>({});
+  const [discarded, setDiscarded] = useState<string[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, { name: string; producer: string }>>({});
+
+  const visible = useMemo(
+    () =>
+      items
+        .filter((i) => !discarded.includes(i.id))
+        .map((i) => {
+          const fix = fixes[i.id];
+          return fix
+            ? { ...i, parsed_name: fix.name, parsed_producer: fix.producer || null, truncated: false }
+            : i;
+        }),
+    [items, fixes, discarded],
+  );
+
+  // A truncated line is a fragment, never a wine: it is never matched and never
+  // mixed in with the readable wines.
+  const unreadable = useMemo(() => visible.filter((i) => i.truncated), [visible]);
+  const readable = useMemo(() => visible.filter((i) => !i.truncated), [visible]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,11 +70,11 @@ export function MenuResults({
       try {
         const taste = await withTimeout(loadTasteContext(userId));
         const linked = await withTimeout(
-          loadLinkedWines(items.map((i) => i.matched_wine_id).filter((x): x is string => !!x)),
+          loadLinkedWines(readable.map((i) => i.matched_wine_id).filter((x): x is string => !!x)),
         );
         if (cancelled) return;
         setCtx(taste);
-        setEnriched(enrichItems(items, taste, linked));
+        setEnriched(enrichItems(readable, taste, linked));
       } catch (err) {
         console.error("Menu matching against diary failed", err);
         if (cancelled) return;
@@ -57,14 +82,14 @@ export function MenuResults({
         setCtx(null);
         setMatchingFailed(true);
         setEnriched(
-          items.map((item) => ({ item, group: "other" as const, diary: null, reason: null })),
+          readable.map((item) => ({ item, group: "other" as const, diary: null, reason: null })),
         );
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [items, userId, reloadKey]);
+  }, [readable, userId, reloadKey]);
 
 
   const groups = useMemo(() => {
@@ -73,6 +98,41 @@ export function MenuResults({
     const other = (enriched ?? []).filter((e) => e.group === "other");
     return { had, similar, other };
   }, [enriched]);
+
+  async function onFix(item: MenuItemRow) {
+    const draft = drafts[item.id] ?? { name: item.parsed_name ?? "", producer: item.parsed_producer ?? "" };
+    if (draft.name.trim().length < 3) {
+      toast.error("Give it at least three characters");
+      return;
+    }
+    try {
+      setBusy(item.id);
+      await updateMenuItem(item.id, {
+        parsed_name: draft.name.trim(),
+        parsed_producer: draft.producer.trim() || null,
+        truncated: false,
+      });
+      setFixes((f) => ({ ...f, [item.id]: { name: draft.name.trim(), producer: draft.producer.trim() } }));
+      toast.success("Fixed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save that");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onDiscard(item: MenuItemRow) {
+    try {
+      setBusy(item.id);
+      await deleteMenuItem(item.id);
+      setDiscarded((d) => [...d, item.id]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not discard that");
+    } finally {
+      setBusy(null);
+    }
+  }
+
 
   async function onWishlist(e: EnrichedItem) {
     try {
