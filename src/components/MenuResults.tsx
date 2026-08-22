@@ -122,6 +122,11 @@ export function MenuResults({
         if (cancelled) return;
         // The wines were read fine — show them all rather than nothing.
         setFailed(true);
+        setFailedMsg(
+          err instanceof SignedOutError
+            ? "Please sign in again to see suggestions."
+            : "Couldn't work out what you'd like — the full list is below.",
+        );
         setRatedCount(null);
         setScored(
           readable.map((item) => ({
@@ -136,6 +141,7 @@ export function MenuResults({
             diary: null,
           })),
         );
+
       }
     })();
     return () => {
