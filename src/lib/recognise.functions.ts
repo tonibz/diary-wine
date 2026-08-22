@@ -11,6 +11,8 @@ export type RecognitionData = {
   name: string | null;
   producer: string | null;
   appellation: string | null;
+  /** ageing/quality term printed on the label — never part of the appellation */
+  classification: string | null;
   region: string | null;
   country: string | null;
   vintage: number | null;
@@ -20,6 +22,7 @@ export type RecognitionData = {
   confidence: number;
   inferred_fields: string[];
 };
+
 
 export type RecognitionResult =
   | { ok: true; data: RecognitionData; recognition_id: string }
