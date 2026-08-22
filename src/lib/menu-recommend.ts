@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
+import { withValidSession } from "@/lib/session-guard";
 import { normalise, type DiaryWine, type MenuItemRow } from "@/lib/menu-match";
+
 
 /**
  * Recommendation is deliberately independent of the wines catalogue. A parsed
