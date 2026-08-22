@@ -61,8 +61,10 @@ export async function findBestMatches(
 
   if (error) {
     console.error("find_wine_matches failed", error);
-    throw new Error(error.message || "Could not match wines against the catalogue");
+    const message = (error as { message?: string }).message;
+    throw new Error(message || "Could not match wines against the catalogue");
   }
+
 
   for (const row of (data ?? []) as unknown as Array<WineCandidate & { idx: number }>) {
     const i = Number(row.idx) - 1; // Postgres arrays are 1-based
