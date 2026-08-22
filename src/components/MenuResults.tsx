@@ -83,18 +83,25 @@ export function MenuResults({
 
   useEffect(() => {
     let cancelled = false;
+    const mark = createStageTimer("menu-results");
     (async () => {
       setFailed(false);
       setScored(null);
       try {
-        const taste = await withTimeout(loadTasteContext(userId));
+        mark("recommendations started");
+        const taste = await withTimeout(loadTasteContext(userId), 20_000, "Your diary took too long");
         const profile = buildTasteProfile(taste.entries);
         // Scoring is against the profile only — no lookup in the wines table.
-        const result = await recommendMenu(readable, profile);
+        const result = await withTimeout(
+          recommendMenu(readable, profile),
+          20_000,
+          "Scoring took too long",
+        );
         if (cancelled) return;
         const withDiary = attachDiary(result, taste.entries);
         setRatedCount(profile.ratedCount);
         setScored(withDiary);
+        mark("recommendations finished", { items: withDiary.length });
         if (profile.ratedCount >= MIN_RATED_FOR_SUGGESTIONS) {
           // Every scored item is logged, not only the ones shown.
           void logRecommendations({
@@ -105,7 +112,9 @@ export function MenuResults({
           });
         }
       } catch (err) {
+        mark("recommendations failed");
         console.error("Scoring this list against your taste failed", err);
+
         if (cancelled) return;
         // The wines were read fine — show them all rather than nothing.
         setFailed(true);
