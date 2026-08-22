@@ -66,6 +66,7 @@ Fields:
 - name: the wine's name as printed
 - producer: the winery or estate
 - appellation: the denomination of origin, for example Corton-Charlemagne, Rioja, Chianti Classico
+- classification: the ageing or quality classification, or null
 - region: the wider wine region
 - country
 - vintage: integer year, or null
@@ -75,7 +76,16 @@ Fields:
 - confidence: number from 0 to 1
 - inferred_fields: array naming any field you filled in from knowledge of the appellation rather than reading it off the label
 
+The appellation is the legally defined origin printed on the label, such as Chianti Classico, Rioja, Chablis, Brunello di Montalcino, Napa Valley. It is not the producer's slogan, not a marketing phrase, and not a range name.
+
+Do not include ageing or quality classifications in the appellation. Riserva, Reserva, Gran Reserva, Grand Cru, Premier Cru, Superiore and Classico Riserva are separate from the appellation name. Return 'Chianti Classico', not 'Chianti Classico Riserva'.
+
+Return the classification separately in the field 'classification', for example 'Riserva', 'Grand Cru', 'Gran Reserva', or null.
+
+If no appellation is printed, return null rather than substituting a region or a phrase from the label.
+
 Rules. If something is not legible on the label, return null instead of guessing. Many European labels never print the colour or the grape, so you may infer those from the appellation, but you must list every field you inferred in inferred_fields. Set confidence low when the photo is blurred, badly lit, cropped, or the label is at a steep angle.`;
+
 
     const content: Array<Record<string, unknown>> = [
       { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
