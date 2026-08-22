@@ -342,6 +342,26 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
           ? "glass"
           : "unknown";
 
+  // The same amount must never land in both columns: a glass price recorded as
+  // a bottle price would dominate any cross-venue comparison, so the serving
+  // decides which column holds the money.
+  if (servingBasis === "glass") {
+    if (glass === null) glass = price;
+    // Only a separately printed bottle price survives on a by-the-glass page.
+    price = bottle !== null && bottle !== glass ? bottle : null;
+  } else if (price === null && glass !== null && glassSized === null) {
+    // A lone amount on a bottle/half-bottle/magnum or unlabelled page is not a
+    // glass price; it belongs in `price`.
+    price = glass;
+    glass = null;
+  }
+  if (price !== null && glass !== null && price === glass) {
+    if (servingBasis === "glass") price = null;
+    else glass = null;
+  }
+
+
+
   const confidence = toNumber(it.confidence);
   const rawName = str(it.name);
 
