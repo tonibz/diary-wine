@@ -483,27 +483,31 @@ export function MenuResults({
         <section>
           <button
             type="button"
+            disabled={listAlwaysOpen}
             onClick={() => setShowOther((v) => !v)}
-            className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook"
+            className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook disabled:cursor-default"
           >
             <span className="font-serif text-xl text-foreground">
-              Everything else{" "}
+              {listAlwaysOpen ? "The wine list" : "Everything else"}{" "}
               <span className="text-sm font-sans text-muted-foreground">
                 ({groups.other.length})
               </span>
             </span>
-            <ChevronDown
-              size={18}
-              className={cn(
-                "transition-transform text-muted-foreground",
-                showOther && "rotate-180",
-              )}
-            />
+            {!listAlwaysOpen && (
+              <ChevronDown
+                size={18}
+                className={cn(
+                  "transition-transform text-muted-foreground",
+                  showOther && "rotate-180",
+                )}
+              />
+            )}
           </button>
-          {showOther && (
+          {otherOpen && (
             <ul className="space-y-3 mt-3">{groups.other.map((s) => row(s, "other"))}</ul>
           )}
         </section>
+
       )}
 
       {unreadable.length > 0 && (
