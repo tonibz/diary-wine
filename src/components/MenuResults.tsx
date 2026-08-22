@@ -46,6 +46,8 @@ export function MenuResults({
   const [scored, setScored] = useState<ScoredItem[] | null>(null);
   const [ratedCount, setRatedCount] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
+  const [failedMsg, setFailedMsg] = useState<string | null>(null);
+
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, "wishlist" | "tasted">>({});
