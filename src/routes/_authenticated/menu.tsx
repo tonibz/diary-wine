@@ -104,11 +104,18 @@ function MenuScanPage() {
   /** Read the photos, then save straight away — the venue is asked for later. */
   async function onRead() {
     if (!pages.length) return;
+    const mark = createStageTimer("menu-scan");
     setReading(true);
     setFailure(null);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
+      const { data: userRes } = await withTimeout(
+        supabase.auth.getUser(),
+        20_000,
+        "Could not confirm your sign-in — please try again",
+      );
       const uid = userRes.user!.id;
+      uidRef.current = uid;
+      mark("user resolved");
 
       const paths: string[] = [];
       for (const [i, p] of pages.entries()) {
@@ -121,6 +128,7 @@ function MenuScanPage() {
         if (up.error) throw up.error;
         paths.push(path);
       }
+      mark("uploads complete", { pages: paths.length });
 
       // One call per page: a whole list in a single request is truncated and
       // can outrun the request timeout.
@@ -148,6 +156,7 @@ function MenuScanPage() {
         currency ??= res.currency;
         items.push(...res.items);
       }
+      mark("read complete", { items: items.length, failedPages: pageErrors.length });
 
       const rejectedCount = items.filter((it) => it.rejected).length;
       const wines = items.filter((it) => !it.rejected);
@@ -178,7 +187,7 @@ function MenuScanPage() {
         skippedCategories: [...skippedCategories],
       };
 
-      await persist(draft, null);
+      await persist(draft, mark);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not read that wine list";
       setFailure(message);
@@ -188,31 +197,48 @@ function MenuScanPage() {
     }
   }
 
-  /** Save and leave immediately. The results route enriches the stored rows later. */
-  async function persist(draft: Draft, supersedeScanId: string | null) {
+  /**
+   * Two inserts and nothing else, then leave. Matching, appellation lookups,
+   * recommendations and every other enrichment happen on the results screen,
+   * so none of them can hold the user on a spinner.
+   */
+  async function persist(draft: Draft, mark = createStageTimer("menu-scan")) {
     setPending(null);
     setReading(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user!.id;
+      const uid = uidRef.current ?? (await supabase.auth.getUser()).data.user!.id;
+      uidRef.current = uid;
 
       setProgress("Saving the list");
-      const { scan } = await saveMenuScan({
-        userId: uid,
-        photoPath: draft.paths[0] ?? null,
-        restaurantName: draft.restaurantFromMenu,
-        raw: { pages: draft.raws } as unknown,
-        items: draft.items,
-        currency: draft.currency,
-        city: placeRef.current.city,
-        country: placeRef.current.country,
-        skippedCount: draft.skippedCount,
-        skippedCategories: draft.skippedCategories,
-        supersedeScanId,
-      });
+      const { scan } = await withTimeout(
+        saveMenuScan({
+          userId: uid,
+          photoPath: draft.paths[0] ?? null,
+          restaurantName: draft.restaurantFromMenu,
+          raw: { pages: draft.raws } as unknown,
+          items: draft.items,
+          currency: draft.currency,
+          city: placeRef.current.city,
+          country: placeRef.current.country,
+          skippedCount: draft.skippedCount,
+          skippedCategories: draft.skippedCategories,
+          onStage: mark,
+        }),
+        20_000,
+        "Saving took too long",
+      );
+      mark("save complete", { scanId: scan.id });
 
-      navigate({ to: "/menu/$id", params: { id: scan.id } });
+      goToResults(scan.id, mark);
     } catch (e) {
+      // The rows are usually already written by the time a save times out, so
+      // land on the newest scan rather than on an endless spinner.
+      const lastId = await newestScanId(uidRef.current).catch(() => null);
+      if (lastId) {
+        mark("save timed out — opening newest scan", { scanId: lastId });
+        goToResults(lastId, mark);
+        return;
+      }
       const message = e instanceof Error ? e.message : "Could not save that wine list";
       setFailure(message);
       toast.error(message);
@@ -221,6 +247,26 @@ function MenuScanPage() {
       setProgress(null);
     }
   }
+
+  /**
+   * The protected-route gate re-checks the session before the results screen
+   * renders. If that check stalls the router never moves, so a hard navigation
+   * takes over rather than leaving the user watching a spinner.
+   */
+  function goToResults(id: string, mark: (stage: string) => void) {
+    const path = `/menu/${id}`;
+    void navigate({ to: "/menu/$id", params: { id } });
+    mark("navigate requested");
+    setTimeout(() => {
+      if (!window.location.pathname.endsWith(path)) {
+        mark("router stalled — hard navigation");
+        window.location.assign(path);
+      } else {
+        mark("navigated");
+      }
+    }, 1500);
+  }
+
 
   /** Never let a page failure escape as a swallowed exception. */
   async function readMenuPageSafe(pageNumber: number, path: string) {
