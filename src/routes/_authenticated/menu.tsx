@@ -60,6 +60,10 @@ function MenuScanPage() {
   const readPage = useServerFn(readMenuPage);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  // Resolved once: re-reading the session after the long read can stall on the
+  // auth refresh lock, which is what used to freeze the save step.
+  const uidRef = useRef<string | null>(null);
+
   // Read from the photo's GPS in the background: never asked for, never blocking.
   const placeRef = useRef<{ city: string | null; country: string | null }>({
     city: null,
