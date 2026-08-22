@@ -143,8 +143,28 @@ export function MenuResults({
 
   const enoughData = ratedCount != null && ratedCount >= MIN_RATED_FOR_SUGGESTIONS;
 
+  /**
+   * The parsed wines and their prices come straight from the stored rows, so the
+   * list can always render. Scoring only ever replaces this with a richer copy.
+   */
+  const baseScored = useMemo<ScoredItem[]>(
+    () =>
+      readable.map((item) => ({
+        item,
+        grapes: item.grapes ?? [],
+        wine_type: item.wine_type,
+        region: null,
+        country: null,
+        filled: null,
+        score: 0,
+        reason: null,
+        diary: null,
+      })),
+    [readable],
+  );
+
   const groups = useMemo(() => {
-    const all = scored ?? [];
+    const all = scored ?? baseScored;
     const had = all.filter((s) => s.diary);
     const rest = all.filter((s) => !s.diary);
     if (!enoughData) {
@@ -157,7 +177,8 @@ export function MenuResults({
       .slice(0, MAX_RECOMMENDATIONS);
     const chosen = new Set(recommended.map((s) => s.item.id));
     return { had, recommended, other: ranked.filter((s) => !chosen.has(s.item.id)) };
-  }, [scored, enoughData]);
+  }, [scored, baseScored, enoughData]);
+
 
   async function onFix(item: MenuItemRow) {
     const draft = drafts[item.id] ?? {
