@@ -215,7 +215,10 @@ export async function saveMenuScan(args: {
   skippedCategories?: string[];
   /** an earlier scan of the same list, marked superseded once this one is saved */
   supersedeScanId?: string | null;
+  /** stage timing, so a stalled insert is visible in the console */
+  onStage?: (stage: string, extra?: Record<string, unknown>) => void;
 }): Promise<{ scan: MenuScanRow; items: MenuItemRow[] }> {
+  const mark = args.onStage ?? (() => {});
   const { data: scan, error } = await menuDb
     .from("menu_scans")
     .insert({
@@ -235,10 +238,12 @@ export async function saveMenuScan(args: {
     .select(SCAN_COLS)
     .single();
   if (error) throw error;
+  mark("scan inserted", { scanId: (scan as { id: string }).id });
 
   if (args.supersedeScanId) {
     // Kept, not deleted: the earlier reading is still evidence of what was read.
-    await menuDb
+    // Fire and forget — bookkeeping must never delay the results screen.
+    void menuDb
       .from("menu_scans")
       .update({ superseded: true, superseded_by: (scan as { id: string }).id })
       .eq("id", args.supersedeScanId);
@@ -282,12 +287,30 @@ export async function saveMenuScan(args: {
       .insert(rows)
       .select(ITEM_COLS);
     if (itemErr) throw itemErr;
+    mark("items inserted", { count: rows.length });
     // Rejected lines stay in the database but never reach the review screen.
     items = ((inserted ?? []) as MenuItemRow[]).filter((r) => !r.rejected);
     items.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }
   return { scan: asScan(scan as Record<string, unknown>), items };
 }
+
+/**
+ * The newest scan for this user. Used when a save times out: the rows are
+ * usually already written, so the user is taken to them instead of a spinner.
+ */
+export async function newestScanId(userId: string | null): Promise<string | null> {
+  if (!userId) return null;
+  const { data } = await menuDb
+    .from("menu_scans")
+    .select("id, scanned_at")
+    .eq("user_id", userId)
+    .order("scanned_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
 
 /**
  * Enrichment only: match already-stored rows against the catalogue and write
@@ -304,7 +327,7 @@ export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRo
     findBestMatches(
       candidates.map((i) => ({ name: i.parsed_name ?? "", producer: i.parsed_producer })),
     ),
-    30_000,
+    20_000,
     "Matching timed out",
   );
 
