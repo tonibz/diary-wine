@@ -8,6 +8,8 @@ import { loadMenuScan, rematchScan, type MenuItemRow, type MenuScanRow } from "@
 import { MenuResults } from "@/components/MenuResults";
 import { ScanVenue } from "@/components/ScanVenue";
 import { withTimeout } from "@/lib/with-timeout";
+import { createStageTimer } from "@/lib/stage-timer";
+
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/menu/$id")({
