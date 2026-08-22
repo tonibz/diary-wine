@@ -88,22 +88,22 @@ function MenuScanDetail() {
   }, [id]);
 
 
-  // Nothing matched at all: the list is stored, matching simply never landed.
-  const neverMatched = !!items && items.length > 0 && items.every((i) => i.match_score == null);
-
   async function onRematch() {
     setRematching(true);
+    setMatchFailed(false);
     try {
-      const updated = await rematchScan(id);
+      const updated = await withTimeout(rematchScan(id), 15_000, "Matching took too long");
       setItems(updated);
       toast.success("Matched against your diary.");
     } catch (err) {
       console.error("Re-matching failed", err);
-      toast.error("Still couldn't match these. The list and its prices are safe.");
+      setMatchFailed(true);
+      if (err instanceof SignedOutError) toast.error("Please sign in again");
     } finally {
       setRematching(false);
     }
   }
+
 
   return (
     <div className="px-5 pt-6 pb-8">
