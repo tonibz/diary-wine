@@ -261,6 +261,9 @@ function MenuScanPage() {
    */
   function goToResults(id: string, mark: (stage: string) => void) {
     const path = `/menu/${id}`;
+    // Cleared unconditionally: a spinner left true would cover whatever renders next.
+    setReading(false);
+    setProgress(null);
     void navigate({ to: "/menu/$id", params: { id } });
     mark("navigate requested");
     setTimeout(() => {
