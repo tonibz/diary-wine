@@ -18,10 +18,12 @@ import { compressImage } from "@/lib/image-compress";
 import { readMenuPage } from "@/lib/read-menu.functions";
 import type { JsonValue } from "@/lib/read-menu.functions";
 import type { MenuParsedItem } from "@/lib/menu-parse";
-import { saveMenuScan } from "@/lib/menu-match";
+import { saveMenuScan, newestScanId } from "@/lib/menu-match";
 import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/with-timeout";
+import { createStageTimer } from "@/lib/stage-timer";
+
 
 export const Route = createFileRoute("/_authenticated/menu")({
   head: () => ({
