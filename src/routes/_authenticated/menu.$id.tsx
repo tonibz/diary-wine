@@ -9,6 +9,8 @@ import { MenuResults } from "@/components/MenuResults";
 import { ScanVenue } from "@/components/ScanVenue";
 import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
+import { SignedOutError } from "@/lib/session-guard";
+
 
 import { Button } from "@/components/ui/button";
 
