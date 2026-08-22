@@ -327,7 +327,7 @@ export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRo
     findBestMatches(
       candidates.map((i) => ({ name: i.parsed_name ?? "", producer: i.parsed_producer })),
     ),
-    30_000,
+    20_000,
     "Matching timed out",
   );
 
