@@ -15,6 +15,9 @@ export type WineDraft = {
   name: string;
   producer: string | null;
   appellation: string | null;
+  /** Riserva, Grand Cru, Gran Reserva … kept out of the appellation name */
+  classification: string | null;
+
   region: string | null;
   country: string | null;
   wine_type: string | null;

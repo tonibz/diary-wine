@@ -1,0 +1,1 @@
+ALTER TABLE public.wines ADD COLUMN IF NOT EXISTS classification text;

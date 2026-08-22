@@ -663,6 +663,7 @@ export type Database = {
       wines: {
         Row: {
           appellation: string | null
+          classification: string | null
           country: string | null
           created_at: string
           created_by: string | null
@@ -680,6 +681,7 @@ export type Database = {
         }
         Insert: {
           appellation?: string | null
+          classification?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
@@ -697,6 +699,7 @@ export type Database = {
         }
         Update: {
           appellation?: string | null
+          classification?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null

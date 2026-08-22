@@ -127,13 +127,23 @@ export function buildFieldSources(
   return sources;
 }
 
-/** Row-level fallback: 'label' when anything came off the label. */
+/**
+ * Row-level summary: the most common per-field origin, not a constant. Ties go
+ * to the less flattering source, so a row is never described as read off the
+ * label when as many fields were recalled or typed.
+ * ('reference' is folded into 'inferred' — the wines column has three values.)
+ */
 export function rowDataSource(sources: FieldSources): "label" | "inferred" | "user" {
-  const vals = Object.values(sources);
-  if (vals.includes("label")) return "label";
-  if (vals.includes("inferred") || vals.includes("reference")) return "inferred";
-  return "user";
+  const tally: Record<"label" | "inferred" | "user", number> = { label: 0, inferred: 0, user: 0 };
+  for (const v of Object.values(sources)) {
+    tally[v === "reference" ? "inferred" : v] += 1;
+  }
+  if (tally.label + tally.inferred + tally.user === 0) return "user";
+  // order encodes the tie-break: user beats inferred beats label
+  const order: Array<"user" | "inferred" | "label"> = ["user", "inferred", "label"];
+  return order.reduce((best, k) => (tally[k] > tally[best] ? k : best), order[0]);
 }
+
 
 /**
  * Merge a patch into wines.field_sources without dropping what's already there.
