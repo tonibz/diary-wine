@@ -25,7 +25,7 @@ import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
 
 
-export const Route = createFileRoute("/_authenticated/menu")({
+export const Route = createFileRoute("/_authenticated/menu/")({
   head: () => ({
     meta: [
       { title: "Scan a wine list — Wine Diary" },
