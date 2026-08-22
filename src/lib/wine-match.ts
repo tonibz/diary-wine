@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { withValidSession } from "@/lib/session-guard";
 import type { FieldSources } from "@/lib/field-provenance";
+
 
 export type WineCandidate = {
   id: string;
