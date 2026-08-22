@@ -424,22 +424,19 @@ export function MenuResults({
         </div>
       )}
 
-      {failed && (
-        <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
-          <p className="text-sm text-foreground">
-            Couldn't work out what you'd like from this list. The wines were read fine — the full
-            list is below.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3"
-            onClick={() => setReloadKey((k) => k + 1)}
-          >
-            Try again
-          </Button>
-        </section>
+      {scoring && (
+        <p className="text-xs text-muted-foreground">Working out what you'd like…</p>
       )}
+
+      {failed && (
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>{failedMsg ?? "Couldn't work out what you'd like — the full list is below."}</span>
+          <Button size="sm" variant="outline" onClick={() => setReloadKey((k) => k + 1)}>
+            Retry
+          </Button>
+        </div>
+      )}
+
 
       {!failed && ratedCount != null && !enoughData && (
         <section className="rounded-2xl border border-border bg-parchment/60 p-4">
