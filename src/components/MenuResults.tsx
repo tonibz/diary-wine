@@ -26,6 +26,8 @@ import {
 import { addMenuItemAsTasted, addMenuItemToWishlist } from "@/lib/menu-actions";
 import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
+import { SignedOutError } from "@/lib/session-guard";
+
 
 
 const MIN_RECOMMEND_SCORE = 0.15;
@@ -46,6 +48,8 @@ export function MenuResults({
   const [scored, setScored] = useState<ScoredItem[] | null>(null);
   const [ratedCount, setRatedCount] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
+  const [failedMsg, setFailedMsg] = useState<string | null>(null);
+
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, "wishlist" | "tasted">>({});
@@ -120,6 +124,11 @@ export function MenuResults({
         if (cancelled) return;
         // The wines were read fine — show them all rather than nothing.
         setFailed(true);
+        setFailedMsg(
+          err instanceof SignedOutError
+            ? "Please sign in again to see suggestions."
+            : "Couldn't work out what you'd like — the full list is below.",
+        );
         setRatedCount(null);
         setScored(
           readable.map((item) => ({
@@ -134,6 +143,7 @@ export function MenuResults({
             diary: null,
           })),
         );
+
       }
     })();
     return () => {
@@ -143,8 +153,28 @@ export function MenuResults({
 
   const enoughData = ratedCount != null && ratedCount >= MIN_RATED_FOR_SUGGESTIONS;
 
+  /**
+   * The parsed wines and their prices come straight from the stored rows, so the
+   * list can always render. Scoring only ever replaces this with a richer copy.
+   */
+  const baseScored = useMemo<ScoredItem[]>(
+    () =>
+      readable.map((item) => ({
+        item,
+        grapes: item.grapes ?? [],
+        wine_type: item.wine_type,
+        region: null,
+        country: null,
+        filled: null,
+        score: 0,
+        reason: null,
+        diary: null,
+      })),
+    [readable],
+  );
+
   const groups = useMemo(() => {
-    const all = scored ?? [];
+    const all = scored ?? baseScored;
     const had = all.filter((s) => s.diary);
     const rest = all.filter((s) => !s.diary);
     if (!enoughData) {
@@ -157,7 +187,8 @@ export function MenuResults({
       .slice(0, MAX_RECOMMENDATIONS);
     const chosen = new Set(recommended.map((s) => s.item.id));
     return { had, recommended, other: ranked.filter((s) => !chosen.has(s.item.id)) };
-  }, [scored, enoughData]);
+  }, [scored, baseScored, enoughData]);
+
 
   async function onFix(item: MenuItemRow) {
     const draft = drafts[item.id] ?? {
@@ -248,9 +279,12 @@ export function MenuResults({
     }
   }
 
-  if (!scored) {
-    return <p className="text-center text-sm text-muted-foreground py-10">Reading the list…</p>;
-  }
+  // No render gate: the stored wines and prices show whether or not scoring,
+  // matching, appellation lookups or inference checks ever finish.
+  const scoring = scored == null;
+  const listAlwaysOpen = groups.recommended.length === 0;
+  const otherOpen = listAlwaysOpen || showOther;
+
 
   const price = (item: MenuItemRow) =>
     (item.price != null || item.glass_price != null) && (
@@ -400,22 +434,19 @@ export function MenuResults({
         </div>
       )}
 
-      {failed && (
-        <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
-          <p className="text-sm text-foreground">
-            Couldn't work out what you'd like from this list. The wines were read fine — the full
-            list is below.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3"
-            onClick={() => setReloadKey((k) => k + 1)}
-          >
-            Try again
-          </Button>
-        </section>
+      {scoring && (
+        <p className="text-xs text-muted-foreground">Working out what you'd like…</p>
       )}
+
+      {failed && (
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>{failedMsg ?? "Couldn't work out what you'd like — the full list is below."}</span>
+          <Button size="sm" variant="outline" onClick={() => setReloadKey((k) => k + 1)}>
+            Retry
+          </Button>
+        </div>
+      )}
+
 
       {!failed && ratedCount != null && !enoughData && (
         <section className="rounded-2xl border border-border bg-parchment/60 p-4">
@@ -452,27 +483,31 @@ export function MenuResults({
         <section>
           <button
             type="button"
+            disabled={listAlwaysOpen}
             onClick={() => setShowOther((v) => !v)}
-            className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook"
+            className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook disabled:cursor-default"
           >
             <span className="font-serif text-xl text-foreground">
-              Everything else{" "}
+              {listAlwaysOpen ? "The wine list" : "Everything else"}{" "}
               <span className="text-sm font-sans text-muted-foreground">
                 ({groups.other.length})
               </span>
             </span>
-            <ChevronDown
-              size={18}
-              className={cn(
-                "transition-transform text-muted-foreground",
-                showOther && "rotate-180",
-              )}
-            />
+            {!listAlwaysOpen && (
+              <ChevronDown
+                size={18}
+                className={cn(
+                  "transition-transform text-muted-foreground",
+                  showOther && "rotate-180",
+                )}
+              />
+            )}
           </button>
-          {showOther && (
+          {otherOpen && (
             <ul className="space-y-3 mt-3">{groups.other.map((s) => row(s, "other"))}</ul>
           )}
         </section>
+
       )}
 
       {unreadable.length > 0 && (

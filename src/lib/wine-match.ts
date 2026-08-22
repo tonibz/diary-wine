@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { withValidSession } from "@/lib/session-guard";
 import type { FieldSources } from "@/lib/field-provenance";
+
 
 export type WineCandidate = {
   id: string;
@@ -50,14 +52,19 @@ export async function findBestMatches(
   const out: Array<WineCandidate | null> = inputs.map(() => null);
   if (!inputs.length) return out;
 
-  const { data, error } = await supabase.rpc("find_wine_matches", {
-    _names: inputs.map((i) => i.name ?? ""),
-    _producers: inputs.map((i) => i.producer ?? ""),
-  } as never);
+  const { data, error } = await withValidSession(async () =>
+    supabase.rpc("find_wine_matches", {
+      _names: inputs.map((i) => i.name ?? ""),
+      _producers: inputs.map((i) => i.producer ?? ""),
+    } as never),
+  );
+
   if (error) {
     console.error("find_wine_matches failed", error);
-    throw new Error(error.message || "Could not match wines against the catalogue");
+    const message = (error as { message?: string }).message;
+    throw new Error(message || "Could not match wines against the catalogue");
   }
+
 
   for (const row of (data ?? []) as unknown as Array<WineCandidate & { idx: number }>) {
     const i = Number(row.idx) - 1; // Postgres arrays are 1-based

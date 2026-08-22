@@ -9,6 +9,8 @@ import { MenuResults } from "@/components/MenuResults";
 import { ScanVenue } from "@/components/ScanVenue";
 import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
+import { SignedOutError } from "@/lib/session-guard";
+
 
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +35,8 @@ function MenuScanDetail() {
   const [items, setItems] = useState<MenuItemRow[] | null>(null);
   const [missing, setMissing] = useState(false);
   const [rematching, setRematching] = useState(false);
+  const [matchFailed, setMatchFailed] = useState(false);
+
 
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -53,12 +57,13 @@ function MenuScanDetail() {
         setItems(res.items);
         mark("stored scan shown", { items: res.items.length });
 
-        // The scan and every price are already persisted. Enrichment starts only
-        // after the stored results are visible and can never affect that save.
+        // The scan and every price are already persisted and now on screen.
+        // Matching is enrichment: it can fail without touching the list.
         if (res.items.length > 0 && res.items.every((item) => item.match_score == null)) {
           setRematching(true);
+          setMatchFailed(false);
           mark("matching started");
-          void withTimeout(rematchScan(id), 20_000, "Matching took too long")
+          void withTimeout(rematchScan(id), 15_000, "Matching took too long")
             .then((updated) => {
               mark("matching finished");
               if (active) setItems(updated);
@@ -66,12 +71,13 @@ function MenuScanDetail() {
             .catch((err) => {
               mark("matching failed");
               console.error("Menu matching failed", err);
-              if (active) toast.error("Couldn't match these. The list and its prices are safe.");
+              if (active) setMatchFailed(true);
             })
             .finally(() => {
               if (active) setRematching(false);
             });
         }
+
       } catch (err) {
         if (!active) return;
         console.error("Could not load menu scan", err);
@@ -84,22 +90,22 @@ function MenuScanDetail() {
   }, [id]);
 
 
-  // Nothing matched at all: the list is stored, matching simply never landed.
-  const neverMatched = !!items && items.length > 0 && items.every((i) => i.match_score == null);
-
   async function onRematch() {
     setRematching(true);
+    setMatchFailed(false);
     try {
-      const updated = await rematchScan(id);
+      const updated = await withTimeout(rematchScan(id), 15_000, "Matching took too long");
       setItems(updated);
       toast.success("Matched against your diary.");
     } catch (err) {
       console.error("Re-matching failed", err);
-      toast.error("Still couldn't match these. The list and its prices are safe.");
+      setMatchFailed(true);
+      if (err instanceof SignedOutError) toast.error("Please sign in again");
     } finally {
       setRematching(false);
     }
   }
+
 
   return (
     <div className="px-5 pt-6 pb-8">
@@ -151,30 +157,21 @@ function MenuScanDetail() {
                 {scan.skipped_categories.length ? ` (${scan.skipped_categories.join(", ")})` : ""}
               </p>
             )}
-            {neverMatched && (
-              <div className="mt-3 rounded-2xl border border-border bg-card p-3">
-                <p className="text-xs text-muted-foreground">
-                  Matching against your diary wasn't available — the list and its prices are saved.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  disabled={rematching}
-                  onClick={onRematch}
-                >
-                  {rematching ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" /> Matching…
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw size={14} /> Try matching again
-                    </>
-                  )}
-                </Button>
-              </div>
+            {/* Inline only: matching never covers or delays the wine list. */}
+            {rematching && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 size={12} className="animate-spin" /> checking your diary…
+              </p>
             )}
+            {!rematching && matchFailed && (
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                Couldn't check your diary.
+                <Button variant="outline" size="sm" onClick={onRematch}>
+                  <RotateCcw size={12} /> Retry
+                </Button>
+              </p>
+            )}
+
           </header>
 
           <MenuResults
