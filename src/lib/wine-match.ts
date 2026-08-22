@@ -50,10 +50,13 @@ export async function findBestMatches(
   const out: Array<WineCandidate | null> = inputs.map(() => null);
   if (!inputs.length) return out;
 
-  const { data, error } = await supabase.rpc("find_wine_matches", {
-    _names: inputs.map((i) => i.name ?? ""),
-    _producers: inputs.map((i) => i.producer ?? ""),
-  } as never);
+  const { data, error } = await withValidSession(async () =>
+    supabase.rpc("find_wine_matches", {
+      _names: inputs.map((i) => i.name ?? ""),
+      _producers: inputs.map((i) => i.producer ?? ""),
+    } as never),
+  );
+
   if (error) {
     console.error("find_wine_matches failed", error);
     throw new Error(error.message || "Could not match wines against the catalogue");
