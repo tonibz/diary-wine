@@ -25,7 +25,7 @@ import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
 
 
-export const Route = createFileRoute("/_authenticated/menu")({
+export const Route = createFileRoute("/_authenticated/menu/")({
   head: () => ({
     meta: [
       { title: "Scan a wine list — Wine Diary" },
@@ -261,6 +261,9 @@ function MenuScanPage() {
    */
   function goToResults(id: string, mark: (stage: string) => void) {
     const path = `/menu/${id}`;
+    // Cleared unconditionally: a spinner left true would cover whatever renders next.
+    setReading(false);
+    setProgress(null);
     void navigate({ to: "/menu/$id", params: { id } });
     mark("navigate requested");
     setTimeout(() => {

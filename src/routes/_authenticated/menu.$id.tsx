@@ -39,6 +39,7 @@ function MenuScanDetail() {
   useEffect(() => {
     let active = true;
     const mark = createStageTimer("menu-detail");
+    mark("results component mounted", { id });
     (async () => {
       try {
         mark("loading stored scan");
