@@ -53,12 +53,13 @@ function MenuScanDetail() {
         setItems(res.items);
         mark("stored scan shown", { items: res.items.length });
 
-        // The scan and every price are already persisted. Enrichment starts only
-        // after the stored results are visible and can never affect that save.
+        // The scan and every price are already persisted and now on screen.
+        // Matching is enrichment: it can fail without touching the list.
         if (res.items.length > 0 && res.items.every((item) => item.match_score == null)) {
           setRematching(true);
+          setMatchFailed(false);
           mark("matching started");
-          void withTimeout(rematchScan(id), 20_000, "Matching took too long")
+          void withTimeout(rematchScan(id), 15_000, "Matching took too long")
             .then((updated) => {
               mark("matching finished");
               if (active) setItems(updated);
@@ -66,12 +67,13 @@ function MenuScanDetail() {
             .catch((err) => {
               mark("matching failed");
               console.error("Menu matching failed", err);
-              if (active) toast.error("Couldn't match these. The list and its prices are safe.");
+              if (active) setMatchFailed(true);
             })
             .finally(() => {
               if (active) setRematching(false);
             });
         }
+
       } catch (err) {
         if (!active) return;
         console.error("Could not load menu scan", err);
