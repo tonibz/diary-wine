@@ -379,7 +379,7 @@ function MenuScanPage() {
             variant="outline"
             size="sm"
             className="mt-3"
-            onClick={() => (pending ? void persist(pending, null) : void onRead())}
+            onClick={() => (pending ? void persist(pending) : void onRead())}
           >
             <RotateCcw size={14} /> Try again
           </Button>
