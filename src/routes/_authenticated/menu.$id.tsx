@@ -155,30 +155,21 @@ function MenuScanDetail() {
                 {scan.skipped_categories.length ? ` (${scan.skipped_categories.join(", ")})` : ""}
               </p>
             )}
-            {neverMatched && (
-              <div className="mt-3 rounded-2xl border border-border bg-card p-3">
-                <p className="text-xs text-muted-foreground">
-                  Matching against your diary wasn't available — the list and its prices are saved.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  disabled={rematching}
-                  onClick={onRematch}
-                >
-                  {rematching ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" /> Matching…
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw size={14} /> Try matching again
-                    </>
-                  )}
-                </Button>
-              </div>
+            {/* Inline only: matching never covers or delays the wine list. */}
+            {rematching && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 size={12} className="animate-spin" /> checking your diary…
+              </p>
             )}
+            {!rematching && matchFailed && (
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                Couldn't check your diary.
+                <Button variant="outline" size="sm" onClick={onRematch}>
+                  <RotateCcw size={12} /> Retry
+                </Button>
+              </p>
+            )}
+
           </header>
 
           <MenuResults
