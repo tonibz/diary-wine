@@ -269,9 +269,12 @@ export function MenuResults({
     }
   }
 
-  if (!scored) {
-    return <p className="text-center text-sm text-muted-foreground py-10">Reading the list…</p>;
-  }
+  // No render gate: the stored wines and prices show whether or not scoring,
+  // matching, appellation lookups or inference checks ever finish.
+  const scoring = scored == null;
+  const listAlwaysOpen = groups.recommended.length === 0;
+  const otherOpen = listAlwaysOpen || showOther;
+
 
   const price = (item: MenuItemRow) =>
     (item.price != null || item.glass_price != null) && (
