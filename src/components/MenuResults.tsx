@@ -26,6 +26,8 @@ import {
 import { addMenuItemAsTasted, addMenuItemToWishlist } from "@/lib/menu-actions";
 import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
+import { SignedOutError } from "@/lib/session-guard";
+
 
 
 const MIN_RECOMMEND_SCORE = 0.15;
