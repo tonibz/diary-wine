@@ -33,6 +33,8 @@ function MenuScanDetail() {
   const [items, setItems] = useState<MenuItemRow[] | null>(null);
   const [missing, setMissing] = useState(false);
   const [rematching, setRematching] = useState(false);
+  const [matchFailed, setMatchFailed] = useState(false);
+
 
   const [failure, setFailure] = useState<string | null>(null);
 
