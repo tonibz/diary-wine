@@ -180,16 +180,18 @@ export async function fillFromAppellations(
   if (!probes.length) return out;
 
   const { data, error } = await withTimeout(
-    (async () =>
-      await supabase.rpc(
+    withValidSession(async () =>
+      supabase.rpc(
         "lookup_appellations" as never,
         {
           _names: probes.map((p) => p.text),
         } as never,
-      ))(),
-    20_000,
+      ),
+    ),
+    15_000,
     "Appellation lookup timed out",
   );
+
   if (error) {
     console.error("lookup_appellations failed", error);
     return out;
