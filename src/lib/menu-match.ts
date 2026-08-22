@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { findBestMatches } from "@/lib/wine-match";
+import { withValidSession } from "@/lib/session-guard";
 import { withTimeout } from "@/lib/with-timeout";
 
 import type {
@@ -340,13 +341,20 @@ export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRo
     });
   });
 
-  await Promise.all(
-    [...patched.entries()].map(([id, patch]) =>
-      menuDb.from("menu_items").update(patch).eq("id", id),
-    ),
-  );
+  const updatedItems = items.map((item) => {
+    const patch = patched.get(item.id);
+    return patch ? { ...item, ...patch } : item;
+  });
 
-  return items.map((i) => (patched.has(i.id) ? { ...i, ...patched.get(i.id)! } : i));
+  // Persist the enrichment in one authenticated request. The old per-item
+  // Promise.all made a long list issue dozens of writes after matching and
+  // could outlive the token that had just been refreshed for the RPC.
+  const { error } = await withValidSession(async () =>
+    menuDb.from("menu_items").upsert(updatedItems, { onConflict: "id" }),
+  );
+  if (error) throw error;
+
+  return updatedItems;
 }
 
 /** Re-run only the matching step against the rows already stored for a scan. */
