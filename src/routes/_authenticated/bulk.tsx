@@ -509,11 +509,17 @@ function BulkPage() {
           ))}
         </Section>
 
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 backdrop-blur px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          {!savable.length && (
+            <p className="mb-2 text-center text-xs text-muted-foreground">
+              Give at least one wine a name to save
+            </p>
+          )}
           <Button className="w-full h-12 rounded-xl" onClick={saveAll} disabled={!savable.length}>
             Add {savable.length} {savable.length === 1 ? "wine" : "wines"} to my diary
           </Button>
         </div>
+
       </div>
     );
   }
