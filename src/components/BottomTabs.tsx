@@ -12,7 +12,10 @@ const tabs = [
 
 export function BottomTabs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Focused, single-task flows own the bottom of the screen.
+  if (pathname.startsWith("/bulk")) return null;
   return (
+
     <>
       <Link
         to="/add"
