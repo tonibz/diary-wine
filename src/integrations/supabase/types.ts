@@ -400,18 +400,21 @@ export type Database = {
           display_name: string | null
           gps_lookup_enabled: boolean
           id: string
+          language: string
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           gps_lookup_enabled?: boolean
           id: string
+          language?: string
         }
         Update: {
           created_at?: string
           display_name?: string | null
           gps_lookup_enabled?: boolean
           id?: string
+          language?: string
         }
         Relationships: []
       }
