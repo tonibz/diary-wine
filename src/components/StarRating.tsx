@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 export function StarRating({
@@ -10,6 +11,7 @@ export function StarRating({
   onChange?: (v: number) => void;
   size?: number;
 }) {
+  const { t } = useTranslation();
   const readonly = !onChange;
   return (
     <div className="flex items-center gap-0.5">
@@ -23,7 +25,7 @@ export function StarRating({
             "transition-transform",
             !readonly && "hover:scale-110 active:scale-95 cursor-pointer",
           )}
-          aria-label={`${n} star${n > 1 ? "s" : ""}`}
+          aria-label={t("entry.starsCount", { count: n })}
         >
           <Star
             size={size}

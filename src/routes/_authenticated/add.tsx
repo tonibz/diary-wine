@@ -58,9 +58,12 @@ import { ArrowLeft, Camera, X, Loader2, Info, ImagePlus, Images, ScrollText } fr
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { withTimeout } from "@/lib/with-timeout";
+import { useTranslation } from "react-i18next";
+import { wineTypeOptions } from "@/lib/wine-type";
+import { i18next } from "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/add")({
-  head: () => ({ meta: [{ title: "Add a wine — Wine Diary" }, { name: "description", content: "Log a new bottle." }] }),
+  head: () => ({ meta: [{ title: `${i18next.t("add.title")} — Wine Diary` }, { name: "description", content: i18next.t("add.title") }] }),
   component: AddPage,
 });
 
@@ -82,6 +85,7 @@ const emptyBottle: BottleForm = {
 };
 
 function AddPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
   const compare = useServerFn(compareLabels) as unknown as CompareFn;
@@ -129,8 +133,8 @@ function AddPage() {
   // Fields the model worked out rather than read — the ones most worth checking.
   const inferredSet = new Set(inferredFields.map((f) => f.trim().toLowerCase()));
   const check = (field: string) => {
-    if (referenceValues[field] !== undefined) return "From Wikipedia";
-    return inferredSet.has(field) ? "Guessed — please check" : undefined;
+    if (referenceValues[field] !== undefined) return t("add.fromWikipedia");
+    return inferredSet.has(field) ? t("add.guessedCheck") : undefined;
   };
   const disagreement = (field: "wine_type" | "country") =>
     refCheck?.disagreements.find((d) => d.field === field) ?? null;
@@ -218,7 +222,7 @@ function AddPage() {
       const result = await withTimeout(
         recognise({ data: { photoPath: path, backPhotoPath: backPhotoPath } }),
         120_000,
-        "Reading that label took too long — please try again",
+        t("add.toast.readTimeout"),
       );
       if (result.recognition_id) setRecognitionId(result.recognition_id);
       if (result.ok && result.data.confidence >= 0.6) {
@@ -238,11 +242,11 @@ function AddPage() {
         setDataSource(result.data.inferred_fields?.length ? "inferred" : "label");
         await runReferenceCheck(result.recognition_id ?? null, result.data);
       } else {
-        toast("Couldn't read that one clearly, fill it in below.");
+        toast(t("add.toast.couldntRead"));
         setDataSource("user");
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : t("add.toast.uploadFailed"));
     } finally {
       setRecognising(false);
     }
@@ -267,7 +271,7 @@ function AddPage() {
         const result = await withTimeout(
           recognise({ data: { photoPath, backPhotoPath: path } }),
           120_000,
-          "Reading that label took too long — please try again",
+          t("add.toast.readTimeout"),
         );
         if (result.recognition_id) setRecognitionId(result.recognition_id);
         if (result.ok && result.data.confidence >= 0.6) {
@@ -291,7 +295,7 @@ function AddPage() {
         }
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : t("add.toast.uploadFailed"));
     } finally {
       setRecognising(false);
     }
@@ -444,13 +448,13 @@ function AddPage() {
 
 
     if (tasted) await recomputeTasteProfile(uid);
-    toast.success(tasted ? "Saved to your diary." : "Added to your wishlist.");
+    toast.success(tasted ? t("add.toast.savedDiary") : t("add.toast.savedWishlist"));
     navigate({ to: "/entry/$id", params: { id: entry.id } });
   }
 
   async function onSave() {
     if (!bottle.name.trim()) {
-      toast.error("A name is needed, even a rough one.");
+      toast.error(t("add.toast.nameRequired"));
       return;
     }
     setSaving(true);
@@ -494,7 +498,7 @@ function AddPage() {
       const wineId = await insertNewWine(draft, uid);
       await finalizeSave(wineId, draft, uid, "auto_new", candidate);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : t("add.toast.saveFailed"));
       setSaving(false);
     }
   }
@@ -515,7 +519,7 @@ function AddPage() {
         await finalizeSave(wineId, draft, uid, "user_rejected", candidate, visual);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : t("add.toast.saveFailed"));
       setSaving(false);
     }
   }
