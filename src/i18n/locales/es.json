@@ -1,1 +1,77 @@
-{}
+{
+  "wineType": {
+    "red": "Tinto",
+    "white": "Blanco",
+    "rose": "Rosado",
+    "sparkling": "Espumoso",
+    "dessert": "Dulce",
+    "fortified": "Generoso"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "retry": "Probar otra vez",
+    "back": "Atrás",
+    "delete": "Borrar",
+    "edit": "Editar",
+    "done": "Listo",
+    "untitled": "Sin nombre",
+    "wine": "vino",
+    "wineCount_one": "{{count}} vino",
+    "wineCount_other": "{{count}} vinos"
+  },
+  "nav": {
+    "diary": "Diario",
+    "wishlist": "Por probar",
+    "taste": "Mi gusto",
+    "menus": "Cartas",
+    "settings": "Ajustes",
+    "add": "Apuntar un vino"
+  },
+  "diary": {
+    "metaTitle": "Mi diario — Wine Diary",
+    "metaDescription": "Todos los vinos que has apuntado, del más reciente al primero.",
+    "metaOgTitle": "Mi diario",
+    "metaOgDescription": "Todos los vinos que has apuntado.",
+    "title": "Mi diario",
+    "subtitle": "Cada botella, contada por ti.",
+    "scanMenu": "Escanear una carta",
+    "scanMenuHint": "¿Una carta de vinos larguísima? Te digo qué ya conoces.",
+    "searchPlaceholder": "Busca por nombre, bodega o lugar…",
+    "allTypes": "Todos los tipos",
+    "anyRating": "Cualquier nota",
+    "ratingAtLeast": "{{count}}★ o más",
+    "ratingOnly": "Solo {{count}}★",
+    "loading": "Cargando…",
+    "untitled": "Sin nombre",
+    "wineAltFallback": "vino",
+    "emptyTitle": "Te espera tu primera botella",
+    "emptyHint": "Toca el botón + y apunta el primer vino que quieras recordar.",
+    "emptyFiltered": "Nada coincide con eso.",
+    "emptyFilteredHint": "Prueba a quitar los filtros."
+  },
+  "entry": {
+    "starsCount_one": "{{count}} estrella",
+    "starsCount_other": "{{count}} estrellas"
+  },
+  "add": {
+    "title": "Apuntar un vino",
+    "fromWikipedia": "De Wikipedia",
+    "guessedCheck": "Deducido — compruébalo",
+    "toast": {
+      "couldntRead": "No se leyó del todo bien; complétalo aquí abajo.",
+      "uploadFailed": "No se pudo subir la foto",
+      "readTimeout": "Leer la etiqueta tardó demasiado",
+      "savedDiary": "Guardado en tu diario.",
+      "savedWishlist": "Añadido a tu lista de por probar.",
+      "nameRequired": "Hace falta un nombre, aunque sea aproximado.",
+      "saveFailed": "No se pudo guardar"
+    }
+  },
+  "settings": {
+    "language": "Idioma",
+    "languageHint": "La app cambia al momento."
+  }
+}
