@@ -1,16 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { BookHeart, Sparkles, Settings, Plus, Bookmark } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { to: "/", label: "Diary", icon: BookHeart },
-  { to: "/wishlist", label: "Wishlist", icon: Bookmark },
-  { to: "/taste", label: "My Taste", icon: Sparkles },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/", labelKey: "nav.diary", icon: BookHeart },
+  { to: "/wishlist", labelKey: "nav.wishlist", icon: Bookmark },
+  { to: "/taste", labelKey: "nav.taste", icon: Sparkles },
+  { to: "/settings", labelKey: "nav.settings", icon: Settings },
 ] as const;
 
 
 export function BottomTabs() {
+  const { t: translate } = useTranslation();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Focused, single-task flows own the bottom of the screen.
   if (pathname.startsWith("/bulk")) return null;
@@ -19,7 +21,7 @@ export function BottomTabs() {
     <>
       <Link
         to="/add"
-        aria-label="Add a wine"
+        aria-label={translate("nav.add")}
         className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-notebook transition-transform active:scale-95 hover:bg-secondary"
       >
         <Plus size={26} />
@@ -39,7 +41,7 @@ export function BottomTabs() {
                   )}
                 >
                   <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
-                  <span className={cn(active && "font-medium")}>{t.label}</span>
+                  <span className={cn(active && "font-medium")}>{translate(t.labelKey)}</span>
                 </Link>
               </li>
             );
