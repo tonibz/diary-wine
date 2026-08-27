@@ -72,6 +72,65 @@
   },
   "settings": {
     "language": "Idioma",
-    "languageHint": "La app cambia al momento."
+    "languageHint": "La app cambia al momento.",
+    "metaTitle": "Ajustes — Wine Diary",
+    "metaDescription": "Tu cuenta y tus preferencias.",
+    "title": "Ajustes",
+    "displayName": "Nombre",
+    "email": "Correo",
+    "gpsTitle": "Usar la ubicación de la foto",
+    "gpsHint": "Si lo activas, miramos el GPS de tu foto para rellenar dónde lo probaste. Está desactivado por defecto.",
+    "saved": "Guardado",
+    "signOut": "Cerrar sesión",
+    "footer": "Wine Diary — solo para ti."
+  },
+  "wishlist": {
+    "metaTitle": "Por probar — Wine Diary",
+    "metaDescription": "Botellas que has visto y quieres recordar para probarlas.",
+    "metaOgTitle": "Mi lista de por probar",
+    "metaOgDescription": "Botellas que quieres probar algún día.",
+    "title": "Por probar",
+    "subtitle": "Botellas que has visto y te apetece probar.",
+    "emptyTitle": "Todavía no hay nada en la lista",
+    "emptyHint": "¿Has visto algo en una estantería o en la mesa de un amigo? Añádelo con el botón + y elige «Aún no lo he probado».",
+    "triedItNow": "Ya lo he probado"
+  },
+  "taste": {
+    "metaTitle": "Mi gusto — Wine Diary",
+    "metaDescription": "Un retrato de lo que te gusta, hecho con tu diario.",
+    "title": "Mi gusto",
+    "emptyHint": "Apunta unos vinos y esta página se irá llenando sola.",
+    "progress": "{{count}} de {{target}} por ahora",
+    "progressHint": "Unas botellas más y aquí aparecerá el retrato de tu gusto.",
+    "colours": "Los colores que sirves",
+    "other": "Otros",
+    "otherNote": "Los rosados, espumosos y demás siguen en tu diario; estas cifras se centran por ahora en tinto y blanco.",
+    "totalUsed": "En total se han usado {{count}} apuntes para el reparto.",
+    "topCountries": "Países que más repites",
+    "topGrapes": "Uvas a las que siempre vuelves",
+    "averageAge": "Edad media",
+    "averageAlcohol": "Alcohol medio",
+    "years": "{{value}} años",
+    "summary": {
+      "startingOut": "Acabas de empezar.",
+      "leanRed": {
+        "plain": "Te tira el tinto.",
+        "grape": "Te tira el tinto, con debilidad por la {{grape}}.",
+        "country": "Te tira el tinto, sobre todo de {{country}}.",
+        "grapeCountry": "Te tira el tinto, con debilidad por la {{grape}}, sobre todo de {{country}}."
+      },
+      "leanWhite": {
+        "plain": "Prefieres los blancos.",
+        "grape": "Prefieres los blancos, con debilidad por la {{grape}}.",
+        "country": "Prefieres los blancos, sobre todo de {{country}}.",
+        "grapeCountry": "Prefieres los blancos, con debilidad por la {{grape}}, sobre todo de {{country}}."
+      },
+      "even": {
+        "plain": "Repartes por igual entre tinto y blanco.",
+        "grape": "Repartes por igual entre tinto y blanco, con debilidad por la {{grape}}.",
+        "country": "Repartes por igual entre tinto y blanco, sobre todo de {{country}}.",
+        "grapeCountry": "Repartes por igual entre tinto y blanco, con debilidad por la {{grape}}, sobre todo de {{country}}."
+      }
+    }
   }
 }

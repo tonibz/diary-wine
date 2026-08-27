@@ -72,6 +72,65 @@
   },
   "settings": {
     "language": "Language",
-    "languageHint": "The app switches straight away."
+    "languageHint": "The app switches straight away.",
+    "metaTitle": "Settings — Wine Diary",
+    "metaDescription": "Your account and preferences.",
+    "title": "Settings",
+    "displayName": "Display name",
+    "email": "Email",
+    "gpsTitle": "Use photo location",
+    "gpsHint": "When on, we look up the place name from your photo's GPS so we can prefill where you tasted it. Off by default.",
+    "saved": "Saved",
+    "signOut": "Sign out",
+    "footer": "Wine Diary — kept just for you."
+  },
+  "wishlist": {
+    "metaTitle": "Wishlist — Wine Diary",
+    "metaDescription": "Bottles you have spotted and want to remember to try.",
+    "metaOgTitle": "My Wishlist",
+    "metaOgDescription": "Bottles you want to try one day.",
+    "title": "Wishlist",
+    "subtitle": "Bottles you've spotted and fancy trying.",
+    "emptyTitle": "Nothing on the list yet",
+    "emptyHint": "Saw something on a shelf or a friend's table? Add it with the + button and pick \"Haven't tried it yet\".",
+    "triedItNow": "I've tried this now"
+  },
+  "taste": {
+    "metaTitle": "My Taste — Wine Diary",
+    "metaDescription": "A picture of what you like, built from your diary.",
+    "title": "My Taste",
+    "emptyHint": "Log a few wines and this page will fill itself in.",
+    "progress": "{{count}} of {{target}} so far",
+    "progressHint": "A few more bottles and your taste picture will appear here.",
+    "colours": "Colours you pour",
+    "other": "Other",
+    "otherNote": "Rosé, sparkling and other bottles are still in your diary; the stats here focus on red & white for now.",
+    "totalUsed": "Total {{count}} entries used for split.",
+    "topCountries": "Top countries",
+    "topGrapes": "Grapes you keep coming back to",
+    "averageAge": "Average age",
+    "averageAlcohol": "Average alcohol",
+    "years": "{{value}} yr",
+    "summary": {
+      "startingOut": "You're just getting started.",
+      "leanRed": {
+        "plain": "You lean red.",
+        "grape": "You lean red, with a soft spot for {{grape}}.",
+        "country": "You lean red, especially from {{country}}.",
+        "grapeCountry": "You lean red, with a soft spot for {{grape}}, especially from {{country}}."
+      },
+      "leanWhite": {
+        "plain": "You favour whites.",
+        "grape": "You favour whites, with a soft spot for {{grape}}.",
+        "country": "You favour whites, especially from {{country}}.",
+        "grapeCountry": "You favour whites, with a soft spot for {{grape}}, especially from {{country}}."
+      },
+      "even": {
+        "plain": "You split evenly between red and white.",
+        "grape": "You split evenly between red and white, with a soft spot for {{grape}}.",
+        "country": "You split evenly between red and white, especially from {{country}}.",
+        "grapeCountry": "You split evenly between red and white, with a soft spot for {{grape}}, especially from {{country}}."
+      }
+    }
   }
 }
