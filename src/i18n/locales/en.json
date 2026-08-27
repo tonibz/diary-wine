@@ -1,1 +1,136 @@
-{}
+{
+  "wineType": {
+    "red": "Red",
+    "white": "White",
+    "rose": "Rosé",
+    "sparkling": "Sparkling",
+    "dessert": "Dessert",
+    "fortified": "Fortified"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "back": "Back",
+    "delete": "Delete",
+    "edit": "Edit",
+    "done": "Done",
+    "untitled": "Untitled",
+    "wine": "wine",
+    "wineCount_one": "{{count}} wine",
+    "wineCount_other": "{{count}} wines"
+  },
+  "nav": {
+    "diary": "Diary",
+    "wishlist": "Wishlist",
+    "taste": "My Taste",
+    "menus": "Menus",
+    "settings": "Settings",
+    "add": "Add a wine"
+  },
+  "diary": {
+    "metaTitle": "My Diary — Wine Diary",
+    "metaDescription": "Every wine you have logged, most recent first.",
+    "metaOgTitle": "My Diary",
+    "metaOgDescription": "Every wine you have logged.",
+    "title": "My Diary",
+    "subtitle": "Every bottle, in your own words.",
+    "scanMenu": "Scan a menu",
+    "scanMenuHint": "Handed a long wine list? I'll tell you what you already know.",
+    "searchPlaceholder": "Search name, producer, place…",
+    "allTypes": "All types",
+    "anyRating": "Any rating",
+    "ratingAtLeast": "{{count}}★ +",
+    "ratingOnly": "{{count}}★ only",
+    "loading": "Loading…",
+    "untitled": "Untitled",
+    "wineAltFallback": "wine",
+    "emptyTitle": "Your first bottle awaits",
+    "emptyHint": "Tap the + button to log the first wine you'd like to remember.",
+    "emptyFiltered": "Nothing matches that.",
+    "emptyFilteredHint": "Try clearing your filters."
+  },
+  "entry": {
+    "starsCount_one": "{{count}} star",
+    "starsCount_other": "{{count}} stars"
+  },
+  "add": {
+    "title": "Add a wine",
+    "fromWikipedia": "From Wikipedia",
+    "guessedCheck": "Guessed — please check",
+    "toast": {
+      "couldntRead": "Couldn't read that one clearly, fill it in below.",
+      "uploadFailed": "Upload failed",
+      "readTimeout": "Reading the label took too long",
+      "savedDiary": "Saved to your diary.",
+      "savedWishlist": "Added to your wishlist.",
+      "nameRequired": "A name is needed, even a rough one.",
+      "saveFailed": "Save failed"
+    }
+  },
+  "settings": {
+    "language": "Language",
+    "languageHint": "The app switches straight away.",
+    "metaTitle": "Settings — Wine Diary",
+    "metaDescription": "Your account and preferences.",
+    "title": "Settings",
+    "displayName": "Display name",
+    "email": "Email",
+    "gpsTitle": "Use photo location",
+    "gpsHint": "When on, we look up the place name from your photo's GPS so we can prefill where you tasted it. Off by default.",
+    "saved": "Saved",
+    "signOut": "Sign out",
+    "footer": "Wine Diary — kept just for you."
+  },
+  "wishlist": {
+    "metaTitle": "Wishlist — Wine Diary",
+    "metaDescription": "Bottles you have spotted and want to remember to try.",
+    "metaOgTitle": "My Wishlist",
+    "metaOgDescription": "Bottles you want to try one day.",
+    "title": "Wishlist",
+    "subtitle": "Bottles you've spotted and fancy trying.",
+    "emptyTitle": "Nothing on the list yet",
+    "emptyHint": "Saw something on a shelf or a friend's table? Add it with the + button and pick \"Haven't tried it yet\".",
+    "triedItNow": "I've tried this now"
+  },
+  "taste": {
+    "metaTitle": "My Taste — Wine Diary",
+    "metaDescription": "A picture of what you like, built from your diary.",
+    "title": "My Taste",
+    "emptyHint": "Log a few wines and this page will fill itself in.",
+    "progress": "{{count}} of {{target}} so far",
+    "progressHint": "A few more bottles and your taste picture will appear here.",
+    "colours": "Colours you pour",
+    "other": "Other",
+    "otherNote": "Rosé, sparkling and other bottles are still in your diary; the stats here focus on red & white for now.",
+    "totalUsed": "Total {{count}} entries used for split.",
+    "topCountries": "Top countries",
+    "topGrapes": "Grapes you keep coming back to",
+    "averageAge": "Average age",
+    "averageAlcohol": "Average alcohol",
+    "years": "{{value}} yr",
+    "summary": {
+      "startingOut": "You're just getting started.",
+      "leanRed": {
+        "plain": "You lean red.",
+        "grape": "You lean red, with a soft spot for {{grape}}.",
+        "country": "You lean red, especially from {{country}}.",
+        "grapeCountry": "You lean red, with a soft spot for {{grape}}, especially from {{country}}."
+      },
+      "leanWhite": {
+        "plain": "You favour whites.",
+        "grape": "You favour whites, with a soft spot for {{grape}}.",
+        "country": "You favour whites, especially from {{country}}.",
+        "grapeCountry": "You favour whites, with a soft spot for {{grape}}, especially from {{country}}."
+      },
+      "even": {
+        "plain": "You split evenly between red and white.",
+        "grape": "You split evenly between red and white, with a soft spot for {{grape}}.",
+        "country": "You split evenly between red and white, especially from {{country}}.",
+        "grapeCountry": "You split evenly between red and white, with a soft spot for {{grape}}, especially from {{country}}."
+      }
+    }
+  }
+}

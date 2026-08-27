@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { i18next } from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { Button } from "@/components/ui/button";
@@ -8,10 +10,12 @@ import { Bookmark, Wine } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/wishlist")({
   head: () => ({
     meta: [
-      { title: "Wishlist — Wine Diary" },
-      { name: "description", content: "Bottles you have spotted and want to remember to try." },
-      { property: "og:title", content: "My Wishlist" },
-      { property: "og:description", content: "Bottles you want to try one day." },
+      { title: i18next.t("wishlist.metaTitle") },
+      { name: "description", content: i18next.t("wishlist.metaDescription") },
+      { property: "og:title", content: i18next.t("wishlist.metaOgTitle") },
+      { property: "og:description", content: i18next.t("wishlist.metaOgDescription") },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: WishlistPage,
@@ -35,6 +39,7 @@ type Item = {
 };
 
 function WishlistPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [items, setItems] = useState<Item[] | null>(null);
 
@@ -57,21 +62,20 @@ function WishlistPage() {
   return (
     <div className="px-5 pt-8 pb-8">
       <header className="mb-6">
-        <h1 className="text-4xl font-serif text-primary">Wishlist</h1>
-        <p className="text-sm text-muted-foreground mt-1">Bottles you've spotted and fancy trying.</p>
+        <h1 className="text-4xl font-serif text-primary">{t("wishlist.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("wishlist.subtitle")}</p>
       </header>
 
       {items === null ? (
-        <p className="text-center text-muted-foreground py-16 text-sm">Loading…</p>
+        <p className="text-center text-muted-foreground py-16 text-sm">{t("common.loading")}</p>
       ) : items.length === 0 ? (
         <div className="text-center py-16 px-4">
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
             <Bookmark size={28} />
           </div>
-          <h2 className="text-2xl font-serif text-foreground">Nothing on the list yet</h2>
+          <h2 className="text-2xl font-serif text-foreground">{t("wishlist.emptyTitle")}</h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
-            Saw something on a shelf or a friend's table? Add it with the + button and pick
-            "Haven't tried it yet".
+            {t("wishlist.emptyHint")}
           </p>
         </div>
       ) : (
@@ -83,14 +87,14 @@ function WishlistPage() {
                 <Link to="/entry/$id" params={{ id: it.id }} className="flex gap-3">
                   <div className="h-20 w-16 flex-shrink-0 rounded-lg bg-parchment overflow-hidden flex items-center justify-center">
                     {it.display_photo ? (
-                      <img src={it.display_photo} alt={w?.name ?? "wine"} className="h-full w-full object-cover" />
+                      <img src={it.display_photo} alt={w?.name ?? t("common.wine")} className="h-full w-full object-cover" />
                     ) : (
                       <Wine className="text-primary/40" size={24} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-serif text-lg leading-tight text-foreground truncate">
-                      {w?.name ?? "Untitled"}{" "}
+                      {w?.name ?? t("common.untitled")}{" "}
                       {it.vintage_row?.vintage && (
                         <span className="text-muted-foreground text-sm font-sans">· {it.vintage_row.vintage}</span>
                       )}
@@ -109,7 +113,7 @@ function WishlistPage() {
                   className="w-full mt-3"
                   onClick={() => navigate({ to: "/entry/$id", params: { id: it.id } })}
                 >
-                  I've tried this now
+                  {t("wishlist.triedItNow")}
                 </Button>
               </li>
             );
