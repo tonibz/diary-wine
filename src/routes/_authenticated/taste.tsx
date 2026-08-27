@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { i18next } from "@/i18n";
+import { formatNumber } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles } from "lucide-react";
 
@@ -13,11 +16,21 @@ type Taste = {
 };
 
 export const Route = createFileRoute("/_authenticated/taste")({
-  head: () => ({ meta: [{ title: "My Taste — Wine Diary" }, { name: "description", content: "A picture of what you like, built from your diary." }] }),
+  head: () => ({
+    meta: [
+      { title: i18next.t("taste.metaTitle") },
+      { name: "description", content: i18next.t("taste.metaDescription") },
+      { property: "og:title", content: i18next.t("taste.title") },
+      { property: "og:description", content: i18next.t("taste.metaDescription") },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: TastePage,
 });
 
 function TastePage() {
+  const { t: tr } = useTranslation();
   const [t, setT] = useState<Taste | null>(null);
   const [otherCount, setOtherCount] = useState(0);
 
@@ -35,19 +48,19 @@ function TastePage() {
   }, []);
 
   if (!t) {
-    return <div className="px-5 pt-8 pb-8"><h1 className="text-4xl font-serif text-primary">My Taste</h1>
-      <p className="text-muted-foreground mt-6">Log a few wines and this page will fill itself in.</p></div>;
+    return <div className="px-5 pt-8 pb-8"><h1 className="text-4xl font-serif text-primary">{tr("taste.title")}</h1>
+      <p className="text-muted-foreground mt-6">{tr("taste.emptyHint")}</p></div>;
   }
 
   if (t.entry_count < 5) {
     return (
       <div className="px-5 pt-8 pb-8">
-        <h1 className="text-4xl font-serif text-primary">My Taste</h1>
+        <h1 className="text-4xl font-serif text-primary">{tr("taste.title")}</h1>
         <div className="mt-8 rounded-2xl bg-card p-8 border border-border shadow-notebook text-center">
           <Sparkles className="mx-auto text-primary mb-3" size={32} />
-          <p className="font-serif text-2xl text-foreground">{t.entry_count} of 5 so far</p>
+          <p className="font-serif text-2xl text-foreground">{tr("taste.progress", { count: t.entry_count, target: 5 })}</p>
           <p className="text-muted-foreground mt-2 text-sm">
-            A few more bottles and your taste picture will appear here.
+            {tr("taste.progressHint")}
           </p>
         </div>
       </div>
@@ -64,29 +77,29 @@ function TastePage() {
   return (
     <div className="px-5 pt-8 pb-8 space-y-6">
       <header>
-        <h1 className="text-4xl font-serif text-primary">My Taste</h1>
+        <h1 className="text-4xl font-serif text-primary">{tr("taste.title")}</h1>
         <p className="mt-3 text-foreground leading-relaxed">{summary}</p>
       </header>
 
       <section className="rounded-2xl bg-card p-5 border border-border shadow-notebook">
-        <h2 className="font-serif text-lg mb-4">Colours you pour</h2>
+        <h2 className="font-serif text-lg mb-4">{tr("taste.colours")}</h2>
         <Donut red={red} white={white} other={other} />
         <div className="mt-4 flex justify-center gap-4 text-xs">
-          <Legend colour="var(--primary)" label={`Red · ${red}`} />
-          <Legend colour="oklch(0.85 0.05 85)" label={`White · ${white}`} />
-          {other > 0 && <Legend colour="var(--muted-foreground)" label={`Other · ${other}`} />}
+          <Legend colour="var(--primary)" label={`${tr("wineType.red")} · ${red}`} />
+          <Legend colour="oklch(0.85 0.05 85)" label={`${tr("wineType.white")} · ${white}`} />
+          {other > 0 && <Legend colour="var(--muted-foreground)" label={`${tr("taste.other")} · ${other}`} />}
         </div>
         {otherCount > 0 && (
           <p className="mt-3 text-xs text-muted-foreground text-center">
-            Rosé, sparkling and other bottles are still in your diary; the stats here focus on red &amp; white for now.
+            {tr("taste.otherNote")}
           </p>
         )}
-        <p className="sr-only">Total {total} entries used for split.</p>
+        <p className="sr-only">{tr("taste.totalUsed", { count: total })}</p>
       </section>
 
       {t.top_countries.length > 0 && (
         <section className="rounded-2xl bg-card p-5 border border-border shadow-notebook">
-          <h2 className="font-serif text-lg mb-3">Top countries</h2>
+          <h2 className="font-serif text-lg mb-3">{tr("taste.topCountries")}</h2>
           <ul className="space-y-2">
             {t.top_countries.map((c) => {
               const max = t.top_countries[0].count;
@@ -108,7 +121,7 @@ function TastePage() {
 
       {t.top_grapes.length > 0 && (
         <section className="rounded-2xl bg-card p-5 border border-border shadow-notebook">
-          <h2 className="font-serif text-lg mb-3">Grapes you keep coming back to</h2>
+          <h2 className="font-serif text-lg mb-3">{tr("taste.topGrapes")}</h2>
           <div className="flex flex-wrap gap-2">
             {t.top_grapes.map((g) => {
               const scale = 0.9 + (g.count / maxGrape) * 0.9;
@@ -127,25 +140,32 @@ function TastePage() {
       )}
 
       <section className="grid grid-cols-2 gap-3">
-        <Stat label="Average age" value={t.avg_vintage_age ? `${t.avg_vintage_age} yr` : "—"} />
-        <Stat label="Average alcohol" value={t.avg_alcohol ? `${t.avg_alcohol}%` : "—"} />
+        <Stat
+          label={tr("taste.averageAge")}
+          value={t.avg_vintage_age ? tr("taste.years", { count: t.avg_vintage_age, value: formatNumber(t.avg_vintage_age) }) : "—"}
+        />
+        <Stat
+          label={tr("taste.averageAlcohol")}
+          value={t.avg_alcohol ? `${formatNumber(t.avg_alcohol, { maximumFractionDigits: 1 })}%` : "—"}
+        />
       </section>
     </div>
   );
 }
 
+/**
+ * Assembled from translated fragments, never concatenated English, so each
+ * language can phrase the whole sentence its own way.
+ */
 function buildSummary(t: Taste, red: number, white: number): string {
   const total = red + white;
-  const bias = total === 0 ? "You're just getting started."
-    : red > white * 1.3 ? "You lean red,"
-    : white > red * 1.3 ? "You favour whites,"
-    : "You split evenly between red and white,";
+  if (total === 0) return i18next.t("taste.summary.startingOut");
+  const bias =
+    red > white * 1.3 ? "leanRed" : white > red * 1.3 ? "leanWhite" : "even";
   const grape = t.top_grapes[0]?.key;
   const country = t.top_countries[0]?.key;
-  const parts = [bias];
-  if (grape) parts.push(`with a soft spot for ${grape}`);
-  if (country) parts.push(`especially from ${country}`);
-  return parts.join(" ") + ".";
+  const variant = grape && country ? "grapeCountry" : grape ? "grape" : country ? "country" : "plain";
+  return i18next.t(`taste.summary.${bias}.${variant}`, { grape, country });
 }
 
 function Donut({ red, white, other }: { red: number; white: number; other: number }) {
