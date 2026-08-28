@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { withValidSession } from "@/lib/session-guard";
+import { i18next } from "@/i18n";
 import type { FieldSources } from "@/lib/field-provenance";
 
 
@@ -62,7 +63,7 @@ export async function findBestMatches(
   if (error) {
     console.error("find_wine_matches failed", error);
     const message = (error as { message?: string }).message;
-    throw new Error(message || "Could not match wines against the catalogue");
+    throw new Error(message || i18next.t("dupe.matchFailed"));
   }
 
 

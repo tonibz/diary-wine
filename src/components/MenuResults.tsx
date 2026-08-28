@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, Bookmark, Wine, Sparkles, GlassWater, ScanLine, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { addMenuItemAsTasted, addMenuItemToWishlist } from "@/lib/menu-actions";
 import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
 import { SignedOutError } from "@/lib/session-guard";
+import { formatDate, formatMoney } from "@/lib/format";
 
 
 
@@ -45,6 +46,7 @@ export function MenuResults({
   scanId: string;
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [scored, setScored] = useState<ScoredItem[] | null>(null);
   const [ratedCount, setRatedCount] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
@@ -196,7 +198,7 @@ export function MenuResults({
       producer: item.parsed_producer ?? "",
     };
     if (draft.name.trim().length < 3) {
-      toast.error("Give it at least three characters");
+      toast.error(t("menu.results.giveThreeChars"));
       return;
     }
     try {
@@ -210,9 +212,9 @@ export function MenuResults({
         ...f,
         [item.id]: { name: draft.name.trim(), producer: draft.producer.trim() },
       }));
-      toast.success("Fixed");
+      toast.success(t("menu.results.fixed"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save that");
+      toast.error(err instanceof Error ? err.message : t("menu.results.couldNotSaveThat"));
     } finally {
       setBusy(null);
     }
@@ -224,7 +226,7 @@ export function MenuResults({
       await deleteMenuItem(item.id);
       setDiscarded((d) => [...d, item.id]);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not discard that");
+      toast.error(err instanceof Error ? err.message : t("menu.results.couldNotDiscardThat"));
     } finally {
       setBusy(null);
     }
@@ -235,9 +237,9 @@ export function MenuResults({
       setBusy(s.item.id);
       await addMenuItemToWishlist(s.item, userId);
       setDone((d) => ({ ...d, [s.item.id]: "wishlist" }));
-      toast.success("Added to your wishlist");
+      toast.success(t("menu.results.addedToWishlist"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not add that");
+      toast.error(err instanceof Error ? err.message : t("menu.results.couldNotAddThat"));
     } finally {
       setBusy(null);
     }
@@ -247,10 +249,10 @@ export function MenuResults({
     try {
       setBusy(s.item.id);
       const entryId = await addMenuItemAsTasted(s.item, userId, restaurantName);
-      toast.success("Logged — add your rating");
+      toast.success(t("menu.results.loggedAddRating"));
       navigate({ to: "/entry/$id", params: { id: entryId } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not log that");
+      toast.error(err instanceof Error ? err.message : t("menu.results.couldNotLogThat"));
       setBusy(null);
     }
   }
@@ -271,9 +273,9 @@ export function MenuResults({
       setServingBusy(true);
       const updated = await setScanServingBasis(readable, basis);
       setServingFix(Object.fromEntries(updated.map((u) => [u.id, u])));
-      toast.success(basis === "glass" ? "Now read as glass prices" : "Now read as bottle prices");
+      toast.success(basis === "glass" ? t("menu.results.nowGlassPrices") : t("menu.results.nowBottlePrices"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not change that");
+      toast.error(err instanceof Error ? err.message : t("menu.results.couldNotChangeThat"));
     } finally {
       setServingBusy(false);
     }
@@ -291,8 +293,7 @@ export function MenuResults({
       <div className="text-right flex-shrink-0">
         {item.price != null && (
           <p className="text-sm font-medium text-foreground">
-            {item.currency ? `${item.currency} ` : ""}
-            {item.price}
+            {formatMoney(item.price, item.currency)}
             <span className="text-[11px] font-normal text-muted-foreground">
               {" "}
               / {servingLabel(item.serving_basis)}
@@ -306,8 +307,8 @@ export function MenuResults({
               item.price == null ? "text-sm font-medium text-foreground" : "text-[11px]",
             )}
           >
-            <GlassWater size={11} /> {item.currency ? `${item.currency} ` : ""}
-            {item.glass_price} / glass
+            <GlassWater size={11} /> {formatMoney(item.glass_price, item.currency)}{" "}
+            {t("menu.results.perGlass")}
           </p>
         )}
       </div>
@@ -330,7 +331,7 @@ export function MenuResults({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-serif text-lg leading-tight text-foreground">
-            {s.item.parsed_name ?? s.item.raw_text ?? "Unnamed wine"}
+            {s.item.parsed_name ?? s.item.raw_text ?? t("menu.results.unnamedWine")}
             {s.item.parsed_vintage && (
               <span className="text-sm font-sans text-muted-foreground">
                 {" "}
@@ -353,17 +354,19 @@ export function MenuResults({
                 </span>
               ))}
             {s.item.truncated && (
-              <span className="text-destructive">· text was cut off, please check</span>
+              <span className="text-destructive">· {t("menu.results.textCutOff")}</span>
             )}
           </p>
           {s.filled && (
             <p className="mt-1 text-[11px] italic text-muted-foreground">
-              {s.filled.grapes && s.filled.wine_type
-                ? "Grapes and colour"
-                : s.filled.grapes
-                  ? "Grapes"
-                  : "Colour"}{" "}
-              taken from {s.filled.appellation}, not printed on the list
+              {t("menu.results.filledFromAppellation", {
+                fields: s.filled.grapes && s.filled.wine_type
+                  ? t("menu.results.filledGrapesAndColour")
+                  : s.filled.grapes
+                    ? t("menu.results.filledGrapes")
+                    : t("menu.results.filledColour"),
+                appellation: s.filled.appellation,
+              })}
             </p>
           )}
         </div>
@@ -375,7 +378,7 @@ export function MenuResults({
           <div className="flex items-center gap-2">
             <StarRating value={s.diary.rating ?? 0} size={14} />
             <span className="text-xs text-muted-foreground">
-              {format(new Date(s.diary.tasted_on), "d MMM yyyy")}
+              {formatDate(s.diary.tasted_on)}
             </span>
           </div>
           {s.diary.notes && (
@@ -394,7 +397,7 @@ export function MenuResults({
       <div className="mt-3 flex gap-2">
         {done[s.item.id] ? (
           <p className="text-xs text-muted-foreground py-2">
-            {done[s.item.id] === "wishlist" ? "On your wishlist" : "Logged"}
+            {done[s.item.id] === "wishlist" ? t("menu.results.onWishlist") : t("menu.results.logged")}
           </p>
         ) : (
           <>
@@ -404,10 +407,10 @@ export function MenuResults({
               disabled={busy === s.item.id}
               onClick={() => onWishlist(s)}
             >
-              <Bookmark size={14} /> Add to wishlist
+              <Bookmark size={14} /> {t("menu.results.addToWishlist")}
             </Button>
             <Button size="sm" disabled={busy === s.item.id} onClick={() => onOrdered(s)}>
-              <Wine size={14} /> I ordered this
+              <Wine size={14} /> {t("menu.results.iOrderedThis")}
             </Button>
           </>
         )}

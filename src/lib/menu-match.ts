@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { findBestMatches } from "@/lib/wine-match";
 import { withValidSession } from "@/lib/session-guard";
 import { withTimeout } from "@/lib/with-timeout";
+import { i18next } from "@/i18n";
 
 import type {
   MenuParsedItem,
@@ -442,11 +443,7 @@ export async function setScanServingBasis(
 
 /** What a line's single price buys, in words, e.g. "glass". */
 export function servingLabel(basis: ServingBasis): string {
-  return basis === "half_bottle"
-    ? "half bottle"
-    : basis === "unknown"
-      ? "serving unknown"
-      : basis;
+  return i18next.t(`recommend.serving.${basis}`);
 }
 
 /**

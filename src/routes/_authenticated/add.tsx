@@ -530,7 +530,7 @@ function AddPage() {
         <button onClick={() => navigate({ to: "/diary" })} className="p-2 -ml-2 text-muted-foreground">
           <ArrowLeft size={22} />
         </button>
-        <h1 className="text-2xl font-serif text-primary">Add a wine</h1>
+        <h1 className="text-2xl font-serif text-primary">{t("add.title")}</h1>
         <span className="w-8" />
       </div>
 
@@ -538,8 +538,8 @@ function AddPage() {
       <div className="mb-5 rounded-2xl bg-card p-2 border border-border shadow-notebook">
         <div className="grid grid-cols-2 gap-2">
           {([
-            ["tasted", "I tasted this"],
-            ["interested", "Haven't tried it yet"],
+            ["tasted", t("add.status.tasted")],
+            ["interested", t("add.status.interested")],
           ] as const).map(([value, label]) => (
             <button
               key={value}
@@ -561,7 +561,7 @@ function AddPage() {
       <div className="rounded-2xl bg-card p-4 shadow-notebook border border-border mb-5">
         {photoDisplayUrl ? (
           <div className="relative">
-            <img src={photoDisplayUrl} alt="label" className="w-full h-56 object-cover rounded-lg" />
+            <img src={photoDisplayUrl} alt={t("add.photo.labelAlt")} className="w-full h-56 object-cover rounded-lg" />
             <button
               onClick={() => { setPhotoDisplayUrl(null); setPhotoPath(null); }}
               className="absolute top-2 right-2 bg-background/90 rounded-full p-1"
@@ -577,7 +577,7 @@ function AddPage() {
               onClick={() => cameraRef.current?.click()}
             >
               <Camera size={24} />
-              <span className="text-sm">Take a photo</span>
+              <span className="text-sm">{t("add.photo.take")}</span>
             </Button>
             <Button
               variant="outline"
@@ -585,7 +585,7 @@ function AddPage() {
               onClick={() => libraryRef.current?.click()}
             >
               <Images size={24} />
-              <span className="text-sm">Choose from library</span>
+              <span className="text-sm">{t("add.photo.library")}</span>
             </Button>
           </div>
         )}
@@ -609,7 +609,7 @@ function AddPage() {
         <div className="mt-3">
           {backPhotoDisplayUrl ? (
             <div className="relative">
-              <img src={backPhotoDisplayUrl} alt="back label" className="w-full h-36 object-cover rounded-lg" />
+              <img src={backPhotoDisplayUrl} alt={t("add.photo.backAlt")} className="w-full h-36 object-cover rounded-lg" />
               <button
                 onClick={() => { setBackPhotoDisplayUrl(null); setBackPhotoPath(null); }}
                 className="absolute top-2 right-2 bg-background/90 rounded-full p-1"
@@ -617,20 +617,20 @@ function AddPage() {
                 <X size={16} />
               </button>
               <span className="absolute bottom-2 left-2 text-[10px] uppercase tracking-wide bg-background/90 rounded px-1.5 py-0.5 text-muted-foreground">
-                Back label
+                {t("add.photo.backLabel")}
               </span>
             </div>
           ) : (
             <>
               <p className="mb-2 text-xs text-muted-foreground">
-                Back label (optional — helps with alcohol % and grapes)
+                {t("add.photo.backHint")}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" size="sm" onClick={() => backCameraRef.current?.click()}>
-                  <Camera size={14} /> Take a photo
+                  <Camera size={14} /> {t("add.photo.take")}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => backLibraryRef.current?.click()}>
-                  <ImagePlus size={14} /> Choose from library
+                  <ImagePlus size={14} /> {t("add.photo.library")}
                 </Button>
               </div>
             </>
@@ -655,15 +655,14 @@ function AddPage() {
 
         {recognising && (
           <p className="mt-3 flex items-center gap-2 text-sm text-primary">
-            <Loader2 size={16} className="animate-spin" /> Reading the label…
+            <Loader2 size={16} className="animate-spin" /> {t("add.photo.reading")}
           </p>
         )}
         {dataSource === "inferred" && inferredFields.length > 0 && !recognising && (
           <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
             <Info size={14} className="mt-0.5 shrink-0" />
             <span>
-              Some fields ({inferredFields.join(", ")}) were worked out from the appellation
-              rather than read off the label — do check them.
+              {t("add.photo.inferredNote", { fields: inferredFields.join(", ") })}
             </span>
           </p>
         )}
@@ -676,9 +675,9 @@ function AddPage() {
       >
         <Images size={20} className="text-primary shrink-0" />
         <span className="min-w-0">
-          <span className="block text-sm font-medium">Import several photos</span>
+          <span className="block text-sm font-medium">{t("add.bulk.title")}</span>
           <span className="block text-xs text-muted-foreground">
-            Read a whole gallery of labels at once, then review and save.
+            {t("add.bulk.hint")}
           </span>
         </span>
       </button>
@@ -690,9 +689,9 @@ function AddPage() {
       >
         <ScrollText size={20} className="text-primary shrink-0" />
         <span className="min-w-0">
-          <span className="block text-sm font-medium">Scan a menu</span>
+          <span className="block text-sm font-medium">{t("add.menu.title")}</span>
           <span className="block text-xs text-muted-foreground">
-            Photograph a restaurant wine list and see what to order.
+            {t("add.menu.hint")}
           </span>
         </span>
       </button>
@@ -701,16 +700,16 @@ function AddPage() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-serif text-foreground">The bottle</h2>
-          <span className="text-xs text-muted-foreground">{bottleFieldsFilled} of 9 filled in</span>
+          <h2 className="text-lg font-serif text-foreground">{t("add.section.bottle")}</h2>
+          <span className="text-xs text-muted-foreground">{t("add.section.filledCount", { count: bottleFieldsFilled, total: 9 })}</span>
         </div>
 
-        <Field label="Name *" hint={check("name")}><Input value={bottle.name} onChange={(e) => setBottle({ ...bottle, name: e.target.value })} /></Field>
-        <Field label="Producer" hint={check("producer")}><Input value={bottle.producer} onChange={(e) => setBottle({ ...bottle, producer: e.target.value })} /></Field>
-        <Field label="Appellation" hint={check("appellation")}><Input value={bottle.appellation} onChange={(e) => setBottle({ ...bottle, appellation: e.target.value })} /></Field>
+        <Field label={t("add.field.name")} hint={check("name")}><Input value={bottle.name} onChange={(e) => setBottle({ ...bottle, name: e.target.value })} /></Field>
+        <Field label={t("add.field.producer")} hint={check("producer")}><Input value={bottle.producer} onChange={(e) => setBottle({ ...bottle, producer: e.target.value })} /></Field>
+        <Field label={t("add.field.appellation")} hint={check("appellation")}><Input value={bottle.appellation} onChange={(e) => setBottle({ ...bottle, appellation: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Region" hint={check("region")}><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
-          <Field label="Country" hint={check("country")}><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
+          <Field label={t("add.field.region")} hint={check("region")}><Input value={bottle.region} onChange={(e) => setBottle({ ...bottle, region: e.target.value })} /></Field>
+          <Field label={t("add.field.country")} hint={check("country")}><Input value={bottle.country} onChange={(e) => setBottle({ ...bottle, country: e.target.value })} /></Field>
         </div>
         {disagreement("country") && (
           <Conflict
@@ -721,17 +720,14 @@ function AddPage() {
           />
         )}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Vintage" hint={check("vintage")}><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
-          <Field label="Type" hint={check("wine_type")}>
+          <Field label={t("add.field.vintage")} hint={check("vintage")}><Input type="number" inputMode="numeric" value={bottle.vintage} onChange={(e) => setBottle({ ...bottle, vintage: e.target.value })} /></Field>
+          <Field label={t("add.field.type")} hint={check("wine_type")}>
             <Select value={bottle.wine_type} onValueChange={(v) => setBottle({ ...bottle, wine_type: v })}>
-              <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("add.select.placeholder")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="red">Red</SelectItem>
-                <SelectItem value="white">White</SelectItem>
-                <SelectItem value="rose">Rosé</SelectItem>
-                <SelectItem value="sparkling">Sparkling</SelectItem>
-                <SelectItem value="dessert">Dessert</SelectItem>
-                <SelectItem value="fortified">Fortified</SelectItem>
+                {wineTypeOptions().map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -744,7 +740,7 @@ function AddPage() {
             onPick={(v) => setBottle({ ...bottle, wine_type: v })}
           />
         )}
-        <Field label="Grapes" hint={check("grapes")}>
+        <Field label={t("add.field.grapes")} hint={check("grapes")}>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {bottle.grapes.map((g) => (
               <span key={g} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-1 text-xs">
@@ -757,18 +753,17 @@ function AddPage() {
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="Type a grape and press Enter"
+              placeholder={t("add.grape.placeholder")}
               value={grapeInput}
               onChange={(e) => setGrapeInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGrape(); } }}
             />
-            <Button type="button" variant="secondary" onClick={addGrape}>Add</Button>
+            <Button type="button" variant="secondary" onClick={addGrape}>{t("add.grape.addButton")}</Button>
           </div>
           {refCheck && refCheck.grapeSuggestions.length > 0 && bottle.grapes.length === 0 && (
             <div className="mt-2 rounded-xl border border-border bg-parchment p-3">
               <p className="text-xs text-muted-foreground">
-                Wikipedia lists these grapes as permitted in {refCheck.ref.name}. This bottle may only
-                use some of them, so tap the ones that apply.
+                {t("add.grape.suggestionsHint", { name: refCheck.ref.name })}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {refCheck.grapeSuggestions.map((g) => (
@@ -787,33 +782,33 @@ function AddPage() {
             </div>
           )}
         </Field>
-        <Field label="Alcohol %" hint={check("alcohol_percent")}><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
+        <Field label={t("add.field.alcohol")} hint={check("alcohol_percent")}><Input type="number" step="0.1" inputMode="decimal" value={bottle.alcohol_percent} onChange={(e) => setBottle({ ...bottle, alcohol_percent: e.target.value })} /></Field>
       </section>
 
       {tasted ? (
         <section className="space-y-4 mt-8">
-          <h2 className="text-lg font-serif text-foreground">My tasting</h2>
-          <Field label="Rating">
+          <h2 className="text-lg font-serif text-foreground">{t("add.section.tasting")}</h2>
+          <Field label={t("add.field.rating")}>
             <StarRating value={rating} onChange={setRating} size={28} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Date" hint={tastedFromPhoto ? "From photo" : undefined}>
+            <Field label={t("add.field.date")} hint={tastedFromPhoto ? t("add.hint.fromPhoto") : undefined}>
               <Input type="date" value={tastedOn} onChange={(e) => { setTastedOn(e.target.value); setTastedFromPhoto(false); }} />
             </Field>
-            <Field label="Place" hint={placeFromPhoto ? "From photo" : undefined}>
-              <Input value={place} onChange={(e) => { setPlace(e.target.value); setPlaceFromPhoto(false); }} placeholder="Restaurant, home…" />
+            <Field label={t("add.field.place")} hint={placeFromPhoto ? t("add.hint.fromPhoto") : undefined}>
+              <Input value={place} onChange={(e) => { setPlace(e.target.value); setPlaceFromPhoto(false); }} placeholder={t("add.field.placePlaceholder")} />
             </Field>
           </div>
-          <Field label="With whom"><Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Optional" /></Field>
-          <Field label="Notes"><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How did it taste? What did it remind you of?" /></Field>
+          <Field label={t("add.field.company")}><Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder={t("add.optional")} /></Field>
+          <Field label={t("add.field.notes")}><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("add.field.notesPlaceholder")} /></Field>
         </section>
       ) : (
         <section className="space-y-4 mt-8">
-          <h2 className="text-lg font-serif text-foreground">A note to yourself</h2>
+          <h2 className="text-lg font-serif text-foreground">{t("add.section.note")}</h2>
           <p className="text-xs text-muted-foreground">
-            Saw it somewhere and want to remember it? Jot down where, and we'll keep it on your wishlist.
+            {t("add.wishlistNote.hint")}
           </p>
-          <Field label="Note"><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Spotted at the corner shop, my friend swears by it…" /></Field>
+          <Field label={t("add.field.noteWishlist")}><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("add.field.noteWishlistPlaceholder")} /></Field>
         </section>
       )}
 
@@ -827,24 +822,23 @@ function AddPage() {
       />
 
       <Button onClick={onSave} disabled={saving} className="w-full mt-8 h-12 text-base">
-        {saving ? "Saving…" : tasted ? "Save to my diary" : "Add to my wishlist"}
+        {saving ? t("common.saving") : tasted ? t("add.save.diary") : t("add.save.wishlist")}
       </Button>
 
       <AlertDialog open={!!mergePrompt}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Is this the same wine?</AlertDialogTitle>
+            <AlertDialogTitle>{t("add.merge.title")}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm">
                 <p className="text-muted-foreground">
-                  Compare the two labels. Should we log this bottle against the existing wine, or is
-                  it actually different? Different years of the same wine belong together.
+                  {t("add.merge.description")}
                 </p>
                 {mergePrompt && (mergePrompt.candidatePhotoUrl || mergePrompt.newPhotoUrl) && (
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: "Already in the catalogue", url: mergePrompt.candidatePhotoUrl },
-                      { label: "This bottle", url: mergePrompt.newPhotoUrl },
+                      { label: t("add.merge.existing"), url: mergePrompt.candidatePhotoUrl },
+                      { label: t("add.merge.thisBottle"), url: mergePrompt.newPhotoUrl },
                     ].map((p) => (
                       <div key={p.label} className="space-y-1">
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -853,12 +847,12 @@ function AddPage() {
                         {p.url ? (
                           <img
                             src={p.url}
-                            alt={`${p.label} wine label`}
+                            alt={t("add.merge.labelAlt", { label: p.label })}
                             className="w-full h-56 object-cover rounded-lg border border-border bg-parchment"
                           />
                         ) : (
                           <div className="w-full h-56 rounded-lg border border-dashed border-border bg-parchment flex items-center justify-center text-xs text-muted-foreground px-2 text-center">
-                            No photo
+                            {t("add.merge.noPhoto")}
                           </div>
                         )}
                       </div>
@@ -882,7 +876,7 @@ function AddPage() {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground pt-1">
-                      Match confidence {(mergePrompt.candidate.score * 100).toFixed(0)}%
+                      {t("add.merge.confidence", { pct: Math.round(mergePrompt.candidate.score * 100) })}
                     </p>
                   </div>
                 )}
@@ -890,8 +884,8 @@ function AddPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => confirmMerge(false)}>No, different wine</AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmMerge(true)}>Yes, same wine</AlertDialogAction>
+            <AlertDialogCancel onClick={() => confirmMerge(false)}>{t("add.merge.no")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmMerge(true)}>{t("add.merge.yes")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -909,24 +903,25 @@ export function PriceSection({
   priceContext: string;
   setPriceContext: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <section className="mt-8 rounded-2xl bg-card p-4 border border-border shadow-notebook space-y-3">
       <div>
-        <h2 className="text-lg font-serif text-foreground">What it cost</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Entirely optional — skip it if you'd rather.</p>
+        <h2 className="text-lg font-serif text-foreground">{t("add.price.title")}</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">{t("add.price.hint")}</p>
       </div>
       <div className="grid grid-cols-[1fr_auto] gap-3">
-        <Field label="Price">
+        <Field label={t("add.field.price")}>
           <Input
             type="number"
             step="0.01"
             inputMode="decimal"
             value={pricePaid}
             onChange={(e) => setPricePaid(e.target.value)}
-            placeholder="Optional"
+            placeholder={t("add.optional")}
           />
         </Field>
-        <Field label="Currency">
+        <Field label={t("add.field.currency")}>
           <Select value={priceCurrency} onValueChange={setPriceCurrency}>
             <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -935,14 +930,14 @@ export function PriceSection({
           </Select>
         </Field>
       </div>
-      <Field label="Where">
+      <Field label={t("add.field.where")}>
         <Select value={priceContext} onValueChange={setPriceContext}>
-          <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={t("add.select.placeholder")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="restaurant">Restaurant</SelectItem>
-            <SelectItem value="shop">Shop</SelectItem>
-            <SelectItem value="online">Online</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            <SelectItem value="restaurant">{t("add.priceContext.restaurant")}</SelectItem>
+            <SelectItem value="shop">{t("add.priceContext.shop")}</SelectItem>
+            <SelectItem value="online">{t("add.priceContext.online")}</SelectItem>
+            <SelectItem value="other">{t("add.priceContext.other")}</SelectItem>
           </SelectContent>
         </Select>
       </Field>

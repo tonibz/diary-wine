@@ -48,14 +48,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withTimeout } from "@/lib/with-timeout";
+import { useTranslation } from "react-i18next";
+import { i18next } from "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/bulk")({
   head: () => ({
     meta: [
-      { title: "Import several photos — Wine Diary" },
-      { name: "description", content: "Import a backlog of bottle photos from your gallery in one go." },
-      { property: "og:title", content: "Import several photos — Wine Diary" },
-      { property: "og:description", content: "Read a whole gallery of wine labels at once, then review and save." },
+      { title: i18next.t("bulk.meta.title") },
+      { name: "description", content: i18next.t("bulk.meta.description") },
+      { property: "og:title", content: i18next.t("bulk.meta.ogTitle") },
+      { property: "og:description", content: i18next.t("bulk.meta.ogDescription") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -576,11 +578,11 @@ function BulkPage() {
               {items.map((i) => (
                 <div key={i.id} className="relative aspect-square">
                   {i.thumbUrl && (
-                    <img src={i.thumbUrl} alt="chosen label" className="h-full w-full rounded-lg object-cover" />
+                    <img src={i.thumbUrl} alt={t("bulk.pick.chosenLabelAlt")} className="h-full w-full rounded-lg object-cover" />
                   )}
                   <button
                     onClick={() => removePicked(i.id)}
-                    aria-label="Remove photo"
+                    aria-label={t("bulk.pick.removePhoto")}
                     className="absolute top-1 right-1 rounded-full bg-background/90 p-1"
                   >
                     <X size={14} />
@@ -597,20 +599,20 @@ function BulkPage() {
         disabled={!items.length}
         onClick={() => setConfirmOpen(true)}
       >
-        Read {items.length || ""} {items.length === 1 ? "label" : "labels"}
+        {t("bulk.pick.readButton", { count: items.length || 0 })}
       </Button>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ready?</AlertDialogTitle>
+            <AlertDialogTitle>{t("bulk.confirm.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will read {items.length} labels. Each one is an API call.
+              {t("bulk.confirm.description", { count: items.length })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={startProcessing}>Start reading</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={startProcessing}>{t("bulk.confirm.start")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
