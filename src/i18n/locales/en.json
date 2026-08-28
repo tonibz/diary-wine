@@ -68,6 +68,97 @@
       "savedWishlist": "Added to your wishlist.",
       "nameRequired": "A name is needed, even a rough one.",
       "saveFailed": "Save failed"
+    },
+    "status": {
+      "tasted": "I tasted this",
+      "interested": "Haven't tried it yet"
+    },
+    "photo": {
+      "labelAlt": "label",
+      "backAlt": "back label",
+      "take": "Take a photo",
+      "library": "Choose from library",
+      "backLabel": "Back label",
+      "backHint": "Back label (optional — helps with alcohol % and grapes)",
+      "reading": "Reading the label…",
+      "inferredNote": "Some fields ({{fields}}) were worked out from the appellation rather than read off the label — do check them."
+    },
+    "bulk": {
+      "title": "Import several photos",
+      "hint": "Read a whole gallery of labels at once, then review and save."
+    },
+    "menu": {
+      "title": "Scan a menu",
+      "hint": "Photograph a restaurant wine list and see what to order."
+    },
+    "section": {
+      "bottle": "The bottle",
+      "filledCount": "{{count}} of {{total}} filled in",
+      "tasting": "My tasting",
+      "note": "A note to yourself"
+    },
+    "field": {
+      "name": "Name *",
+      "producer": "Producer",
+      "appellation": "Appellation",
+      "region": "Region",
+      "country": "Country",
+      "vintage": "Vintage",
+      "type": "Type",
+      "grapes": "Grapes",
+      "alcohol": "Alcohol %",
+      "rating": "Rating",
+      "date": "Date",
+      "place": "Place",
+      "placePlaceholder": "Restaurant, home…",
+      "company": "With whom",
+      "notes": "Notes",
+      "notesPlaceholder": "How did it taste? What did it remind you of?",
+      "noteWishlist": "Note",
+      "noteWishlistPlaceholder": "Spotted at the corner shop, my friend swears by it…",
+      "price": "Price",
+      "currency": "Currency",
+      "where": "Where"
+    },
+    "hint": {
+      "fromPhoto": "From photo"
+    },
+    "optional": "Optional",
+    "select": {
+      "placeholder": "—"
+    },
+    "grape": {
+      "placeholder": "Type a grape and press Enter",
+      "addButton": "Add",
+      "suggestionsHint": "Wikipedia lists these grapes as permitted in {{name}}. This bottle may only use some of them, so tap the ones that apply."
+    },
+    "wishlistNote": {
+      "hint": "Saw it somewhere and want to remember it? Jot down where, and we'll keep it on your wishlist."
+    },
+    "price": {
+      "title": "What it cost",
+      "hint": "Entirely optional — skip it if you'd rather."
+    },
+    "priceContext": {
+      "restaurant": "Restaurant",
+      "shop": "Shop",
+      "online": "Online",
+      "other": "Other"
+    },
+    "save": {
+      "diary": "Save to my diary",
+      "wishlist": "Add to my wishlist"
+    },
+    "merge": {
+      "title": "Is this the same wine?",
+      "description": "Compare the two labels. Should we log this bottle against the existing wine, or is it actually different? Different years of the same wine belong together.",
+      "existing": "Already in the catalogue",
+      "thisBottle": "This bottle",
+      "labelAlt": "{{label}} wine label",
+      "noPhoto": "No photo",
+      "confidence": "Match confidence {{pct}}%",
+      "no": "No, different wine",
+      "yes": "Yes, same wine"
     }
   },
   "settings": {
@@ -132,5 +223,9 @@
         "grapeCountry": "You split evenly between red and white, with a soft spot for {{grape}}, especially from {{country}}."
       }
     }
+  },
+  "dupe": {
+    "matchFailed": "Could not match wines against the catalogue",
+    "compareTimeout": "Comparing the labels took too long"
   }
 }

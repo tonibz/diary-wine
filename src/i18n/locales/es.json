@@ -68,6 +68,97 @@
       "savedWishlist": "Añadido a tu lista de por probar.",
       "nameRequired": "Hace falta un nombre, aunque sea aproximado.",
       "saveFailed": "No se pudo guardar"
+    },
+    "status": {
+      "tasted": "Lo he probado",
+      "interested": "Aún no lo he probado"
+    },
+    "photo": {
+      "labelAlt": "etiqueta",
+      "backAlt": "contraetiqueta",
+      "take": "Hacer una foto",
+      "library": "Elegir de la galería",
+      "backLabel": "Contraetiqueta",
+      "backHint": "Contraetiqueta (opcional — ayuda con el grado y las uvas)",
+      "reading": "Leyendo la etiqueta…",
+      "inferredNote": "Algunos campos ({{fields}}) se dedujeron a partir de la denominación, no se leyeron en la etiqueta — conviene revisarlos."
+    },
+    "bulk": {
+      "title": "Importar varias fotos",
+      "hint": "Lee toda una galería de etiquetas de una vez y luego revisa y guarda."
+    },
+    "menu": {
+      "title": "Escanear una carta",
+      "hint": "Fotografía la carta de vinos de un restaurante y descubre qué pedir."
+    },
+    "section": {
+      "bottle": "La botella",
+      "filledCount": "{{count}} de {{total}} completados",
+      "tasting": "Mi cata",
+      "note": "Una nota para ti"
+    },
+    "field": {
+      "name": "Nombre *",
+      "producer": "Bodega",
+      "appellation": "Denominación",
+      "region": "Región",
+      "country": "País",
+      "vintage": "Añada",
+      "type": "Tipo",
+      "grapes": "Uvas",
+      "alcohol": "Grado (%)",
+      "rating": "Puntuación",
+      "date": "Fecha",
+      "place": "Lugar",
+      "placePlaceholder": "Restaurante, casa…",
+      "company": "Con quién",
+      "notes": "Notas",
+      "notesPlaceholder": "¿Qué tal sabía? ¿Qué te recordó?",
+      "noteWishlist": "Nota",
+      "noteWishlistPlaceholder": "Lo vi en la tienda de la esquina, un amigo lo recomienda…",
+      "price": "Precio",
+      "currency": "Moneda",
+      "where": "Dónde"
+    },
+    "hint": {
+      "fromPhoto": "De la foto"
+    },
+    "optional": "Opcional",
+    "select": {
+      "placeholder": "—"
+    },
+    "grape": {
+      "placeholder": "Escribe una uva y pulsa Intro",
+      "addButton": "Añadir",
+      "suggestionsHint": "Wikipedia indica que estas uvas están permitidas en {{name}}. Puede que esta botella use solo algunas, así que marca las que apliquen."
+    },
+    "wishlistNote": {
+      "hint": "¿Lo has visto por ahí y quieres acordarte? Apunta dónde y lo guardamos en tu lista de deseos."
+    },
+    "price": {
+      "title": "Lo que costó",
+      "hint": "Totalmente opcional — sáltatelo si prefieres."
+    },
+    "priceContext": {
+      "restaurant": "Restaurante",
+      "shop": "Tienda",
+      "online": "Online",
+      "other": "Otro"
+    },
+    "save": {
+      "diary": "Guardar en mi diario",
+      "wishlist": "Añadir a mi lista de deseos"
+    },
+    "merge": {
+      "title": "¿Es el mismo vino?",
+      "description": "Compara las dos etiquetas. ¿Registramos esta botella junto al vino que ya existe, o es en realidad otro? Distintas añadas del mismo vino van juntas.",
+      "existing": "Ya está en el catálogo",
+      "thisBottle": "Esta botella",
+      "labelAlt": "Etiqueta de {{label}}",
+      "noPhoto": "Sin foto",
+      "confidence": "Coincidencia del {{pct}}%",
+      "no": "No, es otro vino",
+      "yes": "Sí, es el mismo"
     }
   },
   "settings": {
@@ -132,5 +223,9 @@
         "grapeCountry": "Repartes por igual entre tinto y blanco, con debilidad por la {{grape}}, sobre todo de {{country}}."
       }
     }
+  },
+  "dupe": {
+    "matchFailed": "No se ha podido comparar los vinos con el catálogo",
+    "compareTimeout": "Comparar las etiquetas ha tardado demasiado"
   }
 }

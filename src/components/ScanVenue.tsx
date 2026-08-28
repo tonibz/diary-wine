@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MapPin, X, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export function ScanVenue({
   scan: MenuScanRow;
   onChange: (patch: Partial<MenuScanRow>) => void;
 }) {
+  const { t } = useTranslation();
   const known = !!scan.restaurant_name?.trim();
   const [dismissed, setDismissed] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -38,9 +40,9 @@ export function ScanVenue({
       });
       onChange(patch);
       setEditing(false);
-      toast.success("Saved");
+      toast.success(t("menu.venue.saved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't save the place");
+      toast.error(err instanceof Error ? err.message : t("menu.venue.couldntSave"));
     } finally {
       setSaving(false);
     }
@@ -52,44 +54,44 @@ export function ScanVenue({
     return (
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 space-y-3 shadow-notebook">
         <div className="space-y-2">
-          <Label htmlFor="venue-name">Place</Label>
+          <Label htmlFor="venue-name">{t("menu.venue.place")}</Label>
           <Input
             id="venue-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Restaurant or wine bar"
+            placeholder={t("menu.venue.placeholderRestaurant")}
             className="bg-background"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label htmlFor="venue-city">City</Label>
+            <Label htmlFor="venue-city">{t("menu.venue.city")}</Label>
             <Input
               id="venue-city"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Optional"
+              placeholder={t("menu.venue.optional")}
               className="bg-background"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="venue-country">Country</Label>
+            <Label htmlFor="venue-country">{t("menu.venue.country")}</Label>
             <Input
               id="venue-country"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              placeholder="Optional"
+              placeholder={t("menu.venue.optional")}
               className="bg-background"
             />
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="venue-note">Kind of place</Label>
+          <Label htmlFor="venue-note">{t("menu.venue.kindOfPlace")}</Label>
           <Input
             id="venue-note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Wine bar, fine dining, trattoria… (optional)"
+            placeholder={t("menu.venue.kindPlaceholder")}
             className="bg-background"
           />
         </div>
@@ -106,10 +108,10 @@ export function ScanVenue({
               })
             }
           >
-            Save
+            {t("menu.venue.save")}
           </Button>
           <Button size="sm" variant="outline" disabled={saving} onClick={() => setEditing(false)}>
-            Cancel
+            {t("menu.venue.cancel")}
           </Button>
         </div>
       </section>
@@ -119,13 +121,13 @@ export function ScanVenue({
   if (known) {
     return (
       <p className="mb-5 flex items-center gap-2 text-xs text-muted-foreground">
-        <MapPin size={13} /> Saved as {place}
+        <MapPin size={13} /> {t("menu.venue.savedAs", { place })}
         <button
           type="button"
           onClick={() => setEditing(true)}
           className="inline-flex items-center gap-1 underline"
         >
-          <Pencil size={11} /> Edit
+          <Pencil size={11} /> {t("menu.venue.edit")}
         </button>
       </p>
     );
@@ -137,15 +139,13 @@ export function ScanVenue({
     <section className="mb-5 rounded-2xl border border-border bg-parchment/60 p-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm text-foreground">
-          Where was this?{" "}
-          <span className="text-muted-foreground">
-            Adding the place makes the prices useful later.
-          </span>
+          {t("menu.venue.prompt")}{" "}
+          <span className="text-muted-foreground">{t("menu.venue.promptHint")}</span>
         </p>
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          aria-label="Dismiss"
+          aria-label={t("menu.venue.dismiss")}
           className="text-muted-foreground"
         >
           <X size={15} />
@@ -155,7 +155,7 @@ export function ScanVenue({
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Restaurant or wine bar"
+          placeholder={t("menu.venue.placeholderRestaurant")}
           className="bg-background"
         />
         <Button
@@ -169,7 +169,7 @@ export function ScanVenue({
             })
           }
         >
-          Save
+          {t("menu.venue.save")}
         </Button>
       </div>
     </section>

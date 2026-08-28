@@ -23,18 +23,20 @@ import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
+import { i18next } from "@/i18n";
+import { useTranslation } from "react-i18next";
 
 
 export const Route = createFileRoute("/_authenticated/menu/")({
   head: () => ({
     meta: [
-      { title: "Scan a wine list — Wine Diary" },
+      { title: i18next.t("menu.scan.metaTitle") },
       {
         name: "description",
-        content: "Photograph a restaurant wine list and see which bottles you already know.",
+        content: i18next.t("menu.scan.metaDescription"),
       },
-      { property: "og:title", content: "Scan a wine list" },
-      { property: "og:description", content: "Know what to order from any wine list." },
+      { property: "og:title", content: i18next.t("menu.scan.metaOgTitle") },
+      { property: "og:description", content: i18next.t("menu.scan.metaOgDescription") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -57,6 +59,7 @@ type Draft = {
 
 function MenuScanPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const readPage = useServerFn(readMenuPage);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);

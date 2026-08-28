@@ -778,7 +778,7 @@ function Row({
       {ambiguousCandidate && (
         <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
           <p className="mb-2">
-            {t("bulk.row.maybeSame", { name: "" })}<span className="font-medium">{ambiguousCandidate.name}</span>
+            {t("bulk.row.maybeSame")} <span className="font-medium">{ambiguousCandidate.name}</span>
             {ambiguousCandidate.producer ? ` — ${ambiguousCandidate.producer}` : ""}
             {ambiguousCandidate.region ? `, ${ambiguousCandidate.region}` : ""}
           </p>
@@ -895,30 +895,30 @@ function Row({
       {expanded && !looseBack && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Name" value={f.name} onChange={(v) => patchFields(item.id, { name: v })} />
-            <Field label="Producer" value={f.producer} onChange={(v) => patchFields(item.id, { producer: v })} />
-            <Field label="Appellation" value={f.appellation} onChange={(v) => patchFields(item.id, { appellation: v })} />
-            <Field label="Region" value={f.region} onChange={(v) => patchFields(item.id, { region: v })} />
-            <Field label="Country" value={f.country} onChange={(v) => patchFields(item.id, { country: v })} />
-            <Field label="Vintage" value={f.vintage} onChange={(v) => patchFields(item.id, { vintage: v })} />
+            <Field label={t("bulk.fields.name")} value={f.name} onChange={(v) => patchFields(item.id, { name: v })} />
+            <Field label={t("bulk.fields.producer")} value={f.producer} onChange={(v) => patchFields(item.id, { producer: v })} />
+            <Field label={t("bulk.fields.appellation")} value={f.appellation} onChange={(v) => patchFields(item.id, { appellation: v })} />
+            <Field label={t("bulk.fields.region")} value={f.region} onChange={(v) => patchFields(item.id, { region: v })} />
+            <Field label={t("bulk.fields.country")} value={f.country} onChange={(v) => patchFields(item.id, { country: v })} />
+            <Field label={t("bulk.fields.vintage")} value={f.vintage} onChange={(v) => patchFields(item.id, { vintage: v })} />
             <div>
-              <Label className="text-xs text-muted-foreground">Type</Label>
+              <Label className="text-xs text-muted-foreground">{t("bulk.fields.type")}</Label>
               <Select value={f.wine_type} onValueChange={(v) => patchFields(item.id, { wine_type: v })}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Pick one" /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder={t("bulk.fields.pickOne")} /></SelectTrigger>
                 <SelectContent>
-                  {WINE_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  {WINE_TYPES.map((wt) => (
+                    <SelectItem key={wt} value={wt}>{t(`wineType.${wt}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <Field label="Alcohol %" value={f.alcohol_percent} onChange={(v) => patchFields(item.id, { alcohol_percent: v })} />
+            <Field label={t("bulk.fields.alcohol")} value={f.alcohol_percent} onChange={(v) => patchFields(item.id, { alcohol_percent: v })} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">
-                Date {item.dateFromPhoto && <span className="text-primary">· from photo</span>}
+                {t("bulk.fields.date")} {item.dateFromPhoto && <span className="text-primary">· {t("bulk.row.fromPhoto")}</span>}
               </Label>
               <Input
                 type="date"
@@ -929,7 +929,7 @@ function Row({
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">
-                Place {item.placeFromPhoto && <span className="text-primary">· from photo</span>}
+                {t("bulk.fields.place")} {item.placeFromPhoto && <span className="text-primary">· {t("bulk.row.fromPhoto")}</span>}
               </Label>
               <Input
                 className="mt-1"
@@ -940,7 +940,7 @@ function Row({
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Note</Label>
+            <Label className="text-xs text-muted-foreground">{t("bulk.fields.note")}</Label>
             <Textarea
               className="mt-1"
               rows={2}
