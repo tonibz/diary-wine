@@ -674,7 +674,7 @@ function Row({
       <div className="flex gap-3">
         <div className="flex shrink-0 gap-1">
           {item.thumbUrl ? (
-            <img src={item.thumbUrl} alt="label" className="h-16 w-16 rounded-lg object-cover" />
+            <img src={item.thumbUrl} alt={t("bulk.row.labelAlt")} className="h-16 w-16 rounded-lg object-cover" />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <Camera size={18} />
@@ -683,7 +683,7 @@ function Row({
           {item.backThumbUrl && (
             <img
               src={item.backThumbUrl}
-              alt="back label"
+              alt={t("bulk.row.backLabelAlt")}
               className="h-16 w-16 rounded-lg object-cover opacity-90"
             />
           )}
