@@ -424,7 +424,7 @@ export function MenuResults({
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-parchment/60 px-4 py-3">
           <p className="text-sm text-foreground flex items-center gap-1.5">
             <GlassWater size={14} className="text-muted-foreground" />
-            {scanBasis === "glass" ? "Read as glass prices" : "Read as bottle prices"}
+            {scanBasis === "glass" ? t("menu.results.readAsGlass") : t("menu.results.readAsBottle")}
           </p>
           <Button
             size="sm"
@@ -432,20 +432,20 @@ export function MenuResults({
             disabled={servingBusy}
             onClick={() => onSwitchServing(scanBasis === "glass" ? "bottle" : "glass")}
           >
-            {scanBasis === "glass" ? "These are bottles" : "These are glasses"}
+            {scanBasis === "glass" ? t("menu.results.theseAreBottles") : t("menu.results.theseAreGlasses")}
           </Button>
         </div>
       )}
 
       {scoring && (
-        <p className="text-xs text-muted-foreground">Working out what you'd like…</p>
+        <p className="text-xs text-muted-foreground">{t("menu.results.workingOut")}</p>
       )}
 
       {failed && (
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>{failedMsg ?? "Couldn't work out what you'd like — the full list is below."}</span>
+          <span>{failedMsg ?? t("menu.results.couldntScore")}</span>
           <Button size="sm" variant="outline" onClick={() => setReloadKey((k) => k + 1)}>
-            Retry
+            {t("menu.results.retry")}
           </Button>
         </div>
       )}
@@ -453,19 +453,16 @@ export function MenuResults({
 
       {!failed && ratedCount != null && !enoughData && (
         <section className="rounded-2xl border border-border bg-parchment/60 p-4">
-          <h2 className="font-serif text-xl text-foreground">Not enough to go on yet</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            I need a few more rated wines before I can suggest things. Rate the wines in your diary
-            and I'll get better at this.
-          </p>
+          <h2 className="font-serif text-xl text-foreground">{t("menu.results.notEnoughTitle")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("menu.results.notEnoughHint")}</p>
         </section>
       )}
 
       {groups.recommended.length > 0 && (
         <section>
-          <h2 className="font-serif text-2xl text-primary mb-1">You'd probably like these</h2>
+          <h2 className="font-serif text-2xl text-primary mb-1">{t("menu.results.youWouldLikeThese")}</h2>
           <p className="text-sm text-muted-foreground mb-3">
-            Based on the {ratedCount} wines you've rated.
+            {t("menu.results.basedOnRated", { count: ratedCount ?? 0 })}
           </p>
           <ul className="space-y-3">{groups.recommended.map((s) => row(s, "recommended"))}</ul>
         </section>
@@ -473,10 +470,9 @@ export function MenuResults({
 
       {groups.had.length > 0 && (
         <section>
-          <h2 className="font-serif text-2xl text-foreground mb-1">You've had this</h2>
+          <h2 className="font-serif text-2xl text-foreground mb-1">{t("menu.results.youveHadThis")}</h2>
           <p className="text-sm text-muted-foreground mb-3">
-            {groups.had.length === 1 ? "One wine" : `${groups.had.length} wines`} on this list are
-            already in your diary.
+            {t("menu.results.alreadyInDiary", { count: groups.had.length })}
           </p>
           <ul className="space-y-3">{groups.had.map((s) => row(s, "had"))}</ul>
         </section>
@@ -491,7 +487,7 @@ export function MenuResults({
             className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-notebook disabled:cursor-default"
           >
             <span className="font-serif text-xl text-foreground">
-              {listAlwaysOpen ? "The wine list" : "Everything else"}{" "}
+              {listAlwaysOpen ? t("menu.results.theWineList") : t("menu.results.everythingElse")}{" "}
               <span className="text-sm font-sans text-muted-foreground">
                 ({groups.other.length})
               </span>
@@ -516,12 +512,9 @@ export function MenuResults({
       {unreadable.length > 0 && (
         <section>
           <h2 className="font-serif text-2xl text-foreground mb-1 flex items-center gap-2">
-            <ScanLine size={18} className="text-muted-foreground" /> Couldn't read these properly
+            <ScanLine size={18} className="text-muted-foreground" /> {t("menu.results.couldntReadProperly")}
           </h2>
-          <p className="text-sm text-muted-foreground mb-3">
-            The photo cut these off, so they aren't saved as wines yet. Fix the name or discard
-            them.
-          </p>
+          <p className="text-sm text-muted-foreground mb-3">{t("menu.results.notSavedHint")}</p>
           <ul className="space-y-3">
             {unreadable.map((item) => {
               const draft = drafts[item.id] ?? {
@@ -534,8 +527,8 @@ export function MenuResults({
                   className="rounded-2xl border border-dashed border-border bg-card p-4"
                 >
                   <p className="text-xs text-muted-foreground mb-2">
-                    Read as “{item.parsed_name ?? item.raw_text ?? "—"}”
-                    {item.price != null ? ` · ${item.currency ?? ""} ${item.price}` : ""}
+                    {t("menu.results.readAs", { text: item.parsed_name ?? item.raw_text ?? "—" })}
+                    {item.price != null ? ` · ${formatMoney(item.price, item.currency)}` : ""}
                   </p>
                   <div className="space-y-2">
                     <Input
@@ -543,7 +536,7 @@ export function MenuResults({
                       onChange={(e) =>
                         setDrafts((d) => ({ ...d, [item.id]: { ...draft, name: e.target.value } }))
                       }
-                      placeholder="Wine name"
+                      placeholder={t("menu.results.wineNamePlaceholder")}
                       className="bg-background"
                     />
                     <Input
@@ -554,13 +547,13 @@ export function MenuResults({
                           [item.id]: { ...draft, producer: e.target.value },
                         }))
                       }
-                      placeholder="Producer (optional)"
+                      placeholder={t("menu.results.producerPlaceholder")}
                       className="bg-background"
                     />
                   </div>
                   <div className="mt-3 flex gap-2">
                     <Button size="sm" disabled={busy === item.id} onClick={() => onFix(item)}>
-                      Save this name
+                      {t("menu.results.saveThisName")}
                     </Button>
                     <Button
                       size="sm"
@@ -568,7 +561,7 @@ export function MenuResults({
                       disabled={busy === item.id}
                       onClick={() => onDiscard(item)}
                     >
-                      <Trash2 size={14} /> Discard
+                      <Trash2 size={14} /> {t("menu.results.discard")}
                     </Button>
                   </div>
                 </li>
@@ -580,7 +573,7 @@ export function MenuResults({
 
       {items.length === 0 && (
         <p className="text-center text-sm text-muted-foreground py-10">
-          No wines could be read from those photos.
+          {t("menu.results.noWinesFound")}
         </p>
       )}
     </div>

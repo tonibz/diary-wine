@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import { markFieldsAsUser } from "@/lib/field-provenance";
+import { wineTypeLabel } from "@/lib/wine-type";
 
 export const Route = createFileRoute("/_authenticated/entry/$id")({
   head: () => ({
@@ -509,7 +510,7 @@ function FieldRow({
             onChange={(e) => { setV(e.target.value); onSave(e.target.value); setEditing(false); }}
           >
             <option value="">—</option>
-            {options.map((o) => <option key={o} value={o}>{o}</option>)}
+            {options.map((o) => <option key={o} value={o}>{wineTypeLabel(o)}</option>)}
           </select>
         </div>
       );
@@ -523,17 +524,12 @@ function FieldRow({
     );
   }
   if (value == null || value === "") {
-    return (
-      <button onClick={() => setEditing(true)} className="flex justify-between w-full items-center py-0.5">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="text-xs rounded-full bg-muted px-2 py-0.5 text-muted-foreground hover:bg-primary/10 hover:text-primary">+ add</span>
-      </button>
-    );
+    return <FieldRowAddButton label={label} onClick={() => setEditing(true)} />;
   }
   return (
     <button onClick={() => setEditing(true)} className="flex justify-between w-full text-left group">
       <span className="text-muted-foreground">{label}</span>
-      <span className="group-hover:text-primary">{String(value)}</span>
+      <span className="group-hover:text-primary">{options ? wineTypeLabel(String(value)) : String(value)}</span>
     </button>
   );
 }
