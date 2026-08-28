@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Wine } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { i18next } from "@/i18n";
 
 export const Route = createFileRoute("/auth")({
   // Preserve where the user was heading (e.g. an OAuth consent screen) so they
@@ -18,10 +20,10 @@ export const Route = createFileRoute("/auth")({
 
   head: () => ({
     meta: [
-      { title: "Sign in — Wine Diary" },
-      { name: "description", content: "Sign in or create your Wine Diary account." },
-      { property: "og:title", content: "Sign in — Wine Diary" },
-      { property: "og:description", content: "Your personal wine log." },
+      { title: i18next.t("auth.metaTitle") },
+      { name: "description", content: i18next.t("auth.metaDescription") },
+      { property: "og:title", content: i18next.t("auth.metaTitle") },
+      { property: "og:description", content: i18next.t("auth.tagline") },
     ],
   }),
   component: AuthPage,
@@ -30,18 +32,19 @@ export const Route = createFileRoute("/auth")({
 function humanizeAuthError(raw: string): string {
   const lower = raw.toLowerCase();
   if (lower.includes("email not confirmed")) {
-    return "Please confirm your email first — check your inbox for the link we sent you.";
+    return i18next.t("auth.toast.emailNotConfirmed");
   }
   if (lower.includes("invalid login credentials")) {
-    return "That email and password don't match. Try again, or create an account.";
+    return i18next.t("auth.toast.invalidCredentials");
   }
   if (lower.includes("user already registered")) {
-    return "An account with this email already exists. Try signing in instead.";
+    return i18next.t("auth.toast.userAlreadyRegistered");
   }
   return raw;
 }
 
 function AuthPage() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,7 +73,7 @@ function AuthPage() {
       if (result.redirected) return;
       goAfterAuth();
     } catch (err) {
-      toast.error(humanizeAuthError(err instanceof Error ? err.message : "Sign-in failed"));
+      toast.error(humanizeAuthError(err instanceof Error ? err.message : t("auth.toast.signInFailed")));
     } finally {
       setBusy(null);
     }
@@ -90,14 +93,14 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Welcome! You're signed in.");
+        toast.success(t("auth.toast.welcome"));
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
       goAfterAuth();
     } catch (err) {
-      toast.error(humanizeAuthError(err instanceof Error ? err.message : "Something went wrong"));
+      toast.error(humanizeAuthError(err instanceof Error ? err.message : t("auth.toast.somethingWrong")));
     } finally {
       setBusy(null);
     }
@@ -105,7 +108,7 @@ function AuthPage() {
 
   async function sendMagicLink() {
     if (!email) {
-      toast.error("Enter your email first.");
+      toast.error(t("auth.toast.enterEmailFirst"));
       return;
     }
     setBusy("magic");
@@ -115,9 +118,9 @@ function AuthPage() {
         options: { emailRedirectTo: returnTo() },
       });
       if (error) throw error;
-      toast.success("Check your inbox for a sign-in link.");
+      toast.success(t("auth.toast.checkInbox"));
     } catch (err) {
-      toast.error(humanizeAuthError(err instanceof Error ? err.message : "Could not send link"));
+      toast.error(humanizeAuthError(err instanceof Error ? err.message : t("auth.toast.couldNotSendLink")));
     } finally {
       setBusy(null);
     }
@@ -130,9 +133,9 @@ function AuthPage() {
           <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary">
             <Wine size={28} />
           </div>
-          <h1 className="text-4xl font-serif text-primary">Wine Diary</h1>
+          <h1 className="text-4xl font-serif text-primary">{t("auth.appName")}</h1>
           <p className="text-sm text-muted-foreground text-center">
-            Keep a personal log of the wines you try.
+            {t("auth.tagline")}
           </p>
         </div>
 
@@ -144,7 +147,7 @@ function AuthPage() {
             disabled={busy !== null}
             onClick={() => withProvider("google")}
           >
-            {busy === "google" ? "…" : "Continue with Google"}
+            {busy === "google" ? "…" : t("auth.continueWithGoogle")}
           </Button>
           <Button
             type="button"
@@ -153,29 +156,29 @@ function AuthPage() {
             disabled={busy !== null}
             onClick={() => withProvider("apple")}
           >
-            {busy === "apple" ? "…" : "Continue with Apple"}
+            {busy === "apple" ? "…" : t("auth.continueWithApple")}
           </Button>
 
           <div className="flex items-center gap-3 py-2">
             <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground font-serif">or</span>
+            <span className="text-xs text-muted-foreground font-serif">{t("auth.or")}</span>
             <div className="h-px flex-1 bg-border" />
           </div>
 
           <form onSubmit={onSubmit} className="space-y-4">
             {mode === "signup" && (
               <div className="space-y-1.5">
-                <Label htmlFor="dn">Your name</Label>
+                <Label htmlFor="dn">{t("auth.yourName")}</Label>
                 <Input
                   id="dn"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="How should we call you?"
+                  placeholder={t("auth.namePlaceholder")}
                 />
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -186,7 +189,7 @@ function AuthPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pw">Password</Label>
+              <Label htmlFor="pw">{t("auth.password")}</Label>
               <Input
                 id="pw"
                 type="password"
@@ -198,7 +201,7 @@ function AuthPage() {
               />
             </div>
             <Button type="submit" disabled={busy !== null} className="w-full">
-              {busy === "password" ? "…" : mode === "signin" ? "Sign in" : "Create account"}
+              {busy === "password" ? "…" : mode === "signin" ? t("auth.signIn") : t("auth.createAccount")}
             </Button>
             <button
               type="button"
@@ -206,14 +209,14 @@ function AuthPage() {
               disabled={busy !== null}
               className="w-full text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
             >
-              {busy === "magic" ? "Sending link…" : "Email me a magic link instead"}
+              {busy === "magic" ? t("auth.sendingLink") : t("auth.magicLink")}
             </button>
             <button
               type="button"
               className="w-full text-sm text-muted-foreground hover:text-foreground"
               onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
             >
-              {mode === "signin" ? "New here? Create an account" : "Already have one? Sign in"}
+              {mode === "signin" ? t("auth.newHere") : t("auth.alreadyHaveOne")}
             </button>
           </form>
         </div>

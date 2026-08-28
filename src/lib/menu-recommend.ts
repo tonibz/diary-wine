@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import { withValidSession } from "@/lib/session-guard";
 import { normalise, type DiaryWine, type MenuItemRow } from "@/lib/menu-match";
+import { i18next } from "@/i18n";
+import { wineTypeLabel } from "@/lib/wine-type";
 
 
 /**
@@ -19,15 +21,6 @@ const W_GRAPE = 0.45;
 const W_REGION = 0.2;
 const W_COUNTRY = 0.15;
 const W_TYPE = 0.2;
-
-const COLOUR_WORDS: Record<string, string> = {
-  red: "red",
-  white: "white",
-  rose: "rosé",
-  sparkling: "sparkling",
-  dessert: "dessert",
-  fortified: "fortified",
-};
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -241,9 +234,11 @@ function monthOf(date: string) {
 }
 
 function praise(e: DiaryWine) {
-  if (e.rating) return `you rated ${e.rating}`;
+  if (e.rating) return i18next.t("recommend.praise.rated", { count: e.rating });
   const m = monthOf(e.tasted_on);
-  return m ? `you enjoyed in ${m}` : "you enjoyed";
+  return m
+    ? i18next.t("recommend.praise.enjoyedInMonth", { month: m })
+    : i18next.t("recommend.praise.enjoyed");
 }
 
 export function scoreItem(
@@ -291,10 +286,18 @@ export function scoreItem(
     const what = grapeHit
       ? titleCase(grapeHit.label)
       : wine_type
-        ? `${titleCase(COLOUR_WORDS[wine_type] ?? wine_type)} wine`
-        : "Wine";
-    const head = where ? `${what} from ${titleCase(where)}` : what;
-    reason = `${head}, like the ${exemplar.name} ${praise(exemplar)}`;
+        ? i18next.t("recommend.wineTypeGeneric", {
+            type: wineTypeLabel(wine_type).toLowerCase(),
+          })
+        : i18next.t("recommend.wineGeneric");
+    const head = where
+      ? i18next.t("recommend.headWithPlace", { what, where: titleCase(where) })
+      : what;
+    reason = i18next.t("recommend.reason", {
+      head,
+      name: exemplar.name,
+      praise: praise(exemplar),
+    });
   }
 
   return {

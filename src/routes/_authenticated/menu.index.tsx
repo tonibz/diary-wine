@@ -23,18 +23,20 @@ import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
 import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
+import { i18next } from "@/i18n";
+import { useTranslation } from "react-i18next";
 
 
 export const Route = createFileRoute("/_authenticated/menu/")({
   head: () => ({
     meta: [
-      { title: "Scan a wine list — Wine Diary" },
+      { title: i18next.t("menu.scan.metaTitle") },
       {
         name: "description",
-        content: "Photograph a restaurant wine list and see which bottles you already know.",
+        content: i18next.t("menu.scan.metaDescription"),
       },
-      { property: "og:title", content: "Scan a wine list" },
-      { property: "og:description", content: "Know what to order from any wine list." },
+      { property: "og:title", content: i18next.t("menu.scan.metaOgTitle") },
+      { property: "og:description", content: i18next.t("menu.scan.metaOgDescription") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -57,6 +59,7 @@ type Draft = {
 
 function MenuScanPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const readPage = useServerFn(readMenuPage);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -117,7 +120,7 @@ function MenuScanPage() {
       const { data: userRes } = await withTimeout(
         supabase.auth.getUser(),
         20_000,
-        "Could not confirm your sign-in — please try again",
+        t("menu.scan.errors.confirmSignIn"),
       );
       const uid = userRes.user!.id;
       uidRef.current = uid;
@@ -125,7 +128,7 @@ function MenuScanPage() {
 
       const paths: string[] = [];
       for (const [i, p] of pages.entries()) {
-        setProgress(`Uploading page ${i + 1} of ${pages.length}`);
+        setProgress(t("menu.scan.progress.uploading", { current: i + 1, total: pages.length }));
         const compressed = await compressImage(p.file);
         const path = `${uid}/${crypto.randomUUID()}.jpg`;
         const up = await supabase.storage
@@ -148,7 +151,7 @@ function MenuScanPage() {
       const skippedCategories = new Set<string>();
 
       for (const [i, path] of paths.entries()) {
-        setProgress(`Reading page ${i + 1} of ${paths.length}`);
+        setProgress(t("menu.scan.progress.reading", { current: i + 1, total: paths.length }));
         const res = await readMenuPageSafe(i + 1, path);
         if (!res.ok) {
           pageErrors.push(res.error);
@@ -170,17 +173,19 @@ function MenuScanPage() {
       if (!wines.length) {
         throw new Error(
           pageErrors[0] ??
-            (paths.length > 1 ? "No wines found on those photos" : "No wines found on that photo"),
+            (paths.length > 1
+              ? t("menu.scan.errors.noWinesMultiple")
+              : t("menu.scan.errors.noWinesSingle")),
         );
       }
 
       if (salvagedPages > 0) {
-        toast.warning(
-          `One page was very long — I read the ${wines.length} wines I could. Photograph fewer pages at once for the rest.`,
-        );
+        toast.warning(t("menu.scan.toasts.salvagedPage", { count: wines.length }));
       }
       if (pageErrors.length) {
-        toast.error(`${pageErrors.length} page(s) couldn't be read: ${pageErrors[0]}`);
+        toast.error(
+          t("menu.scan.toasts.pagesFailed", { count: pageErrors.length, message: pageErrors[0] }),
+        );
       }
 
       const draft: Draft = {
@@ -195,7 +200,7 @@ function MenuScanPage() {
 
       await persist(draft, mark);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not read that wine list";
+      const message = e instanceof Error ? e.message : t("menu.scan.errors.couldNotReadList");
       setFailure(message);
       toast.error(message);
       setReading(false);
@@ -215,7 +220,7 @@ function MenuScanPage() {
       const uid = uidRef.current ?? (await supabase.auth.getUser()).data.user!.id;
       uidRef.current = uid;
 
-      setProgress("Saving the list");
+      setProgress(t("menu.scan.progress.saving"));
       const { scan } = await withTimeout(
         saveMenuScan({
           userId: uid,
@@ -231,7 +236,7 @@ function MenuScanPage() {
           onStage: mark,
         }),
         20_000,
-        "Saving took too long",
+        t("menu.scan.errors.savingTookTooLong"),
       );
       mark("save complete", { scanId: scan.id });
 
@@ -245,7 +250,7 @@ function MenuScanPage() {
         goToResults(lastId, mark);
         return;
       }
-      const message = e instanceof Error ? e.message : "Could not save that wine list";
+      const message = e instanceof Error ? e.message : t("menu.scan.errors.couldNotSaveList");
       setFailure(message);
       toast.error(message);
       setPending(draft);
@@ -283,17 +288,17 @@ function MenuScanPage() {
       return await withTimeout(
         readPage({ data: { photoPath: path, pageNumber } }),
         120_000,
-        `Page ${pageNumber} took too long — try again with fewer pages at once`,
+        t("menu.scan.errors.pageTimeout", { number: pageNumber }),
       );
     } catch (e) {
       return {
         ok: false as const,
         error:
           e instanceof Error && /abort|timeout|network|fetch/i.test(e.message)
-            ? `Page ${pageNumber} timed out — try again with fewer pages at once`
+            ? t("menu.scan.errors.pageTimeout", { number: pageNumber })
             : e instanceof Error
-              ? `Page ${pageNumber}: ${e.message}`
-              : `Page ${pageNumber} could not be read`,
+              ? t("menu.scan.errors.pageError", { number: pageNumber, message: e.message })
+              : t("menu.scan.errors.pageUnreadable", { number: pageNumber }),
         raw: null as JsonValue,
       };
     }

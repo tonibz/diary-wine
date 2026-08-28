@@ -1,5 +1,8 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { i18next } from "@/i18n";
+import { formatDate } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedPhotoUrl } from "@/lib/wine-photo";
 import { compressImage } from "@/lib/image-compress";
@@ -15,9 +18,15 @@ import { format } from "date-fns";
 import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import { markFieldsAsUser } from "@/lib/field-provenance";
+import { wineTypeLabel } from "@/lib/wine-type";
 
 export const Route = createFileRoute("/_authenticated/entry/$id")({
-  head: () => ({ meta: [{ title: "Wine detail — Wine Diary" }, { name: "description", content: "A bottle you tasted." }] }),
+  head: () => ({
+    meta: [
+      { title: i18next.t("entry.metaTitle") },
+      { name: "description", content: i18next.t("entry.metaDescription") },
+    ],
+  }),
   component: EntryDetail,
 });
 
@@ -50,18 +59,23 @@ type Entry = {
 
 type WineRow = NonNullable<NonNullable<Entry["vintage_row"]>["wine"]>;
 
-const wineFields: Array<{ key: keyof WineRow; label: string; options?: string[] }> = [
-  { key: "producer", label: "Producer" },
-  { key: "appellation", label: "Appellation" },
-  { key: "region", label: "Region" },
-  { key: "country", label: "Country" },
-  { key: "wine_type", label: "Type", options: ["red", "white", "rose", "sparkling", "dessert", "fortified"] },
-];
+function useWineFields(): Array<{ key: keyof WineRow; label: string; options?: string[] }> {
+  const { t } = useTranslation();
+  return [
+    { key: "producer", label: t("entry.fields.producer") },
+    { key: "appellation", label: t("entry.fields.appellation") },
+    { key: "region", label: t("entry.fields.region") },
+    { key: "country", label: t("entry.fields.country") },
+    { key: "wine_type", label: t("entry.fields.type"), options: ["red", "white", "rose", "sparkling", "dessert", "fortified"] },
+  ];
+}
 
 const SELECT =
   "id, photo_url, back_photo_url, rating, tasted_on, place, company, notes, status, price_paid, price_currency, price_context, wine_vintage_id, vintage_row:wine_vintages(id, vintage, alcohol_percent, wine:wines(id, name, producer, appellation, region, country, wine_type, grapes, label_image_url))";
 
 function EntryDetail() {
+  const { t } = useTranslation();
+  const wineFields = useWineFields();
   const { id } = useParams({ from: "/_authenticated/entry/$id" });
   const navigate = useNavigate();
   const backFileRef = useRef<HTMLInputElement>(null);
@@ -113,7 +127,7 @@ function EntryDetail() {
       price_context: (priceContext || null) as never,
     }).eq("id", entry.id);
     if (error) return toast.error(error.message);
-    toast.success("Updated");
+    toast.success(t("entry.toast.updated"));
     setEditingTasting(false);
     await load();
     const { data } = await supabase.auth.getUser();
@@ -136,7 +150,7 @@ function EntryDetail() {
     }).eq("id", entry.id);
     if (error) return toast.error(error.message);
     setConverting(false);
-    toast.success("Lovely — it's in your diary now.");
+    toast.success(t("entry.toast.convertedToTasting"));
     await load();
     const { data } = await supabase.auth.getUser();
     if (data.user) recomputeTasteProfile(data.user.id);
@@ -207,9 +221,9 @@ function EntryDetail() {
       const { error } = await supabase.from("entries").update({ back_photo_url: path }).eq("id", entry.id);
       if (error) throw error;
       await load();
-      toast.success("Back label added");
+      toast.success(t("entry.backLabel.added"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : t("entry.toast.uploadFailed"));
     }
   }
 
@@ -221,7 +235,7 @@ function EntryDetail() {
 
   async function onDelete() {
     if (!entry) return;
-    if (!confirm("Remove this from your diary?")) return;
+    if (!confirm(t("entry.toast.deleteConfirm"))) return;
     const { error } = await supabase.from("entries").delete().eq("id", entry.id);
     if (error) return toast.error(error.message);
     const { data } = await supabase.auth.getUser();
@@ -229,7 +243,7 @@ function EntryDetail() {
     navigate({ to: entry.status === "interested" ? "/wishlist" : "/diary" });
   }
 
-  if (!entry) return <div className="p-6 text-center text-muted-foreground">Loading…</div>;
+  if (!entry) return <div className="p-6 text-center text-muted-foreground">{t("common.loading")}</div>;
   const w = entry.vintage_row?.wine;
   const isWishlist = entry.status === "interested";
 
@@ -237,7 +251,7 @@ function EntryDetail() {
     <div className="pb-12">
       <div className="relative">
         {photoUrl ? (
-          <img src={photoUrl} alt={w?.name ?? "wine"} className="w-full h-64 object-cover" />
+          <img src={photoUrl} alt={w?.name ?? t("entry.wineAltFallback")} className="w-full h-64 object-cover" />
         ) : (
           <div className="w-full h-40 bg-parchment flex items-center justify-center">
             <Wine className="text-primary/30" size={48} />
@@ -257,7 +271,7 @@ function EntryDetail() {
       <div className="px-5 pt-5">
         {isWishlist && (
           <span className="inline-block mb-2 rounded-full bg-primary/10 text-primary text-xs px-2.5 py-1">
-            On your wishlist
+            {t("entry.onWishlist")}
           </span>
         )}
         <h1 className="text-3xl font-serif text-foreground leading-tight">{w?.name}</h1>
@@ -269,7 +283,7 @@ function EntryDetail() {
         {!isWishlist && <div className="mt-2"><StarRating value={entry.rating ?? 0} size={20} /></div>}
 
         <section className="mt-6 rounded-2xl bg-card p-4 border border-border shadow-notebook">
-          <h2 className="font-serif text-lg mb-3">The bottle</h2>
+          <h2 className="font-serif text-lg mb-3">{t("entry.bottle.title")}</h2>
           <dl className="space-y-2 text-sm">
             {wineFields.map((f) => {
               const val = (w?.[f.key] ?? null) as string | number | null;
@@ -278,19 +292,19 @@ function EntryDetail() {
               );
             })}
             <FieldRow
-              label="Vintage"
+              label={t("entry.fields.vintage")}
               type="number"
               value={entry.vintage_row?.vintage ?? null}
               onSave={(v) => saveVintageField("vintage", v)}
             />
             <FieldRow
-              label="Alcohol %"
+              label={t("entry.fields.alcohol")}
               type="number"
               value={entry.vintage_row?.alcohol_percent ?? null}
               onSave={(v) => saveVintageField("alcohol_percent", v)}
             />
             <FieldRow
-              label="Grapes"
+              label={t("entry.fields.grapes")}
               value={w?.grapes?.length ? w.grapes.join(", ") : null}
               onSave={(v) => {
                 const arr = v.split(",").map((s) => s.trim()).filter(Boolean);
@@ -308,10 +322,10 @@ function EntryDetail() {
 
         {/* Optional back label */}
         <section className="mt-4 rounded-2xl bg-card p-4 border border-border shadow-notebook">
-          <h2 className="font-serif text-lg mb-3">Back label</h2>
+          <h2 className="font-serif text-lg mb-3">{t("entry.backLabel.title")}</h2>
           {backPhotoUrl ? (
             <div className="relative">
-              <img src={backPhotoUrl} alt="back label" className="w-full h-48 object-cover rounded-lg" />
+              <img src={backPhotoUrl} alt={t("entry.backLabel.alt")} className="w-full h-48 object-cover rounded-lg" />
               <button onClick={removeBackPhoto} className="absolute top-2 right-2 bg-background/90 rounded-full p-1">
                 <X size={16} />
               </button>
@@ -319,10 +333,10 @@ function EntryDetail() {
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={() => backFileRef.current?.click()}>
-                <Camera size={14} /> Take a photo
+                <Camera size={14} /> {t("entry.backLabel.takePhoto")}
               </Button>
               <Button variant="outline" size="sm" onClick={() => backLibraryRef.current?.click()}>
-                <ImagePlus size={14} /> Choose from library
+                <ImagePlus size={14} /> {t("entry.backLabel.chooseFromLibrary")}
               </Button>
             </div>
           )}
@@ -351,55 +365,55 @@ function EntryDetail() {
             )}
             {converting ? (
               <div className="space-y-3">
-                <h2 className="font-serif text-lg">How was it?</h2>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Rating</Label><StarRating value={rating} onChange={setRating} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Date</Label><Input type="date" value={tastedOn} onChange={(e) => setTastedOn(e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Place</Label><Input value={place} onChange={(e) => setPlace(e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Notes</Label><Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+                <h2 className="font-serif text-lg">{t("entry.wishlistSection.howWasIt")}</h2>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.rating")}</Label><StarRating value={rating} onChange={setRating} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.date")}</Label><Input type="date" value={tastedOn} onChange={(e) => setTastedOn(e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.place")}</Label><Input value={place} onChange={(e) => setPlace(e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.notes")}</Label><Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
                 <PriceFields
                   pricePaid={pricePaid} setPricePaid={setPricePaid}
                   priceCurrency={priceCurrency} setPriceCurrency={setPriceCurrency}
                   priceContext={priceContext} setPriceContext={setPriceContext}
                 />
                 <div className="flex gap-2">
-                  <Button onClick={convertToTasting} className="flex-1">Save to my diary</Button>
-                  <Button variant="ghost" onClick={() => setConverting(false)}>Cancel</Button>
+                  <Button onClick={convertToTasting} className="flex-1">{t("entry.wishlistSection.saveToDiary")}</Button>
+                  <Button variant="ghost" onClick={() => setConverting(false)}>{t("entry.wishlistSection.cancel")}</Button>
                 </div>
               </div>
             ) : (
-              <Button onClick={() => setConverting(true)} className="w-full">I've tried this now</Button>
+              <Button onClick={() => setConverting(true)} className="w-full">{t("entry.wishlistSection.triedItNow")}</Button>
             )}
           </section>
         ) : (
           <section className="mt-4 rounded-2xl bg-card p-4 border border-border shadow-notebook">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-serif text-lg">My tasting</h2>
+              <h2 className="font-serif text-lg">{t("entry.tasting.title")}</h2>
               <button onClick={() => setEditingTasting((s) => !s)} className="text-muted-foreground hover:text-primary">
                 {editingTasting ? <Check size={18} /> : <Pencil size={16} />}
               </button>
             </div>
             {editingTasting ? (
               <div className="space-y-3">
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Rating</Label><StarRating value={rating} onChange={setRating} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Date</Label><Input type="date" value={tastedOn} onChange={(e) => setTastedOn(e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Place</Label><Input value={place} onChange={(e) => setPlace(e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">With</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Notes</Label><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.rating")}</Label><StarRating value={rating} onChange={setRating} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.date")}</Label><Input type="date" value={tastedOn} onChange={(e) => setTastedOn(e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.place")}</Label><Input value={place} onChange={(e) => setPlace(e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.with")}</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{t("entry.tasting.notes")}</Label><Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
                 <PriceFields
                   pricePaid={pricePaid} setPricePaid={setPricePaid}
                   priceCurrency={priceCurrency} setPriceCurrency={setPriceCurrency}
                   priceContext={priceContext} setPriceContext={setPriceContext}
                 />
-                <Button onClick={saveTasting} className="w-full">Save</Button>
+                <Button onClick={saveTasting} className="w-full">{t("common.save")}</Button>
               </div>
             ) : (
               <dl className="space-y-2 text-sm">
-                <Row label="Tasted on" value={format(new Date(entry.tasted_on), "d MMMM yyyy")} />
-                <Row label="Place" value={entry.place} />
-                <Row label="With" value={entry.company} />
+                <Row label={t("entry.tasting.tastedOn")} value={formatDate(entry.tasted_on)} />
+                <Row label={t("entry.tasting.place")} value={entry.place} />
+                <Row label={t("entry.tasting.with")} value={entry.company} />
                 {entry.notes && (
                   <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("entry.tasting.notes")}</p>
                     <p className="whitespace-pre-wrap leading-relaxed">{entry.notes}</p>
                   </div>
                 )}
@@ -419,9 +433,10 @@ function PriceFields({
   priceCurrency: string; setPriceCurrency: (v: string) => void;
   priceContext: string; setPriceContext: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2 pt-2 border-t border-border">
-      <p className="text-xs text-muted-foreground">What it cost — optional.</p>
+      <p className="text-xs text-muted-foreground">{t("entry.price.hint")}</p>
       <div className="flex gap-2">
         <Input
           type="number"
@@ -429,7 +444,7 @@ function PriceFields({
           inputMode="decimal"
           value={pricePaid}
           onChange={(e) => setPricePaid(e.target.value)}
-          placeholder="Price"
+          placeholder={t("entry.price.placeholder")}
         />
         <Select value={priceCurrency} onValueChange={setPriceCurrency}>
           <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
@@ -439,12 +454,12 @@ function PriceFields({
         </Select>
       </div>
       <Select value={priceContext} onValueChange={setPriceContext}>
-        <SelectTrigger><SelectValue placeholder="Where?" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder={t("entry.price.wherePlaceholder")} /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="restaurant">Restaurant</SelectItem>
-          <SelectItem value="shop">Shop</SelectItem>
-          <SelectItem value="online">Online</SelectItem>
-          <SelectItem value="other">Other</SelectItem>
+          <SelectItem value="restaurant">{t("entry.price.restaurant")}</SelectItem>
+          <SelectItem value="shop">{t("entry.price.shop")}</SelectItem>
+          <SelectItem value="online">{t("entry.price.online")}</SelectItem>
+          <SelectItem value="other">{t("entry.price.other")}</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -458,6 +473,16 @@ function Row({ label, value }: { label: string; value: string | null | undefined
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="text-right">{value}</dd>
     </div>
+  );
+}
+
+function FieldRowAddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <button onClick={onClick} className="flex justify-between w-full items-center py-0.5">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-xs rounded-full bg-muted px-2 py-0.5 text-muted-foreground hover:bg-primary/10 hover:text-primary">{t("entry.fields.add")}</span>
+    </button>
   );
 }
 
@@ -485,7 +510,7 @@ function FieldRow({
             onChange={(e) => { setV(e.target.value); onSave(e.target.value); setEditing(false); }}
           >
             <option value="">—</option>
-            {options.map((o) => <option key={o} value={o}>{o}</option>)}
+            {options.map((o) => <option key={o} value={o}>{wineTypeLabel(o)}</option>)}
           </select>
         </div>
       );
@@ -499,17 +524,12 @@ function FieldRow({
     );
   }
   if (value == null || value === "") {
-    return (
-      <button onClick={() => setEditing(true)} className="flex justify-between w-full items-center py-0.5">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="text-xs rounded-full bg-muted px-2 py-0.5 text-muted-foreground hover:bg-primary/10 hover:text-primary">+ add</span>
-      </button>
-    );
+    return <FieldRowAddButton label={label} onClick={() => setEditing(true)} />;
   }
   return (
     <button onClick={() => setEditing(true)} className="flex justify-between w-full text-left group">
       <span className="text-muted-foreground">{label}</span>
-      <span className="group-hover:text-primary">{String(value)}</span>
+      <span className="group-hover:text-primary">{options ? wineTypeLabel(String(value)) : String(value)}</span>
     </button>
   );
 }

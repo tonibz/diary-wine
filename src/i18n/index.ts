@@ -14,8 +14,19 @@ if (!i18next.isInitialized) {
     defaultNS: "translation",
     interpolation: { escapeValue: false },
     returnNull: false,
+    // Safety net: a key that is missing everywhere must never surface as a raw
+    // identifier like "diary.emptyTitle". Fall back to English, then to a
+    // readable version of the last path segment.
+    parseMissingKeyHandler: (key: string) => {
+      const en = i18next.getResource(FALLBACK_LANGUAGE, "translation", key);
+      if (typeof en === "string" && en) return en;
+      const leaf = key.split(".").pop() ?? key;
+      const words = leaf.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+      return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
+    },
   });
 }
+
 
 export { i18next, resolveLanguage };
 export type { LanguageCode };

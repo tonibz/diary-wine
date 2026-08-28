@@ -48,14 +48,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withTimeout } from "@/lib/with-timeout";
+import { useTranslation } from "react-i18next";
+import { i18next } from "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/bulk")({
   head: () => ({
     meta: [
-      { title: "Import several photos — Wine Diary" },
-      { name: "description", content: "Import a backlog of bottle photos from your gallery in one go." },
-      { property: "og:title", content: "Import several photos — Wine Diary" },
-      { property: "og:description", content: "Read a whole gallery of wine labels at once, then review and save." },
+      { title: i18next.t("bulk.meta.title") },
+      { name: "description", content: i18next.t("bulk.meta.description") },
+      { property: "og:title", content: i18next.t("bulk.meta.ogTitle") },
+      { property: "og:description", content: i18next.t("bulk.meta.ogDescription") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -576,11 +578,11 @@ function BulkPage() {
               {items.map((i) => (
                 <div key={i.id} className="relative aspect-square">
                   {i.thumbUrl && (
-                    <img src={i.thumbUrl} alt="chosen label" className="h-full w-full rounded-lg object-cover" />
+                    <img src={i.thumbUrl} alt={t("bulk.pick.chosenLabelAlt")} className="h-full w-full rounded-lg object-cover" />
                   )}
                   <button
                     onClick={() => removePicked(i.id)}
-                    aria-label="Remove photo"
+                    aria-label={t("bulk.pick.removePhoto")}
                     className="absolute top-1 right-1 rounded-full bg-background/90 p-1"
                   >
                     <X size={14} />
@@ -597,20 +599,20 @@ function BulkPage() {
         disabled={!items.length}
         onClick={() => setConfirmOpen(true)}
       >
-        Read {items.length || ""} {items.length === 1 ? "label" : "labels"}
+        {t("bulk.pick.readButton", { count: items.length || 0 })}
       </Button>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ready?</AlertDialogTitle>
+            <AlertDialogTitle>{t("bulk.confirm.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will read {items.length} labels. Each one is an API call.
+              {t("bulk.confirm.description", { count: items.length })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={startProcessing}>Start reading</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={startProcessing}>{t("bulk.confirm.start")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -653,6 +655,7 @@ function Row({
   pairRows: (frontId: string, backId: string) => void;
   unpairRow: (frontId: string) => void;
 }) {
+  const { t } = useTranslation();
   const f = item.fields;
   const busy = !!busyRows[item.id];
   const looseBack = isLooseBack(item);
@@ -671,7 +674,7 @@ function Row({
       <div className="flex gap-3">
         <div className="flex shrink-0 gap-1">
           {item.thumbUrl ? (
-            <img src={item.thumbUrl} alt="label" className="h-16 w-16 rounded-lg object-cover" />
+            <img src={item.thumbUrl} alt={t("bulk.row.labelAlt")} className="h-16 w-16 rounded-lg object-cover" />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <Camera size={18} />
@@ -680,32 +683,32 @@ function Row({
           {item.backThumbUrl && (
             <img
               src={item.backThumbUrl}
-              alt="back label"
+              alt={t("bulk.row.backLabelAlt")}
               className="h-16 w-16 rounded-lg object-cover opacity-90"
             />
           )}
         </div>
         <button onClick={onExpand} className="min-w-0 flex-1 text-left">
           <p className="truncate font-medium">
-            {looseBack ? "Looks like a back label" : f.name || "Not read — fill in by hand"}
+            {looseBack ? t("bulk.row.backLabelTitle") : f.name || t("bulk.row.unreadName")}
           </p>
           <p className="truncate text-sm text-muted-foreground">
             {looseBack
-              ? item.sideReason ?? "Dense small print, no wine name"
+              ? item.sideReason ?? t("bulk.row.defaultSideReason")
               : [f.producer, f.vintage].filter(Boolean).join(" · ") || "—"}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {looseBack
-              ? "It won't be saved as a wine — pair it with a front label instead."
+              ? t("bulk.row.looseBackHint")
               : item.status === "failed"
-                ? item.error ?? "Failed"
-                : `Confidence ${Math.round((item.confidence ?? 0) * 100)}%`}
-            {!looseBack && item.dateFromPhoto && ` · ${item.tastedOn} from photo`}
+                ? item.error ?? t("bulk.row.failedFallback")
+                : t("bulk.row.confidence", { value: Math.round((item.confidence ?? 0) * 100) })}
+            {!looseBack && item.dateFromPhoto && ` · ${item.tastedOn} ${t("bulk.row.fromPhoto")}`}
           </p>
         </button>
         <button
           onClick={() => patchItem(item.id, { discarded: true })}
-          aria-label="Discard"
+          aria-label={t("bulk.row.discard")}
           className="self-start p-1 text-muted-foreground hover:text-destructive"
         >
           <Trash2 size={16} />
@@ -714,7 +717,7 @@ function Row({
 
       {busy && (
         <p className="mt-2 flex items-center gap-2 text-xs text-primary">
-          <Loader2 size={13} className="animate-spin" /> Reading this bottle again…
+          <Loader2 size={13} className="animate-spin" /> {t("bulk.row.rereading")}
         </p>
       )}
 
@@ -722,23 +725,23 @@ function Row({
       {item.pairedBackId && !looseBack && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-muted/60 p-3 text-sm">
           <span className="flex items-center gap-1.5">
-            <Link2 size={14} /> Front and back of one bottle
+            <Link2 size={14} /> {t("bulk.row.pairedLabel")}
           </span>
           <Button size="sm" variant="outline" disabled={busy} onClick={() => unpairRow(item.id)}>
-            <Unlink size={13} /> Separate
+            <Unlink size={13} /> {t("bulk.row.separate")}
           </Button>
         </div>
       )}
 
       {!item.pairedBackId && !looseBack && looseBacks.length > 0 && (
         <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
-          <p className="mb-2">Is one of these its back label?</p>
+          <p className="mb-2">{t("bulk.row.pairPrompt")}</p>
           <Select value="" onValueChange={(v) => pairRows(item.id, v)}>
-            <SelectTrigger><SelectValue placeholder="Pair a back label" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("bulk.row.pairPlaceholder")} /></SelectTrigger>
             <SelectContent>
               {looseBacks.map((b, k) => (
                 <SelectItem key={b.id} value={b.id}>
-                  Back label {k + 1}
+                  {t("bulk.row.backLabelOption", { count: k + 1 })}
                   {b.takenAtMs ? ` · ${new Date(b.takenAtMs).toLocaleTimeString()}` : ""}
                 </SelectItem>
               ))}
@@ -749,15 +752,15 @@ function Row({
 
       {looseBack && (
         <div className="mt-3 space-y-2 rounded-xl bg-muted/60 p-3 text-sm">
-          <p>Pair it with the bottle it belongs to:</p>
+          <p>{t("bulk.row.looseBackPrompt")}</p>
           <Select value="" onValueChange={(v) => pairRows(v, item.id)}>
-            <SelectTrigger><SelectValue placeholder="Choose a bottle" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("bulk.row.choosePlaceholder")} /></SelectTrigger>
             <SelectContent>
               {frontRows
                 .filter((r) => !r.pairedBackId)
                 .map((r) => (
                   <SelectItem key={r.id} value={r.id}>
-                    {r.fields.name || "Unnamed bottle"}
+                    {r.fields.name || t("bulk.row.unnamedBottle")}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -767,7 +770,7 @@ function Row({
             variant="outline"
             onClick={() => patchItem(item.id, { side: "front", sideReason: null })}
           >
-            It's actually a front label
+            {t("bulk.row.actuallyFront")}
           </Button>
         </div>
       )}
@@ -775,27 +778,27 @@ function Row({
       {ambiguousCandidate && (
         <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
           <p className="mb-2">
-            Might be the same as <span className="font-medium">{ambiguousCandidate.name}</span>
+            {t("bulk.row.maybeSame")} <span className="font-medium">{ambiguousCandidate.name}</span>
             {ambiguousCandidate.producer ? ` — ${ambiguousCandidate.producer}` : ""}
             {ambiguousCandidate.region ? `, ${ambiguousCandidate.region}` : ""}
           </p>
           {(item.candidatePhotoUrl || item.thumbUrl) && (
             <div className="mb-2 grid grid-cols-2 gap-2">
               {[
-                { label: "In the catalogue", url: item.candidatePhotoUrl },
-                { label: "This bottle", url: item.thumbUrl },
+                { label: t("bulk.row.inCatalogue"), url: item.candidatePhotoUrl },
+                { label: t("bulk.row.thisBottle"), url: item.thumbUrl },
               ].map((p) => (
                 <div key={p.label} className="space-y-1">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{p.label}</p>
                   {p.url ? (
                     <img
                       src={p.url}
-                      alt={`${p.label} wine label`}
+                      alt={t("bulk.row.labelPhotoAlt", { label: p.label })}
                       className="h-44 w-full rounded-lg border border-border object-cover"
                     />
                   ) : (
                     <div className="flex h-44 w-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
-                      No photo
+                      {t("bulk.row.noPhoto")}
                     </div>
                   )}
                 </div>
@@ -813,14 +816,14 @@ function Row({
               variant={item.mergeChoice === "same" ? "default" : "outline"}
               onClick={() => patchItem(item.id, { mergeChoice: "same" })}
             >
-              Same wine
+              {t("bulk.row.sameWine")}
             </Button>
             <Button
               size="sm"
               variant={item.mergeChoice === "different" ? "default" : "outline"}
               onClick={() => patchItem(item.id, { mergeChoice: "different" })}
             >
-              Different wine
+              {t("bulk.row.differentWine")}
             </Button>
           </div>
         </div>
@@ -829,8 +832,8 @@ function Row({
       {dupOf && (item.dupOfScore ?? 0) < 0.85 && (
         <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
           <p className="mb-2">
-            Might be the same bottle as another photo in this batch:{" "}
-            <span className="font-medium">{dupOf.fields.name || "unnamed"}</span>
+            {t("bulk.row.maybeDup")}{" "}
+            <span className="font-medium">{dupOf.fields.name || t("bulk.row.unnamed")}</span>
           </p>
           <div className="flex gap-2">
             <Button
@@ -838,14 +841,14 @@ function Row({
               variant={item.dupChoice === "same" ? "default" : "outline"}
               onClick={() => patchItem(item.id, { dupChoice: "same" })}
             >
-              Same wine
+              {t("bulk.row.sameWine")}
             </Button>
             <Button
               size="sm"
               variant={item.dupChoice === "different" ? "default" : "outline"}
               onClick={() => patchItem(item.id, { dupChoice: "different" })}
             >
-              Different wine
+              {t("bulk.row.differentWine")}
             </Button>
           </div>
         </div>
@@ -853,7 +856,7 @@ function Row({
 
       {dupOf && (item.dupOfScore ?? 0) >= 0.85 && (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Info size={13} /> Same wine as another photo in this batch, they'll share one catalogue entry.
+          <Info size={13} /> {t("bulk.row.sharedEntry")}
         </p>
       )}
 
@@ -867,7 +870,7 @@ function Row({
               size={22}
             />
             {item.entryStatus === "interested" && item.rating === 0 && (
-              <span className="text-xs text-muted-foreground">not tried yet</span>
+              <span className="text-xs text-muted-foreground">{t("bulk.row.notTriedYet")}</span>
             )}
           </div>
           <div className="flex rounded-xl bg-muted/50 p-1">
@@ -882,7 +885,7 @@ function Row({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {s === "tasted" ? "Tasted" : "Want to try"}
+                {s === "tasted" ? t("bulk.row.tasted") : t("bulk.row.wantToTry")}
               </button>
             ))}
           </div>
@@ -892,30 +895,30 @@ function Row({
       {expanded && !looseBack && (
         <div className="mt-3 space-y-3 border-t border-border pt-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Name" value={f.name} onChange={(v) => patchFields(item.id, { name: v })} />
-            <Field label="Producer" value={f.producer} onChange={(v) => patchFields(item.id, { producer: v })} />
-            <Field label="Appellation" value={f.appellation} onChange={(v) => patchFields(item.id, { appellation: v })} />
-            <Field label="Region" value={f.region} onChange={(v) => patchFields(item.id, { region: v })} />
-            <Field label="Country" value={f.country} onChange={(v) => patchFields(item.id, { country: v })} />
-            <Field label="Vintage" value={f.vintage} onChange={(v) => patchFields(item.id, { vintage: v })} />
+            <Field label={t("bulk.fields.name")} value={f.name} onChange={(v) => patchFields(item.id, { name: v })} />
+            <Field label={t("bulk.fields.producer")} value={f.producer} onChange={(v) => patchFields(item.id, { producer: v })} />
+            <Field label={t("bulk.fields.appellation")} value={f.appellation} onChange={(v) => patchFields(item.id, { appellation: v })} />
+            <Field label={t("bulk.fields.region")} value={f.region} onChange={(v) => patchFields(item.id, { region: v })} />
+            <Field label={t("bulk.fields.country")} value={f.country} onChange={(v) => patchFields(item.id, { country: v })} />
+            <Field label={t("bulk.fields.vintage")} value={f.vintage} onChange={(v) => patchFields(item.id, { vintage: v })} />
             <div>
-              <Label className="text-xs text-muted-foreground">Type</Label>
+              <Label className="text-xs text-muted-foreground">{t("bulk.fields.type")}</Label>
               <Select value={f.wine_type} onValueChange={(v) => patchFields(item.id, { wine_type: v })}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Pick one" /></SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder={t("bulk.fields.pickOne")} /></SelectTrigger>
                 <SelectContent>
-                  {WINE_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  {WINE_TYPES.map((wt) => (
+                    <SelectItem key={wt} value={wt}>{t(`wineType.${wt}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <Field label="Alcohol %" value={f.alcohol_percent} onChange={(v) => patchFields(item.id, { alcohol_percent: v })} />
+            <Field label={t("bulk.fields.alcohol")} value={f.alcohol_percent} onChange={(v) => patchFields(item.id, { alcohol_percent: v })} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">
-                Date {item.dateFromPhoto && <span className="text-primary">· from photo</span>}
+                {t("bulk.fields.date")} {item.dateFromPhoto && <span className="text-primary">· {t("bulk.row.fromPhoto")}</span>}
               </Label>
               <Input
                 type="date"
@@ -926,7 +929,7 @@ function Row({
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">
-                Place {item.placeFromPhoto && <span className="text-primary">· from photo</span>}
+                {t("bulk.fields.place")} {item.placeFromPhoto && <span className="text-primary">· {t("bulk.row.fromPhoto")}</span>}
               </Label>
               <Input
                 className="mt-1"
@@ -937,7 +940,7 @@ function Row({
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Note</Label>
+            <Label className="text-xs text-muted-foreground">{t("bulk.fields.note")}</Label>
             <Textarea
               className="mt-1"
               rows={2}

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
+import { i18next } from "@/i18n";
 import type { LabelComparison } from "@/lib/compare-labels.functions";
 
 export type CompareFn = (args: {
@@ -64,7 +65,7 @@ export async function compareLabelsVisually(
     const res = await withTimeout(
       compare({ data: { candidatePath, newPath } }),
       15_000,
-      "Comparing the labels took too long",
+      i18next.t("dupe.compareTimeout"),
     );
     if (!res.ok) {
       console.error("compare-labels failed", res.error);
