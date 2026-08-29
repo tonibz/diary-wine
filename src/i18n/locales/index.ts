@@ -5,7 +5,10 @@ import es from "./es.json";
  * Adding a language: create ./<code>.json with the same shape as en.json,
  * import it here and add one entry below. Nothing else in the app changes.
  */
-export const resources = { en, es } as const;
+export const resources = {
+  en: { translation: en },
+  es: { translation: es },
+} as const;
 
 export const LANGUAGES = [
   { code: "en", label: "English" },
