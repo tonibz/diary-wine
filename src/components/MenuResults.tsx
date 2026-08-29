@@ -128,8 +128,8 @@ export function MenuResults({
         setFailed(true);
         setFailedMsg(
           err instanceof SignedOutError
-            ? "Please sign in again to see suggestions."
-            : "Couldn't work out what you'd like — the full list is below.",
+            ? t("menu.results.signInAgain")
+            : t("menu.results.couldntScore"),
         );
         setRatedCount(null);
         setScored(
