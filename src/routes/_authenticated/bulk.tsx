@@ -75,6 +75,7 @@ function isLooseBack(i: BulkItem) {
 }
 
 function BulkPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const recognise = useServerFn(recogniseLabel);
   const classify = useServerFn(classifyLabelSides);
