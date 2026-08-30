@@ -391,11 +391,57 @@ export async function updateMenuScanContext(
     city?: string | null;
     country?: string | null;
     venue_note?: string | null;
+    currency?: string | null;
+    raw_response?: unknown;
+    skipped_count?: number;
+    skipped_categories?: string[];
   },
 ): Promise<void> {
   const { error } = await menuDb.from("menu_scans").update(patch).eq("id", scanId);
   if (error) throw error;
 }
+
+/**
+ * Append one page's lines to a scan that already exists. Long lists are saved
+ * page by page, so giving up (or a failed page 6) never loses pages 1 to 5.
+ */
+export async function appendMenuItems(args: {
+  scanId: string;
+  items: MenuParsedItem[];
+  currency: string | null;
+  /** how many lines are already stored, so `position` keeps the reading order */
+  positionOffset: number;
+}): Promise<number> {
+  if (!args.items.length) return 0;
+  const rows = args.items.map((it, i) => ({
+    menu_scan_id: args.scanId,
+    raw_text: it.raw_text,
+    parsed_name: it.name,
+    parsed_producer: it.producer,
+    parsed_vintage: it.vintage,
+    price: it.price,
+    currency: args.currency,
+    glass_price: it.glass_price,
+    prices: it.prices.length ? it.prices : null,
+    rejected: it.rejected,
+    by_the_glass: it.by_the_glass,
+    section_heading: it.section_heading,
+    page_heading: it.page_heading,
+    serving_basis: it.serving_basis,
+    attributes: it.attributes,
+    wine_type: it.wine_type,
+    grapes: it.grapes.length ? it.grapes : null,
+    item_confidence: it.confidence,
+    truncated: it.truncated,
+    matched_wine_id: null,
+    match_score: null,
+    position: args.positionOffset + i,
+  }));
+  const { error } = await menuDb.from("menu_items").insert(rows);
+  if (error) throw error;
+  return rows.length;
+}
+
 
 /** Fix or discard a line the photo cut off. */
 export async function updateMenuItem(
