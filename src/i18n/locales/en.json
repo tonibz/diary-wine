@@ -184,5 +184,35 @@
       "couldNotDiscardThat": "Couldn't discard that.",
       "noWinesFound": "No wines found on that photo."
     }
+  },
+  "auth": {
+    "metaTitle": "Sign in — Wine Diary",
+    "metaDescription": "Keep a diary of the wines you drink and find out what you actually like.",
+    "appName": "Wine Diary",
+    "tagline": "Remember the wines you loved. Order better next time.",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithApple": "Continue with Apple",
+    "or": "or",
+    "yourName": "Your name",
+    "namePlaceholder": "What should we call you?",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "magicLink": "Email me a link instead",
+    "sendingLink": "Sending…",
+    "newHere": "New here? Create an account",
+    "alreadyHaveOne": "Already have an account? Sign in",
+    "toast": {
+      "welcome": "Welcome. Let's find your first bottle.",
+      "emailNotConfirmed": "Check your inbox and confirm your email first.",
+      "invalidCredentials": "That email and password don't match.",
+      "userAlreadyRegistered": "There's already an account with that email. Try signing in.",
+      "enterEmailFirst": "Type your email first and we'll send a link.",
+      "checkInbox": "Link sent. Check your inbox.",
+      "couldNotSendLink": "Couldn't send the link.",
+      "signInFailed": "Couldn't sign you in.",
+      "somethingWrong": "Something went wrong."
+    }
   }
 }

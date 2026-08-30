@@ -184,5 +184,35 @@
       "couldNotDiscardThat": "No se pudo descartar.",
       "noWinesFound": "No se han encontrado vinos en esa foto."
     }
+  },
+  "auth": {
+    "metaTitle": "Entrar — Wine Diary",
+    "metaDescription": "Lleva un diario de los vinos que bebes y descubre qué te gusta de verdad.",
+    "appName": "Wine Diary",
+    "tagline": "Recuerda los vinos que te gustaron. Acierta la próxima vez.",
+    "continueWithGoogle": "Entrar con Google",
+    "continueWithApple": "Entrar con Apple",
+    "or": "o",
+    "yourName": "Tu nombre",
+    "namePlaceholder": "¿Cómo te llamamos?",
+    "email": "Correo",
+    "password": "Contraseña",
+    "signIn": "Entrar",
+    "createAccount": "Crear cuenta",
+    "magicLink": "Mejor mándame un enlace",
+    "sendingLink": "Enviando…",
+    "newHere": "¿Primera vez? Crea una cuenta",
+    "alreadyHaveOne": "¿Ya tienes cuenta? Entra",
+    "toast": {
+      "welcome": "Bienvenido. Vamos a por tu primera botella.",
+      "emailNotConfirmed": "Confirma tu correo antes de entrar; mira tu bandeja.",
+      "invalidCredentials": "El correo y la contraseña no coinciden.",
+      "userAlreadyRegistered": "Ya hay una cuenta con ese correo. Prueba a entrar.",
+      "enterEmailFirst": "Escribe tu correo y te mandamos un enlace.",
+      "checkInbox": "Enlace enviado. Mira tu bandeja.",
+      "couldNotSendLink": "No se pudo enviar el enlace.",
+      "signInFailed": "No se pudo entrar.",
+      "somethingWrong": "Algo ha salido mal."
+    }
   }
 }
