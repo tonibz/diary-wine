@@ -222,6 +222,24 @@ function AuthPage() {
             </button>
           </form>
         </div>
+
+        <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
+          {(["en", "es"] as const).map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLanguage(code)}
+              aria-pressed={language === code}
+              className={
+                language === code
+                  ? "font-medium text-foreground underline underline-offset-4"
+                  : "hover:text-foreground"
+              }
+            >
+              {code === "en" ? "English" : "Español"}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
