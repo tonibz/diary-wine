@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Wine } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
+import { useLanguage } from "@/lib/language";
 
 export const Route = createFileRoute("/auth")({
   // Preserve where the user was heading (e.g. an OAuth consent screen) so they
@@ -45,6 +46,7 @@ function humanizeAuthError(raw: string): string {
 
 function AuthPage() {
   const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
