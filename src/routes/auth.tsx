@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Wine } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
+import { useLanguage } from "@/lib/language";
 
 export const Route = createFileRoute("/auth")({
   // Preserve where the user was heading (e.g. an OAuth consent screen) so they
@@ -45,6 +46,7 @@ function humanizeAuthError(raw: string): string {
 
 function AuthPage() {
   const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -219,6 +221,24 @@ function AuthPage() {
               {mode === "signin" ? t("auth.newHere") : t("auth.alreadyHaveOne")}
             </button>
           </form>
+        </div>
+
+        <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
+          {(["en", "es"] as const).map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLanguage(code)}
+              aria-pressed={language === code}
+              className={
+                language === code
+                  ? "font-medium text-foreground underline underline-offset-4"
+                  : "hover:text-foreground"
+              }
+            >
+              {code === "en" ? "English" : "Español"}
+            </button>
+          ))}
         </div>
       </div>
     </div>
