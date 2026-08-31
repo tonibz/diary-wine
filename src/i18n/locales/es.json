@@ -274,6 +274,73 @@
       "couldNotSaveThat": "No se pudo guardar.",
       "couldNotDiscardThat": "No se pudo descartar.",
       "noWinesFound": "No se han encontrado vinos en esa foto."
+    },
+    "scan": {
+      "metaTitle": "Escanear una carta de vinos — Wine Diary",
+      "metaDescription": "Fotografía la carta de vinos de un restaurante y descubre qué vinos encajan con tu gusto.",
+      "metaOgTitle": "Escanear una carta de vinos",
+      "metaOgDescription": "Descubre qué vinos de la carta te gustarían.",
+      "title": "Escanear una carta de vinos",
+      "subtitle": "Fotografía la carta y te diré qué te gustaría.",
+      "pastScans": "Escaneos anteriores",
+      "takePhoto": "Hacer foto",
+      "choosePhotos": "Elegir fotos",
+      "pageAlt": "Página {{number}}",
+      "removePage": "Quitar la página {{number}}",
+      "readList": "Leer la carta",
+      "readListPages": "Leer {{count}} páginas",
+      "startAnyway": "Leer las {{count}} páginas de todos modos",
+      "longScanWarning": "{{count}} páginas tardarán un rato en leerse.",
+      "longScanHint": "Mantén esta pantalla abierta: las páginas se guardan a medida que se leen.",
+      "keepOpen": "Mantén esta pantalla abierta mientras leo.",
+      "footnote": "Las fotos solo se usan para leer la carta.",
+      "progress": {
+        "uploading": "Subiendo la foto {{current}} de {{total}}…",
+        "preparing": "Preparando…",
+        "reading": "Leyendo la página {{current}} de {{total}}…",
+        "savingPage": "Guardando la página {{current}} de {{total}}…",
+        "readingList": "Leyendo la carta…"
+      },
+      "partial": {
+        "summary": "Se leyeron {{read}} de {{total}} páginas.",
+        "hint_one": "No se pudo leer {{count}} página.",
+        "hint_other": "No se pudieron leer {{count}} páginas.",
+        "retryFailed_one": "Reintentar {{count}} página",
+        "retryFailed_other": "Reintentar {{count}} páginas",
+        "seeWhatWasRead_one": "Ver el {{count}} vino que leí",
+        "seeWhatWasRead_other": "Ver los {{count}} vinos que leí"
+      },
+      "errors": {
+        "confirmSignIn": "Vuelve a iniciar sesión para leer una carta.",
+        "couldNotStart": "No se pudo empezar a leer la carta.",
+        "couldNotReadList": "No se pudo leer la carta.",
+        "couldNotSaveList": "No se pudo guardar la carta.",
+        "pageTimeout": "La página {{number}} tardó demasiado en leerse.",
+        "pageError": "Página {{number}}: {{message}}",
+        "pageUnreadable": "No se pudo leer la página {{number}}."
+      },
+      "toasts": {
+        "salvagedPage_one": "Se guardó {{count}} vino: parte de una página quedó cortada.",
+        "salvagedPage_other": "Se guardaron {{count}} vinos: parte de una página quedó cortada."
+      }
+    },
+    "venue": {
+      "place": "Lugar",
+      "placeholderRestaurant": "Nombre del restaurante o bar",
+      "city": "Ciudad",
+      "country": "País",
+      "optional": "Opcional",
+      "kindOfPlace": "Tipo de lugar",
+      "kindPlaceholder": "p. ej. bar de vinos, bistró",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "saved": "Lugar guardado.",
+      "couldntSave": "No se pudo guardar el lugar.",
+      "savedAs": "Guardado como {{place}}",
+      "edit": "Editar",
+      "dismiss": "Descartar",
+      "prompt": "¿De dónde era esta carta?",
+      "promptHint": "Te ayuda a encontrar este escaneo más tarde."
     }
   },
   "auth": {

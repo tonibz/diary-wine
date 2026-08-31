@@ -274,6 +274,73 @@
       "couldNotSaveThat": "Couldn't save that.",
       "couldNotDiscardThat": "Couldn't discard that.",
       "noWinesFound": "No wines found on that photo."
+    },
+    "scan": {
+      "metaTitle": "Scan a wine list — Wine Diary",
+      "metaDescription": "Photograph a restaurant wine list and see which wines match your taste.",
+      "metaOgTitle": "Scan a wine list",
+      "metaOgDescription": "See which wines on the list you'd probably like.",
+      "title": "Scan a wine list",
+      "subtitle": "Photograph the list and I'll tell you what you'd probably enjoy.",
+      "pastScans": "Past scans",
+      "takePhoto": "Take photo",
+      "choosePhotos": "Choose photos",
+      "pageAlt": "Page {{number}}",
+      "removePage": "Remove page {{number}}",
+      "readList": "Read list",
+      "readListPages": "Read {{count}} pages",
+      "startAnyway": "Read all {{count}} pages anyway",
+      "longScanWarning": "{{count}} pages will take a while to read.",
+      "longScanHint": "Keep this screen open — pages are saved as they're read.",
+      "keepOpen": "Keep this screen open while I read.",
+      "footnote": "Photos are only used to read the list.",
+      "progress": {
+        "uploading": "Uploading photo {{current}} of {{total}}…",
+        "preparing": "Getting ready…",
+        "reading": "Reading page {{current}} of {{total}}…",
+        "savingPage": "Saving page {{current}} of {{total}}…",
+        "readingList": "Reading the list…"
+      },
+      "partial": {
+        "summary": "Read {{read}} of {{total}} pages.",
+        "hint_one": "{{count}} page couldn't be read.",
+        "hint_other": "{{count}} pages couldn't be read.",
+        "retryFailed_one": "Retry {{count}} page",
+        "retryFailed_other": "Retry {{count}} pages",
+        "seeWhatWasRead_one": "See the {{count}} wine I read",
+        "seeWhatWasRead_other": "See the {{count}} wines I read"
+      },
+      "errors": {
+        "confirmSignIn": "Please sign in again to read a list.",
+        "couldNotStart": "Couldn't start reading the list.",
+        "couldNotReadList": "Couldn't read the list.",
+        "couldNotSaveList": "Couldn't save the list.",
+        "pageTimeout": "Page {{number}} took too long to read.",
+        "pageError": "Page {{number}}: {{message}}",
+        "pageUnreadable": "Page {{number}} couldn't be read."
+      },
+      "toasts": {
+        "salvagedPage_one": "Saved {{count}} wine — part of a page was cut off.",
+        "salvagedPage_other": "Saved {{count}} wines — part of a page was cut off."
+      }
+    },
+    "venue": {
+      "place": "Place",
+      "placeholderRestaurant": "Restaurant or bar name",
+      "city": "City",
+      "country": "Country",
+      "optional": "Optional",
+      "kindOfPlace": "Kind of place",
+      "kindPlaceholder": "e.g. wine bar, bistro",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Place saved.",
+      "couldntSave": "Couldn't save the place.",
+      "savedAs": "Saved as {{place}}",
+      "edit": "Edit",
+      "dismiss": "Dismiss",
+      "prompt": "Where was this list from?",
+      "promptHint": "Helps you find this scan later."
     }
   },
   "auth": {
