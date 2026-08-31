@@ -59,7 +59,98 @@
   "add": {
     "title": "Add a wine",
     "fromWikipedia": "From Wikipedia",
-    "guessedCheck": "Guessed — please check",
+    "guessedCheck": "Guessed — check it",
+    "optional": "Optional",
+    "status": {
+      "tasted": "I tasted this",
+      "interested": "Haven't tried it yet"
+    },
+    "photo": {
+      "take": "Take a photo",
+      "library": "Choose from library",
+      "labelAlt": "The bottle label",
+      "backAlt": "The back label",
+      "backLabel": "Back label",
+      "backHint": "Add the back label too — it usually carries the alcohol and the grapes.",
+      "reading": "Reading the label…",
+      "inferredNote": "Worked out from the appellation rather than read off the label: {{fields}}. Worth checking."
+    },
+    "bulk": {
+      "title": "Import several photos",
+      "hint": "Got a backlog on your phone? Bring them all in at once."
+    },
+    "menu": {
+      "title": "Scan a wine list",
+      "hint": "Handed a long list? I'll tell you what to order."
+    },
+    "section": {
+      "bottle": "The bottle",
+      "tasting": "Your tasting",
+      "note": "A note to yourself",
+      "filledCount": "{{count}} of {{total}} filled in"
+    },
+    "field": {
+      "name": "Name",
+      "producer": "Producer",
+      "appellation": "Appellation",
+      "region": "Region",
+      "country": "Country",
+      "vintage": "Vintage",
+      "type": "Type",
+      "grapes": "Grapes",
+      "alcohol": "Alcohol %",
+      "rating": "How was it?",
+      "date": "When",
+      "place": "Where",
+      "placePlaceholder": "Restaurant, shop, a friend's place…",
+      "company": "Who with",
+      "notes": "Notes",
+      "notesPlaceholder": "What did it taste like? What did it remind you of?",
+      "noteWishlist": "Why this one?",
+      "noteWishlistPlaceholder": "Where you saw it, who recommended it…",
+      "price": "Price",
+      "currency": "Currency",
+      "where": "Where was this?"
+    },
+    "select": {
+      "placeholder": "Choose…"
+    },
+    "grape": {
+      "placeholder": "Add a grape",
+      "addButton": "Add",
+      "suggestionsHint": "{{name}} usually uses these. Tap any that apply."
+    },
+    "hint": {
+      "fromPhoto": "From the photo"
+    },
+    "wishlistNote": {
+      "hint": "Nothing here counts as a tasting. Move it to your diary once you've actually tried it."
+    },
+    "price": {
+      "title": "What did it cost?",
+      "hint": "Optional. Helps work out whether a bottle is well priced."
+    },
+    "priceContext": {
+      "restaurant": "A restaurant",
+      "shop": "A shop",
+      "online": "Online",
+      "other": "Somewhere else"
+    },
+    "save": {
+      "diary": "Save to my diary",
+      "wishlist": "Add to my wishlist"
+    },
+    "merge": {
+      "title": "Is this the same wine?",
+      "description": "We already have something very close. Different years of the same wine belong together, but two producers can make wines with the same name.",
+      "existing": "Already in your diary",
+      "thisBottle": "The bottle you just scanned",
+      "labelAlt": "{{label}} label",
+      "noPhoto": "No photo saved for this one",
+      "confidence": "Name and producer match {{pct}}%",
+      "yes": "Yes, same wine",
+      "no": "No, different wine"
+    },
     "toast": {
       "couldntRead": "Couldn't read that one clearly, fill it in below.",
       "uploadFailed": "Upload failed",

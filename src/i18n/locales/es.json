@@ -60,6 +60,97 @@
     "title": "Apuntar un vino",
     "fromWikipedia": "De Wikipedia",
     "guessedCheck": "Deducido — compruébalo",
+    "optional": "Opcional",
+    "status": {
+      "tasted": "Lo he probado",
+      "interested": "Aún no lo he probado"
+    },
+    "photo": {
+      "take": "Hacer una foto",
+      "library": "Elegir de la galería",
+      "labelAlt": "La etiqueta de la botella",
+      "backAlt": "La contraetiqueta",
+      "backLabel": "Contraetiqueta",
+      "backHint": "Añade también la contraetiqueta: suele llevar el alcohol y las uvas.",
+      "reading": "Leyendo la etiqueta…",
+      "inferredNote": "Deducido de la denominación, no leído en la etiqueta: {{fields}}. Conviene comprobarlo."
+    },
+    "bulk": {
+      "title": "Subir varias fotos",
+      "hint": "¿Tienes fotos acumuladas en el móvil? Súbelas todas de una vez."
+    },
+    "menu": {
+      "title": "Escanear una carta",
+      "hint": "¿Una carta larguísima? Te digo qué pedir."
+    },
+    "section": {
+      "bottle": "La botella",
+      "tasting": "Tu cata",
+      "note": "Una nota para ti",
+      "filledCount": "{{count}} de {{total}} rellenados"
+    },
+    "field": {
+      "name": "Nombre",
+      "producer": "Bodega",
+      "appellation": "Denominación",
+      "region": "Región",
+      "country": "País",
+      "vintage": "Añada",
+      "type": "Tipo",
+      "grapes": "Uvas",
+      "alcohol": "Alcohol %",
+      "rating": "¿Qué tal estaba?",
+      "date": "Cuándo",
+      "place": "Dónde",
+      "placePlaceholder": "Restaurante, tienda, casa de un amigo…",
+      "company": "Con quién",
+      "notes": "Notas",
+      "notesPlaceholder": "¿A qué sabía? ¿A qué te recordó?",
+      "noteWishlist": "¿Por qué este?",
+      "noteWishlistPlaceholder": "Dónde lo viste, quién te lo recomendó…",
+      "price": "Precio",
+      "currency": "Moneda",
+      "where": "¿Dónde fue?"
+    },
+    "select": {
+      "placeholder": "Elige…"
+    },
+    "grape": {
+      "placeholder": "Añadir una uva",
+      "addButton": "Añadir",
+      "suggestionsHint": "En {{name}} suelen usar estas. Toca las que encajen."
+    },
+    "hint": {
+      "fromPhoto": "De la foto"
+    },
+    "wishlistNote": {
+      "hint": "Esto no cuenta como cata. Pásalo a tu diario cuando lo hayas probado de verdad."
+    },
+    "price": {
+      "title": "¿Cuánto costó?",
+      "hint": "Opcional. Ayuda a saber si una botella está bien de precio."
+    },
+    "priceContext": {
+      "restaurant": "Un restaurante",
+      "shop": "Una tienda",
+      "online": "Por internet",
+      "other": "En otro sitio"
+    },
+    "save": {
+      "diary": "Guardar en mi diario",
+      "wishlist": "Añadir a por probar"
+    },
+    "merge": {
+      "title": "¿Es el mismo vino?",
+      "description": "Ya tenemos uno muy parecido. Dos añadas del mismo vino van juntas, pero dos bodegas pueden hacer vinos con el mismo nombre.",
+      "existing": "Ya en tu diario",
+      "thisBottle": "La botella que acabas de escanear",
+      "labelAlt": "Etiqueta: {{label}}",
+      "noPhoto": "No hay foto guardada de este",
+      "confidence": "El nombre y la bodega coinciden un {{pct}}%",
+      "yes": "Sí, es el mismo",
+      "no": "No, es otro vino"
+    },
     "toast": {
       "couldntRead": "No se leyó del todo bien; complétalo aquí abajo.",
       "uploadFailed": "No se pudo subir la foto",
