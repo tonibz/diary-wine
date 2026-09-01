@@ -121,6 +121,8 @@ function RootComponent() {
       <LanguageProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
+        {/* Without this every toast.error() in the app is silent. */}
+        <Toaster position="top-center" richColors closeButton />
       </LanguageProvider>
     </QueryClientProvider>
   );
