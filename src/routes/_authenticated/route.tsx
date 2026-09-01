@@ -5,7 +5,8 @@ import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AuthLoading } from "@/components/AuthLoading";
 
 export const Route = createFileRoute("/_authenticated")({
-  ssr: false,
+  // SSR renders only the loading shell (the gate is "checking" on the server),
+  // so a direct hit on a protected URL paints a spinner, never a blank page.
   component: Layout,
 });
 
