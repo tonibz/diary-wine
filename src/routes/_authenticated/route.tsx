@@ -1,27 +1,43 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { BottomTabs } from "@/components/BottomTabs";
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { AuthLoading } from "@/components/AuthLoading";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
-  },
   component: Layout,
 });
+
+/**
+ * Three explicit states. The old guard resolved the session in `beforeLoad`,
+ * so an OAuth return rendered nothing while the check was in flight (and
+ * bounced to /auth when the tokens in the URL had not been read yet).
+ */
+function Gate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/auth", replace: true });
+  }, [loading, user, navigate]);
+
+  if (loading) return <AuthLoading label="One moment…" />;
+  if (!user) return <AuthLoading label="Taking you to sign in…" />;
+  return <>{children}</>;
+}
 
 function Layout() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-background pb-24">
-        <div className="mx-auto max-w-md">
-          <Outlet />
+      <Gate>
+        <div className="min-h-screen bg-background pb-24">
+          <div className="mx-auto max-w-md">
+            <Outlet />
+          </div>
+          <BottomTabs />
         </div>
-        <BottomTabs />
-      </div>
+      </Gate>
     </AuthProvider>
   );
 }
