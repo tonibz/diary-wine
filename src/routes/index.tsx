@@ -8,7 +8,6 @@ import { AuthLoading } from "@/components/AuthLoading";
  * the session in the URL has been read. It waits, then routes.
  */
 export const Route = createFileRoute("/")({
-  ssr: false,
   head: () => ({
     meta: [
       { title: "Wine Diary — Your personal wine log" },
