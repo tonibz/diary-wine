@@ -104,7 +104,7 @@ function BulkPage() {
       if (!restorable.length) return;
       setItems(restorable);
       setPhase("review");
-      toast("Picked up where you left off.");
+      toast(t("bulk.toast.resumed"));
     });
     return () => { alive = false; };
   }, []);
@@ -154,13 +154,13 @@ function BulkPage() {
       const item = working[i];
       const file = filesRef.current.get(item.id);
       try {
-        if (!file) throw new Error("Photo is no longer available");
+        if (!file) throw new Error(t("bulk.errors.photoGone"));
         working[i] = { ...item, ...(await uploadPhoto(file, uid, gpsEnabled)) } as BulkItem;
       } catch (e) {
         working[i] = {
           ...item,
           status: "failed",
-          error: e instanceof Error ? e.message : "Could not upload this photo",
+          error: e instanceof Error ? e.message : t("bulk.errors.uploadFailed"),
         };
       }
       setItems([...working]);
@@ -174,7 +174,7 @@ function BulkPage() {
         const res = await withTimeout(
           classify({ data: { paths: chunk.map((c) => c.photoPath!) } }),
           60_000,
-          "Sorting front and back labels took too long",
+          t("bulk.errors.sortTimeout"),
         );
         if (res.ok) {
           chunk.forEach((c, k) => {
@@ -207,7 +207,7 @@ function BulkPage() {
         merged = {
           ...working[idx],
           status: "failed",
-          error: e instanceof Error ? e.message : "Failed to read this photo",
+          error: e instanceof Error ? e.message : t("bulk.errors.readFailed"),
         };
       }
       merged = await withMatches(merged, working);
@@ -293,7 +293,7 @@ function BulkPage() {
         return next;
       });
     } catch {
-      toast.error("Couldn't re-read that bottle.");
+      toast.error(t("bulk.toast.rereadFailed"));
     } finally {
       setBusyRows((b) => ({ ...b, [id]: false }));
     }
@@ -329,7 +329,7 @@ function BulkPage() {
         return next;
       });
     } catch {
-      toast.error("Couldn't re-read that bottle.");
+      toast.error(t("bulk.toast.rereadFailed"));
     } finally {
       setBusyRows((b) => ({ ...b, [frontId]: false }));
     }
@@ -373,7 +373,7 @@ function BulkPage() {
 
   async function saveAll() {
     if (!savable.length) {
-      toast.error("Give at least one of them a name first.");
+      toast.error(t("bulk.toast.nameFirst"));
       return;
     }
     setPhase("saving");
@@ -403,8 +403,8 @@ function BulkPage() {
     clearProgress();
     toast.success(
       failed
-        ? `Added ${ok} to your diary, ${failed} couldn't be saved.`
-        : `Added ${ok} ${ok === 1 ? "wine" : "wines"} to your diary.`,
+        ? t("bulk.toast.savedWithFailures", { ok, failed })
+        : t("bulk.toast.saved", { count: ok }),
     );
     navigate({ to: "/diary" });
   }
