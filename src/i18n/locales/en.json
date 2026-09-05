@@ -161,6 +161,115 @@
       "saveFailed": "Save failed"
     }
   },
+  "bulk": {
+    "meta": {
+      "title": "Import several — Wine Diary",
+      "description": "Bring in a backlog of bottle photos all at once.",
+      "ogTitle": "Import several",
+      "ogDescription": "Bring in a backlog of bottle photos all at once."
+    },
+    "pick": {
+      "heading": "Import several",
+      "take": "Take a photo",
+      "library": "Choose from library",
+      "pairHint": "Front and back of the same bottle? Photograph them one after the other and I'll pair them for you.",
+      "chosen_one": "{{count}} photo chosen",
+      "chosen_other": "{{count}} photos chosen",
+      "chosenLabelAlt": "Chosen label",
+      "removePhoto": "Remove this photo",
+      "readButton_one": "Read {{count}} photo",
+      "readButton_other": "Read {{count}} photos"
+    },
+    "confirm": {
+      "title": "Ready to read them?",
+      "description_one": "This will read {{count}} label. It takes a moment each.",
+      "description_other": "This will read {{count}} labels. It takes a moment each.",
+      "start": "Go ahead"
+    },
+    "progress": {
+      "uploading": "Getting your photos ready",
+      "processing": "Reading your labels",
+      "saving": "Saving",
+      "photoOf": "Photo {{current}} of {{total}}",
+      "bottleOf": "Reading bottle {{current}} of {{total}}",
+      "savedOf": "Saved {{current}} of {{total}}",
+      "stayHere": "Please stay on this screen.",
+      "readingAlt": "The label being read"
+    },
+    "review": {
+      "heading": "Review",
+      "intro": "Nothing is in your diary yet. Rate them here if you can — that's what builds your taste profile — then save.",
+      "good": "Looks good",
+      "check": "Worth checking",
+      "bad": "Couldn't read these",
+      "needName": "Give at least one wine a name to save",
+      "saveButton_one": "Add {{count}} wine to my diary",
+      "saveButton_other": "Add {{count}} wines to my diary"
+    },
+    "row": {
+      "labelAlt": "The bottle label",
+      "backLabelAlt": "The back label",
+      "backLabelTitle": "Back label",
+      "unreadName": "Couldn't read the name",
+      "defaultSideReason": "This looks like the back of a bottle.",
+      "looseBackHint": "Pair it with its front, or mark it as a front label.",
+      "failedFallback": "Couldn't read this one.",
+      "confidence": "{{value}}% sure",
+      "fromPhoto": "from the photo",
+      "discard": "Discard",
+      "rereading": "Reading it again…",
+      "pairedLabel": "Front and back paired",
+      "separate": "Separate",
+      "pairPrompt": "Is one of these its back label?",
+      "pairPlaceholder": "Pick a back label",
+      "backLabelOption": "Back label {{count}}",
+      "looseBackPrompt": "Which bottle does this belong to?",
+      "choosePlaceholder": "Choose a bottle",
+      "unnamedBottle": "Unnamed bottle",
+      "actuallyFront": "Actually, it's a front label",
+      "maybeSame": "This might be the same as",
+      "inCatalogue": "Already saved",
+      "thisBottle": "This bottle",
+      "labelPhotoAlt": "{{label}} label",
+      "noPhoto": "No photo saved",
+      "sameWine": "Same wine",
+      "differentWine": "Different wine",
+      "maybeDup": "This might be the same as another photo in this batch:",
+      "unnamed": "unnamed",
+      "sharedEntry": "Saved as one wine with the other photo.",
+      "notTriedYet": "Not tried yet",
+      "tasted": "Tasted",
+      "wantToTry": "Want to try"
+    },
+    "fields": {
+      "name": "Name",
+      "producer": "Producer",
+      "appellation": "Appellation",
+      "region": "Region",
+      "country": "Country",
+      "vintage": "Vintage",
+      "type": "Type",
+      "pickOne": "Choose…",
+      "alcohol": "Alcohol %",
+      "date": "When",
+      "place": "Where",
+      "note": "Notes"
+    },
+    "toast": {
+      "resumed": "Picked up where you left off.",
+      "nameFirst": "Give at least one of them a name first.",
+      "rereadFailed": "Couldn't re-read that bottle.",
+      "saved_one": "Added {{count}} wine to your diary.",
+      "saved_other": "Added {{count}} wines to your diary.",
+      "savedWithFailures": "Added {{ok}} to your diary, {{failed}} couldn't be saved."
+    },
+    "errors": {
+      "photoGone": "That photo is no longer available",
+      "uploadFailed": "Couldn't upload this photo",
+      "readFailed": "Couldn't read this photo",
+      "sortTimeout": "Sorting front and back labels took too long"
+    }
+  },
   "settings": {
     "language": "Language",
     "languageHint": "The app switches straight away.",
