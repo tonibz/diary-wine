@@ -161,6 +161,115 @@
       "saveFailed": "No se pudo guardar"
     }
   },
+  "bulk": {
+    "meta": {
+      "title": "Subir varias — Wine Diary",
+      "description": "Sube de una vez todas las fotos que tengas acumuladas.",
+      "ogTitle": "Subir varias",
+      "ogDescription": "Sube de una vez todas las fotos que tengas acumuladas."
+    },
+    "pick": {
+      "heading": "Subir varias",
+      "take": "Hacer una foto",
+      "library": "Elegir de la galería",
+      "pairHint": "¿Tienes el frontal y la contraetiqueta de la misma botella? Hazlas seguidas y te las emparejo.",
+      "chosen_one": "{{count}} foto elegida",
+      "chosen_other": "{{count}} fotos elegidas",
+      "chosenLabelAlt": "Etiqueta elegida",
+      "removePhoto": "Quitar esta foto",
+      "readButton_one": "Leer {{count}} foto",
+      "readButton_other": "Leer {{count}} fotos"
+    },
+    "confirm": {
+      "title": "¿Las leo ya?",
+      "description_one": "Voy a leer {{count}} etiqueta. Cada una tarda un poco.",
+      "description_other": "Voy a leer {{count}} etiquetas. Cada una tarda un poco.",
+      "start": "Adelante"
+    },
+    "progress": {
+      "uploading": "Preparando tus fotos",
+      "processing": "Leyendo las etiquetas",
+      "saving": "Guardando",
+      "photoOf": "Foto {{current}} de {{total}}",
+      "bottleOf": "Leyendo la botella {{current}} de {{total}}",
+      "savedOf": "Guardadas {{current}} de {{total}}",
+      "stayHere": "No te vayas de esta pantalla.",
+      "readingAlt": "La etiqueta que estoy leyendo"
+    },
+    "review": {
+      "heading": "Repasar",
+      "intro": "Todavía no hay nada en tu diario. Ponles nota aquí si puedes, que es lo que construye tu perfil, y luego guarda.",
+      "good": "Están bien",
+      "check": "Conviene mirarlos",
+      "bad": "Estos no los he leído",
+      "needName": "Ponle nombre al menos a uno para poder guardar",
+      "saveButton_one": "Añadir {{count}} vino a mi diario",
+      "saveButton_other": "Añadir {{count}} vinos a mi diario"
+    },
+    "row": {
+      "labelAlt": "La etiqueta de la botella",
+      "backLabelAlt": "La contraetiqueta",
+      "backLabelTitle": "Contraetiqueta",
+      "unreadName": "No he leído el nombre",
+      "defaultSideReason": "Esto parece la parte de atrás de una botella.",
+      "looseBackHint": "Empareja con su frontal o márcala como etiqueta principal.",
+      "failedFallback": "No he podido leer esta.",
+      "confidence": "{{value}}% de seguridad",
+      "fromPhoto": "de la foto",
+      "discard": "Descartar",
+      "rereading": "Leyéndola otra vez…",
+      "pairedLabel": "Frontal y contraetiqueta emparejadas",
+      "separate": "Separar",
+      "pairPrompt": "¿Alguna de estas es su contraetiqueta?",
+      "pairPlaceholder": "Elige una contraetiqueta",
+      "backLabelOption": "Contraetiqueta {{count}}",
+      "looseBackPrompt": "¿De qué botella es esta?",
+      "choosePlaceholder": "Elige una botella",
+      "unnamedBottle": "Botella sin nombre",
+      "actuallyFront": "En realidad es el frontal",
+      "maybeSame": "Puede que sea el mismo que",
+      "inCatalogue": "Ya guardado",
+      "thisBottle": "Esta botella",
+      "labelPhotoAlt": "Etiqueta: {{label}}",
+      "noPhoto": "Sin foto guardada",
+      "sameWine": "El mismo",
+      "differentWine": "Otro vino",
+      "maybeDup": "Puede que sea el mismo que otra foto de esta tanda:",
+      "unnamed": "sin nombre",
+      "sharedEntry": "Se guarda como un solo vino junto con la otra foto.",
+      "notTriedYet": "Aún no probado",
+      "tasted": "Probado",
+      "wantToTry": "Por probar"
+    },
+    "fields": {
+      "name": "Nombre",
+      "producer": "Bodega",
+      "appellation": "Denominación",
+      "region": "Región",
+      "country": "País",
+      "vintage": "Añada",
+      "type": "Tipo",
+      "pickOne": "Elige…",
+      "alcohol": "Alcohol %",
+      "date": "Cuándo",
+      "place": "Dónde",
+      "note": "Notas"
+    },
+    "toast": {
+      "resumed": "Sigo donde lo dejaste.",
+      "nameFirst": "Ponle nombre al menos a uno.",
+      "rereadFailed": "No he podido volver a leer esa botella.",
+      "saved_one": "He añadido {{count}} vino a tu diario.",
+      "saved_other": "He añadido {{count}} vinos a tu diario.",
+      "savedWithFailures": "He añadido {{ok}} a tu diario; {{failed}} no se han podido guardar."
+    },
+    "errors": {
+      "photoGone": "Esa foto ya no está disponible",
+      "uploadFailed": "No he podido subir esta foto",
+      "readFailed": "No he podido leer esta foto",
+      "sortTimeout": "He tardado demasiado ordenando frontales y contraetiquetas"
+    }
+  },
   "settings": {
     "language": "Idioma",
     "languageHint": "La app cambia al momento.",
