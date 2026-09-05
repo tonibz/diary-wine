@@ -421,16 +421,16 @@ function BulkPage() {
     const done = phase === "saving" ? savedCount : currentIdx;
     const pct = total ? Math.round((done / total) * 100) : 0;
     const heading =
-      phase === "uploading" ? "Getting your photos ready" : phase === "processing" ? "Reading your labels" : "Saving";
+      phase === "uploading" ? t("bulk.progress.uploading") : phase === "processing" ? t("bulk.progress.processing") : t("bulk.progress.saving");
     return (
       <div className="px-5 pt-10 pb-8">
         <h1 className="text-2xl font-serif text-primary mb-2">{heading}</h1>
         <p className="text-sm text-muted-foreground mb-5">
           {phase === "saving"
-            ? `Saved ${done} of ${total}`
+            ? t("bulk.progress.savedOf", { current: done, total })
             : phase === "uploading"
-              ? `Photo ${Math.min(done + 1, total)} of ${total}`
-              : `Reading bottle ${Math.min(done + 1, total)} of ${total}`}
+              ? t("bulk.progress.photoOf", { current: Math.min(done + 1, total), total })
+              : t("bulk.progress.bottleOf", { current: Math.min(done + 1, total), total })}
         </p>
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden mb-5">
           <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
@@ -438,12 +438,12 @@ function BulkPage() {
         {currentThumb && (
           <img
             src={currentThumb}
-            alt="label being read"
+            alt={t("bulk.progress.readingAlt")}
             className="w-40 h-40 object-cover rounded-2xl shadow-notebook border border-border mx-auto"
           />
         )}
         <p className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="animate-spin" size={16} /> Please stay on this screen.
+          <Loader2 className="animate-spin" size={16} /> {t("bulk.progress.stayHere")}
         </p>
       </div>
     );
@@ -465,16 +465,15 @@ function BulkPage() {
           <button onClick={() => navigate({ to: "/diary" })} className="p-2 -ml-2 text-muted-foreground">
             <ArrowLeft size={22} />
           </button>
-          <h1 className="text-2xl font-serif text-primary">Review</h1>
+          <h1 className="text-2xl font-serif text-primary">{t("bulk.review.heading")}</h1>
           <span className="w-8" />
         </div>
         <p className="text-sm text-muted-foreground mb-5">
-          Nothing is in your diary yet. Rate them here if you can — that's what builds your taste
-          profile — then save.
+          {t("bulk.review.intro")}
         </p>
 
         <Section
-          title="Looks good"
+          title={t("bulk.review.good")}
           count={groups.good.length}
           open={openGroups.good}
           onToggle={() => setOpenGroups((g) => ({ ...g, good: !g.good }))}
@@ -487,7 +486,7 @@ function BulkPage() {
         </Section>
 
         <Section
-          title="Worth checking"
+          title={t("bulk.review.check")}
           count={groups.check.length}
           open={openGroups.check}
           onToggle={() => setOpenGroups((g) => ({ ...g, check: !g.check }))}
@@ -500,7 +499,7 @@ function BulkPage() {
         </Section>
 
         <Section
-          title="Couldn't read these"
+          title={t("bulk.review.bad")}
           count={groups.bad.length}
           open={openGroups.bad}
           onToggle={() => setOpenGroups((g) => ({ ...g, bad: !g.bad }))}
@@ -515,11 +514,11 @@ function BulkPage() {
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 backdrop-blur px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           {!savable.length && (
             <p className="mb-2 text-center text-xs text-muted-foreground">
-              Give at least one wine a name to save
+              {t("bulk.review.needName")}
             </p>
           )}
           <Button className="w-full h-12 rounded-xl" onClick={saveAll} disabled={!savable.length}>
-            Add {savable.length} {savable.length === 1 ? "wine" : "wines"} to my diary
+            {t("bulk.review.saveButton", { count: savable.length })}
           </Button>
         </div>
 
