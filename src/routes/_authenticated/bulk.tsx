@@ -533,7 +533,7 @@ function BulkPage() {
         <button onClick={() => navigate({ to: "/add" })} className="p-2 -ml-2 text-muted-foreground">
           <ArrowLeft size={22} />
         </button>
-        <h1 className="text-2xl font-serif text-primary">Import several</h1>
+        <h1 className="text-2xl font-serif text-primary">{t("bulk.pick.heading")}</h1>
         <span className="w-8" />
       </div>
 
@@ -541,11 +541,11 @@ function BulkPage() {
         <div className="grid grid-cols-2 gap-3">
           <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => cameraRef.current?.click()}>
             <Camera size={22} />
-            <span className="text-sm">Take a photo</span>
+            <span className="text-sm">{t("bulk.pick.take")}</span>
           </Button>
           <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => libraryRef.current?.click()}>
             <Images size={22} />
-            <span className="text-sm">Choose from library</span>
+            <span className="text-sm">{t("bulk.pick.library")}</span>
           </Button>
         </div>
         <input
@@ -565,14 +565,13 @@ function BulkPage() {
           onChange={(e) => { if (e.target.files?.length) onPick(e.target.files); e.target.value = ""; }}
         />
         <p className="mt-3 text-xs text-muted-foreground">
-          Front and back of the same bottle? Photograph them one after the other and I'll pair them
-          for you.
+          {t("bulk.pick.pairHint")}
         </p>
 
         {items.length > 0 && (
           <>
             <p className="mt-4 mb-2 text-sm text-muted-foreground">
-              {items.length} {items.length === 1 ? "photo" : "photos"} chosen
+              {t("bulk.pick.chosen", { count: items.length })}
             </p>
             <div className="grid grid-cols-3 gap-2">
               {items.map((i) => (
