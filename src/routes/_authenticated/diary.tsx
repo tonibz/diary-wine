@@ -142,8 +142,10 @@ function DiaryPage() {
         </div>
       </div>
 
-      {filtered === null ? (
+      {loading ? (
         <p className="text-center text-muted-foreground py-16 text-sm">{t("diary.loading")}</p>
+      ) : error || filtered === null ? (
+        <ErrorState onRetry={reload} />
       ) : filtered.length === 0 ? (
         <EmptyDiary hasEntries={(entries?.length ?? 0) > 0} />
       ) : (
