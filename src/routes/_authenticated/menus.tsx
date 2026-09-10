@@ -75,8 +75,11 @@ function MenuHistoryPage() {
         )}
       </header>
 
-      {scans === null ? (
+      {loading ? (
         <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
+      ) : error || scans === null ? (
+        // A failed read must not read as "no lists yet".
+        <ErrorState onRetry={reload} />
       ) : scans.length === 0 ? (
         <div className="text-center py-16">
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
