@@ -42,15 +42,23 @@ function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      setEmail(data.user.email ?? "");
-      const { data: p } = await supabase.from("profiles").select("display_name, gps_lookup_enabled").eq("id", data.user.id).maybeSingle();
-      setDisplayName(p?.display_name ?? "");
-      setGpsLookup(!!p?.gps_lookup_enabled);
-    });
-  }, []);
+  // Until the real settings are read, saving is blocked: overwriting the
+  // user's own values with defaults would be worse than showing an error.
+  const { error: loadError, loading, reload } = useAsyncData("/settings", async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    if (!data.user) throw new Error("No session");
+    setEmail(data.user.email ?? "");
+    const { data: p, error: profileErr } = await supabase
+      .from("profiles")
+      .select("display_name, gps_lookup_enabled")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (profileErr) throw profileErr;
+    setDisplayName(p?.display_name ?? "");
+    setGpsLookup(!!p?.gps_lookup_enabled);
+    return true;
+  });
 
   async function save() {
     setSaving(true);

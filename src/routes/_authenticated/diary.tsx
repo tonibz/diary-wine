@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAsyncData } from "@/lib/use-async-data";
+import { ErrorState } from "@/components/ErrorState";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedPhotoUrls } from "@/lib/wine-photo";
@@ -47,28 +49,27 @@ export const Route = createFileRoute("/_authenticated/diary")({
 
 function DiaryPage() {
   const { t } = useTranslation();
-  const [entries, setEntries] = useState<Entry[] | null>(null);
+  
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [minRating, setMinRating] = useState<string>("0");
 
-  useEffect(() => {
-    (async () => {
-      // Wishlist items (status 'interested') never appear in the diary.
-      const { data } = await supabase
-        .from("entries")
-        .select(
-          "id, photo_url, rating, tasted_on, place, company, vintage_row:wine_vintages(id, vintage, wine:wines(id, name, producer, wine_type, label_image_url))",
-        )
-        .eq("status", "tasted")
-        .order("created_at", { ascending: false });
-      const rows = (data ?? []) as unknown as Entry[];
-      const refs = rows.map((e) => e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null);
-      const signed = await getSignedPhotoUrls(refs);
-      rows.forEach((e, i) => { e.display_photo = signed[i]; });
-      setEntries(rows);
-    })();
-  }, []);
+  const { data: entries, error, loading, reload } = useAsyncData("/diary", async () => {
+    // Wishlist items (status 'interested') never appear in the diary.
+    const { data, error: readError } = await supabase
+      .from("entries")
+      .select(
+        "id, photo_url, rating, tasted_on, place, company, vintage_row:wine_vintages(id, vintage, wine:wines(id, name, producer, wine_type, label_image_url))",
+      )
+      .eq("status", "tasted")
+      .order("created_at", { ascending: false });
+    if (readError) throw readError;
+    const rows = (data ?? []) as unknown as Entry[];
+    const refs = rows.map((e) => e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null);
+    const signed = await getSignedPhotoUrls(refs);
+    rows.forEach((e, i) => { e.display_photo = signed[i]; });
+    return rows;
+  });
 
 
   const filtered = useMemo(() => {
@@ -141,8 +142,10 @@ function DiaryPage() {
         </div>
       </div>
 
-      {filtered === null ? (
+      {loading ? (
         <p className="text-center text-muted-foreground py-16 text-sm">{t("diary.loading")}</p>
+      ) : error || filtered === null ? (
+        <ErrorState onRetry={reload} />
       ) : filtered.length === 0 ? (
         <EmptyDiary hasEntries={(entries?.length ?? 0) > 0} />
       ) : (

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useAsyncData } from "@/lib/use-async-data";
+import { ErrorState } from "@/components/ErrorState";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
 import { formatNumber } from "@/lib/format";
@@ -31,21 +32,45 @@ export const Route = createFileRoute("/_authenticated/taste")({
 
 function TastePage() {
   const { t: tr } = useTranslation();
-  const [t, setT] = useState<Taste | null>(null);
-  const [otherCount, setOtherCount] = useState(0);
+  const { data, error, loading, reload } = useAsyncData("/taste", async () => {
+    const { data: userRes, error: userErr } = await supabase.auth.getUser();
+    if (userErr) throw userErr;
+    if (!userRes.user) throw new Error("No session");
+    const { data: row, error: profileErr } = await supabase
+      .from("taste_profiles")
+      .select("*")
+      .eq("user_id", userRes.user.id)
+      .maybeSingle();
+    if (profileErr) throw profileErr;
+    const { count, error: countErr } = await supabase
+      .from("entries")
+      .select("wine:wines!inner(wine_type)", { count: "exact", head: true })
+      .not("wine.wine_type", "in", "(red,white)");
+    if (countErr) throw countErr;
+    return { profile: (row as unknown as Taste | null) ?? null, otherCount: count ?? 0 };
+  });
 
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      const { data: row } = await supabase.from("taste_profiles").select("*").eq("user_id", data.user.id).maybeSingle();
-      if (row) setT(row as unknown as Taste);
-      const { count } = await supabase
-        .from("entries")
-        .select("wine:wines!inner(wine_type)", { count: "exact", head: true })
-        .not("wine.wine_type", "in", "(red,white)");
-      setOtherCount(count ?? 0);
-    });
-  }, []);
+  if (loading) {
+    return (
+      <div className="px-5 pt-8 pb-8">
+        <h1 className="text-4xl font-serif text-primary">{tr("taste.title")}</h1>
+        <p className="text-muted-foreground mt-6 text-sm">{tr("common.loading")}</p>
+      </div>
+    );
+  }
+
+  // A read failure must never look like "you have no profile yet".
+  if (error || !data) {
+    return (
+      <div className="px-5 pt-8 pb-8">
+        <h1 className="text-4xl font-serif text-primary">{tr("taste.title")}</h1>
+        <ErrorState onRetry={reload} />
+      </div>
+    );
+  }
+
+  const t = data.profile;
+  const otherCount = data.otherCount;
 
   if (!t) {
     return <div className="px-5 pt-8 pb-8"><h1 className="text-4xl font-serif text-primary">{tr("taste.title")}</h1>

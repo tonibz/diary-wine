@@ -19,6 +19,10 @@ import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import { markFieldsAsUser } from "@/lib/field-provenance";
 import { wineTypeLabel } from "@/lib/wine-type";
+import { withTimeout } from "@/lib/with-timeout";
+import { READ_TIMEOUT_MS } from "@/lib/use-async-data";
+import { captureClientError } from "@/lib/sentry-browser";
+import { ErrorState } from "@/components/ErrorState";
 
 export const Route = createFileRoute("/_authenticated/entry/$id")({
   head: () => ({
@@ -93,12 +97,22 @@ function EntryDetail() {
   const [priceCurrency, setPriceCurrency] = useState(localeCurrency());
   const [priceContext, setPriceContext] = useState("");
   const [converting, setConverting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<Error | null>(null);
 
+  /** One read path with a hard ceiling: a failure shows a retry, never a spinner. */
   async function load() {
-    const { data } = await supabase.from("entries").select(SELECT).eq("id", id).single();
-    const e = data as unknown as Entry | null;
-    setEntry(e);
-    if (e) {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const { data, error } = await withTimeout(
+        (async () => await supabase.from("entries").select(SELECT).eq("id", id).single())(),
+        READ_TIMEOUT_MS,
+      );
+      if (error) throw error;
+      const e = data as unknown as Entry | null;
+      setEntry(e);
+      if (!e) throw new Error("Entry not found");
       setRating(e.rating ?? 0);
       setNotes(e.notes ?? "");
       setPlace(e.place ?? "");
@@ -110,9 +124,15 @@ function EntryDetail() {
       const ref = e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null;
       setPhotoUrl(await getSignedPhotoUrl(ref));
       setBackPhotoUrl(await getSignedPhotoUrl(e.back_photo_url));
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      setLoadError(err);
+      captureClientError(err, { route: "/entry/$id" });
+    } finally {
+      setLoading(false);
     }
   }
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { void load(); }, [id]);
 
   async function saveTasting() {
     if (!entry) return;
@@ -243,7 +263,8 @@ function EntryDetail() {
     navigate({ to: entry.status === "interested" ? "/wishlist" : "/diary" });
   }
 
-  if (!entry) return <div className="p-6 text-center text-muted-foreground">{t("common.loading")}</div>;
+  if (loading) return <div className="p-6 text-center text-muted-foreground">{t("common.loading")}</div>;
+  if (loadError || !entry) return <ErrorState onRetry={() => void load()} />;
   const w = entry.vintage_row?.wine;
   const isWishlist = entry.status === "interested";
 

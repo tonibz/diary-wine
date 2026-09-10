@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAsyncData } from "@/lib/use-async-data";
+import { ErrorState } from "@/components/ErrorState";
 import { format } from "date-fns";
 import { ArrowLeft, ScrollText, ChevronRight, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -31,7 +33,13 @@ export const Route = createFileRoute("/_authenticated/menus")({
 });
 
 function MenuHistoryPage() {
-  const [scans, setScans] = useState<Array<MenuScanRow & { item_count: number }> | null>(null);
+  const {
+    data: scans,
+    error,
+    loading,
+    reload,
+    setData: setScans,
+  } = useAsyncData<Array<MenuScanRow & { item_count: number }>>("/menus", () => listMenuScans());
   const [exporting, setExporting] = useState(false);
 
   /** Own data only: RLS scopes the export to this user's scans. */
@@ -48,9 +56,6 @@ function MenuHistoryPage() {
     }
   }
 
-  useEffect(() => {
-    listMenuScans().then(setScans).catch(() => setScans([]));
-  }, []);
 
   return (
     <div className="px-5 pt-6 pb-8">
@@ -70,8 +75,11 @@ function MenuHistoryPage() {
         )}
       </header>
 
-      {scans === null ? (
+      {loading ? (
         <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
+      ) : error || scans === null ? (
+        // A failed read must not read as "no lists yet".
+        <ErrorState onRetry={reload} />
       ) : scans.length === 0 ? (
         <div className="text-center py-16">
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">

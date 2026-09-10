@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useAsyncData } from "@/lib/use-async-data";
+import { ErrorState } from "@/components/ErrorState";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,23 +42,20 @@ type Item = {
 function WishlistPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [items, setItems] = useState<Item[] | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("entries")
-        .select(
-          "id, photo_url, notes, vintage_row:wine_vintages(vintage, wine:wines(name, producer, region, country, label_image_url))",
-        )
-        .eq("status", "interested")
-        .order("created_at", { ascending: false });
-      const rows = (data ?? []) as unknown as Item[];
-      const signed = await getSignedPhotoUrls(rows.map((r) => r.photo_url ?? null));
-      rows.forEach((r, i) => { r.display_photo = signed[i]; });
-      setItems(rows);
-    })();
-  }, []);
+  const { data: items, error, loading, reload } = useAsyncData("/wishlist", async () => {
+    const { data, error: readError } = await supabase
+      .from("entries")
+      .select(
+        "id, photo_url, notes, vintage_row:wine_vintages(vintage, wine:wines(name, producer, region, country, label_image_url))",
+      )
+      .eq("status", "interested")
+      .order("created_at", { ascending: false });
+    if (readError) throw readError;
+    const rows = (data ?? []) as unknown as Item[];
+    const signed = await getSignedPhotoUrls(rows.map((r) => r.photo_url ?? null));
+    rows.forEach((r, i) => { r.display_photo = signed[i]; });
+    return rows;
+  });
 
   return (
     <div className="px-5 pt-8 pb-8">
@@ -66,8 +64,10 @@ function WishlistPage() {
         <p className="text-sm text-muted-foreground mt-1">{t("wishlist.subtitle")}</p>
       </header>
 
-      {items === null ? (
+      {loading ? (
         <p className="text-center text-muted-foreground py-16 text-sm">{t("common.loading")}</p>
+      ) : error || items === null ? (
+        <ErrorState onRetry={reload} />
       ) : items.length === 0 ? (
         <div className="text-center py-16 px-4">
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
