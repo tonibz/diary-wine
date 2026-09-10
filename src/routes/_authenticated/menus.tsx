@@ -33,7 +33,13 @@ export const Route = createFileRoute("/_authenticated/menus")({
 });
 
 function MenuHistoryPage() {
-  const [scans, setScans] = useState<Array<MenuScanRow & { item_count: number }> | null>(null);
+  const {
+    data: scans,
+    error,
+    loading,
+    reload,
+    setData: setScans,
+  } = useAsyncData<Array<MenuScanRow & { item_count: number }>>("/menus", () => listMenuScans());
   const [exporting, setExporting] = useState(false);
 
   /** Own data only: RLS scopes the export to this user's scans. */
