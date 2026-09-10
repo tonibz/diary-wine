@@ -94,11 +94,19 @@ function EntryDetail() {
   const [priceContext, setPriceContext] = useState("");
   const [converting, setConverting] = useState(false);
 
+  /** One read path with a hard ceiling: a failure shows a retry, never a spinner. */
   async function load() {
-    const { data } = await supabase.from("entries").select(SELECT).eq("id", id).single();
-    const e = data as unknown as Entry | null;
-    setEntry(e);
-    if (e) {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const { data, error } = await withTimeout(
+        (async () => await supabase.from("entries").select(SELECT).eq("id", id).single())(),
+        READ_TIMEOUT_MS,
+      );
+      if (error) throw error;
+      const e = data as unknown as Entry | null;
+      setEntry(e);
+      if (!e) throw new Error("Entry not found");
       setRating(e.rating ?? 0);
       setNotes(e.notes ?? "");
       setPlace(e.place ?? "");
