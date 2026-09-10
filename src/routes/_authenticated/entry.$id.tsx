@@ -93,6 +93,8 @@ function EntryDetail() {
   const [priceCurrency, setPriceCurrency] = useState(localeCurrency());
   const [priceContext, setPriceContext] = useState("");
   const [converting, setConverting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<Error | null>(null);
 
   /** One read path with a hard ceiling: a failure shows a retry, never a spinner. */
   async function load() {
@@ -118,9 +120,15 @@ function EntryDetail() {
       const ref = e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null;
       setPhotoUrl(await getSignedPhotoUrl(ref));
       setBackPhotoUrl(await getSignedPhotoUrl(e.back_photo_url));
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      setLoadError(err);
+      captureClientError(err, { route: "/entry/$id" });
+    } finally {
+      setLoading(false);
     }
   }
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { void load(); }, [id]);
 
   async function saveTasting() {
     if (!entry) return;
