@@ -263,7 +263,8 @@ function EntryDetail() {
     navigate({ to: entry.status === "interested" ? "/wishlist" : "/diary" });
   }
 
-  if (!entry) return <div className="p-6 text-center text-muted-foreground">{t("common.loading")}</div>;
+  if (loading) return <div className="p-6 text-center text-muted-foreground">{t("common.loading")}</div>;
+  if (loadError || !entry) return <ErrorState onRetry={() => void load()} />;
   const w = entry.vintage_row?.wine;
   const isWishlist = entry.status === "interested";
 
