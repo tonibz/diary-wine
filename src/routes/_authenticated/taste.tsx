@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useAsyncData } from "@/lib/use-async-data";
+import { ErrorState } from "@/components/ErrorState";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
 import { formatNumber } from "@/lib/format";
