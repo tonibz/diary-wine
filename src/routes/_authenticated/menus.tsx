@@ -56,9 +56,6 @@ function MenuHistoryPage() {
     }
   }
 
-  useEffect(() => {
-    listMenuScans().then(setScans).catch(() => setScans([]));
-  }, []);
 
   return (
     <div className="px-5 pt-6 pb-8">
