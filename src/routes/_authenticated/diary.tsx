@@ -52,23 +52,22 @@ function DiaryPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [minRating, setMinRating] = useState<string>("0");
 
-  useEffect(() => {
-    (async () => {
-      // Wishlist items (status 'interested') never appear in the diary.
-      const { data } = await supabase
-        .from("entries")
-        .select(
-          "id, photo_url, rating, tasted_on, place, company, vintage_row:wine_vintages(id, vintage, wine:wines(id, name, producer, wine_type, label_image_url))",
-        )
-        .eq("status", "tasted")
-        .order("created_at", { ascending: false });
-      const rows = (data ?? []) as unknown as Entry[];
-      const refs = rows.map((e) => e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null);
-      const signed = await getSignedPhotoUrls(refs);
-      rows.forEach((e, i) => { e.display_photo = signed[i]; });
-      setEntries(rows);
-    })();
-  }, []);
+  const { data: entries, error, loading, reload } = useAsyncData("/diary", async () => {
+    // Wishlist items (status 'interested') never appear in the diary.
+    const { data, error: readError } = await supabase
+      .from("entries")
+      .select(
+        "id, photo_url, rating, tasted_on, place, company, vintage_row:wine_vintages(id, vintage, wine:wines(id, name, producer, wine_type, label_image_url))",
+      )
+      .eq("status", "tasted")
+      .order("created_at", { ascending: false });
+    if (readError) throw readError;
+    const rows = (data ?? []) as unknown as Entry[];
+    const refs = rows.map((e) => e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null);
+    const signed = await getSignedPhotoUrls(refs);
+    rows.forEach((e, i) => { e.display_photo = signed[i]; });
+    return rows;
+  });
 
 
   const filtered = useMemo(() => {
