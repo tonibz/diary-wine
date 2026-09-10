@@ -64,8 +64,10 @@ function WishlistPage() {
         <p className="text-sm text-muted-foreground mt-1">{t("wishlist.subtitle")}</p>
       </header>
 
-      {items === null ? (
+      {loading ? (
         <p className="text-center text-muted-foreground py-16 text-sm">{t("common.loading")}</p>
+      ) : error || items === null ? (
+        <ErrorState onRetry={reload} />
       ) : items.length === 0 ? (
         <div className="text-center py-16 px-4">
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
