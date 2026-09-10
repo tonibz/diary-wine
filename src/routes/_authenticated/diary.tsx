@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAsyncData } from "@/lib/use-async-data";
+import { ErrorState } from "@/components/ErrorState";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { getSignedPhotoUrls } from "@/lib/wine-photo";
@@ -47,7 +49,7 @@ export const Route = createFileRoute("/_authenticated/diary")({
 
 function DiaryPage() {
   const { t } = useTranslation();
-  const [entries, setEntries] = useState<Entry[] | null>(null);
+  
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [minRating, setMinRating] = useState<string>("0");
