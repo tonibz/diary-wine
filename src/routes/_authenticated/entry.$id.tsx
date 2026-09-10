@@ -19,6 +19,10 @@ import { recomputeTasteProfile } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import { markFieldsAsUser } from "@/lib/field-provenance";
 import { wineTypeLabel } from "@/lib/wine-type";
+import { withTimeout } from "@/lib/with-timeout";
+import { READ_TIMEOUT_MS } from "@/lib/use-async-data";
+import { captureClientError } from "@/lib/sentry-browser";
+import { ErrorState } from "@/components/ErrorState";
 
 export const Route = createFileRoute("/_authenticated/entry/$id")({
   head: () => ({
