@@ -18,6 +18,8 @@ import { LogOut } from "lucide-react";
 import { i18next } from "@/i18n";
 import { LANGUAGES, type LanguageCode } from "@/i18n/locales";
 import { useLanguage } from "@/lib/language";
+import { useAsyncData } from "@/lib/use-async-data";
+import { ErrorState } from "@/components/ErrorState";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -60,18 +62,26 @@ function SettingsPage() {
     return true;
   });
 
+  const blocked = loading || !!loadError;
+
   async function save() {
+    if (blocked) return;
     setSaving(true);
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    const { error } = await supabase.from("profiles").upsert({
-      id: data.user.id,
-      display_name: displayName || null,
-      gps_lookup_enabled: gpsLookup,
-    });
-    setSaving(false);
-    if (error) toast.error(error.message);
-    else toast.success(t("settings.saved"));
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) throw new Error("No session");
+      const { error } = await supabase.from("profiles").upsert({
+        id: data.user.id,
+        display_name: displayName || null,
+        gps_lookup_enabled: gpsLookup,
+      });
+      if (error) throw error;
+      toast.success(t("settings.saved"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("errorState.body"));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function signOut() {
