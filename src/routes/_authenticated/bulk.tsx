@@ -12,7 +12,7 @@ import {
 } from "@/lib/label-compare";
 import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { findBestMatch } from "@/lib/wine-match";
-import { recomputeTasteProfile } from "@/lib/taste-profile";
+import { recomputeTasteProfileSafely } from "@/lib/taste-profile";
 import {
   type BulkItem,
   type BulkFields,

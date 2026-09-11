@@ -13,7 +13,7 @@ import {
 import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { compressImage } from "@/lib/image-compress";
 import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
-import { recomputeTasteProfile } from "@/lib/taste-profile";
+import { recomputeTasteProfileSafely } from "@/lib/taste-profile";
 import { getSignedPhotoUrl } from "@/lib/wine-photo";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import {
