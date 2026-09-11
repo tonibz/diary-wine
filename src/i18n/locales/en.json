@@ -481,5 +481,12 @@
       "signInFailed": "Couldn't sign you in.",
       "somethingWrong": "Something went wrong."
     }
+  },
+  "errorState": {
+    "title": "Couldn't load this",
+    "body": "Something went wrong on our side. Your data is safe.",
+    "retry": "Try again",
+    "offline": "You seem to be offline. Check your connection and try again.",
+    "settingsBlocked": "Your settings couldn't be loaded, so they can't be changed right now."
   }
 }

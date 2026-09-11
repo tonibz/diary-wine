@@ -23,7 +23,6 @@ import { Route as AuthenticatedAddRouteImport } from './routes/_authenticated/ad
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedMenuIndexRouteImport } from './routes/_authenticated/menu.index'
-import { Route as ApiPublicSentryTestRouteImport } from './routes/api/public/sentry-test'
 import { Route as AuthenticatedMenuIdRouteImport } from './routes/_authenticated/menu.$id'
 import { Route as AuthenticatedEntryIdRouteImport } from './routes/_authenticated/entry.$id'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -100,11 +99,6 @@ const AuthenticatedMenuIndexRoute = AuthenticatedMenuIndexRouteImport.update({
   path: '/menu/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiPublicSentryTestRoute = ApiPublicSentryTestRouteImport.update({
-  id: '/api/public/sentry-test',
-  path: '/api/public/sentry-test',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedMenuIdRoute = AuthenticatedMenuIdRouteImport.update({
   id: '/menu/$id',
   path: '/menu/$id',
@@ -144,7 +138,6 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
-  '/api/public/sentry-test': typeof ApiPublicSentryTestRoute
   '/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesByTo {
@@ -164,7 +157,6 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
-  '/api/public/sentry-test': typeof ApiPublicSentryTestRoute
   '/menu': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRoutesById {
@@ -186,7 +178,6 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/entry/$id': typeof AuthenticatedEntryIdRoute
   '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
-  '/api/public/sentry-test': typeof ApiPublicSentryTestRoute
   '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
 }
 export interface FileRouteTypes {
@@ -208,7 +199,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/entry/$id'
     | '/menu/$id'
-    | '/api/public/sentry-test'
     | '/menu/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -228,7 +218,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/entry/$id'
     | '/menu/$id'
-    | '/api/public/sentry-test'
     | '/menu'
   id:
     | '__root__'
@@ -249,7 +238,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/entry/$id'
     | '/_authenticated/menu/$id'
-    | '/api/public/sentry-test'
     | '/_authenticated/menu/'
   fileRoutesById: FileRoutesById
 }
@@ -262,7 +250,6 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
-  ApiPublicSentryTestRoute: typeof ApiPublicSentryTestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -365,13 +352,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMenuIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/sentry-test': {
-      id: '/api/public/sentry-test'
-      path: '/api/public/sentry-test'
-      fullPath: '/api/public/sentry-test'
-      preLoaderRoute: typeof ApiPublicSentryTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/menu/$id': {
       id: '/_authenticated/menu/$id'
       path: '/menu/$id'
@@ -442,7 +422,6 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
-  ApiPublicSentryTestRoute: ApiPublicSentryTestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

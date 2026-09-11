@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { captureClientError } from "@/lib/sentry-browser";
 
 type EntryRow = {
   rating: number | null;
@@ -44,7 +45,7 @@ export async function recomputeTasteProfile(userId: string) {
   }
   const top = (o: Record<string, number>, n: number) =>
     Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => ({ key: k, count: v }));
-  await supabase.from("taste_profiles").upsert({
+  const { error: upsertError } = await supabase.from("taste_profiles").upsert({
     user_id: userId,
     type_split: typeSplit,
     top_countries: top(countries, 3),
@@ -53,5 +54,16 @@ export async function recomputeTasteProfile(userId: string) {
     avg_alcohol: alcCount ? +(alcSum / alcCount).toFixed(1) : null,
     entry_count: total,
     updated_at: new Date().toISOString(),
+  });
+  if (upsertError) throw upsertError;
+}
+
+/**
+ * Secondary work: the wine is already saved, so a failure here must never change
+ * what the user is told. It goes to Sentry and nowhere else.
+ */
+export function recomputeTasteProfileSafely(userId: string, route: string) {
+  void recomputeTasteProfile(userId).catch((e) => {
+    captureClientError(e instanceof Error ? e : new Error(String(e)), { route });
   });
 }

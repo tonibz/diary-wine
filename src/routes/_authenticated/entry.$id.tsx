@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Wine, Pencil, Trash2, Check, ImagePlus, Camera, X } from "lucide-react";
 import { format } from "date-fns";
-import { recomputeTasteProfile } from "@/lib/taste-profile";
+import { recomputeTasteProfile, recomputeTasteProfileSafely } from "@/lib/taste-profile";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import { markFieldsAsUser } from "@/lib/field-provenance";
 import { wineTypeLabel } from "@/lib/wine-type";
@@ -151,7 +151,7 @@ function EntryDetail() {
     setEditingTasting(false);
     await load();
     const { data } = await supabase.auth.getUser();
-    if (data.user) recomputeTasteProfile(data.user.id);
+    if (data.user) recomputeTasteProfileSafely(data.user.id, "/entry/$id");
   }
 
   /** Wishlist → tasting: ask for rating, date and place, then flip the status. */
@@ -173,7 +173,7 @@ function EntryDetail() {
     toast.success(t("entry.toast.convertedToTasting"));
     await load();
     const { data } = await supabase.auth.getUser();
-    if (data.user) recomputeTasteProfile(data.user.id);
+    if (data.user) recomputeTasteProfileSafely(data.user.id, "/entry/$id");
   }
 
   async function saveWineField(key: string, value: string) {
@@ -185,7 +185,7 @@ function EntryDetail() {
     await markFieldsAsUser(w.id, [key]);
     await load();
     const { data } = await supabase.auth.getUser();
-    if (data.user) recomputeTasteProfile(data.user.id);
+    if (data.user) recomputeTasteProfileSafely(data.user.id, "/entry/$id");
   }
 
   /** Vintage and alcohol live on the wine_vintages row, not on wines. */
@@ -226,7 +226,7 @@ function EntryDetail() {
     if (linkErr) return toast.error(linkErr.message);
     await load();
     const { data } = await supabase.auth.getUser();
-    if (data.user) recomputeTasteProfile(data.user.id);
+    if (data.user) recomputeTasteProfileSafely(data.user.id, "/entry/$id");
   }
 
   async function onBackPhoto(file: File) {
@@ -259,7 +259,7 @@ function EntryDetail() {
     const { error } = await supabase.from("entries").delete().eq("id", entry.id);
     if (error) return toast.error(error.message);
     const { data } = await supabase.auth.getUser();
-    if (data.user) await recomputeTasteProfile(data.user.id);
+    if (data.user) recomputeTasteProfileSafely(data.user.id, "/entry/$id");
     navigate({ to: entry.status === "interested" ? "/wishlist" : "/diary" });
   }
 

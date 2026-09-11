@@ -13,7 +13,7 @@ import {
 import { getSignedPhotoUrls } from "@/lib/wine-photo";
 import { compressImage } from "@/lib/image-compress";
 import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
-import { recomputeTasteProfile } from "@/lib/taste-profile";
+import { recomputeTasteProfileSafely } from "@/lib/taste-profile";
 import { getSignedPhotoUrl } from "@/lib/wine-photo";
 import { localeCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import {
@@ -447,8 +447,9 @@ function AddPage() {
 
 
 
-    if (tasted) await recomputeTasteProfile(uid);
+    // The wine is saved: the message is success, whatever the profile recompute does.
     toast.success(tasted ? t("add.toast.savedDiary") : t("add.toast.savedWishlist"));
+    if (tasted) recomputeTasteProfileSafely(uid, "/add");
     navigate({ to: "/entry/$id", params: { id: entry.id } });
   }
 
