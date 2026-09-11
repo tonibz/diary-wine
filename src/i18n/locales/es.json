@@ -481,5 +481,12 @@
       "signInFailed": "No se pudo entrar.",
       "somethingWrong": "Algo ha salido mal."
     }
+  },
+  "errorState": {
+    "title": "No he podido cargar esto",
+    "body": "Ha fallado algo por nuestra parte. Tus datos están a salvo.",
+    "retry": "Probar otra vez",
+    "offline": "Parece que no tienes conexión. Compruébala y vuelve a intentarlo.",
+    "settingsBlocked": "No he podido cargar tus ajustes, así que ahora mismo no se pueden cambiar."
   }
 }

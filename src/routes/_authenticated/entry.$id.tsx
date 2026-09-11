@@ -259,7 +259,7 @@ function EntryDetail() {
     const { error } = await supabase.from("entries").delete().eq("id", entry.id);
     if (error) return toast.error(error.message);
     const { data } = await supabase.auth.getUser();
-    if (data.user) await recomputeTasteProfile(data.user.id);
+    if (data.user) recomputeTasteProfileSafely(data.user.id, "/entry/$id");
     navigate({ to: entry.status === "interested" ? "/wishlist" : "/diary" });
   }
 
