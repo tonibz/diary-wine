@@ -447,8 +447,9 @@ function AddPage() {
 
 
 
-    if (tasted) await recomputeTasteProfile(uid);
+    // The wine is saved: the message is success, whatever the profile recompute does.
     toast.success(tasted ? t("add.toast.savedDiary") : t("add.toast.savedWishlist"));
+    if (tasted) recomputeTasteProfileSafely(uid, "/add");
     navigate({ to: "/entry/$id", params: { id: entry.id } });
   }
 

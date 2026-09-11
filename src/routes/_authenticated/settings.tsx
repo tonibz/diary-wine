@@ -121,7 +121,16 @@ function SettingsPage() {
           </div>
           <Switch checked={gpsLookup} onCheckedChange={setGpsLookup} />
         </div>
-        <Button onClick={save} disabled={saving}>{saving ? "…" : t("common.save")}</Button>
+        {/* Saving defaults over the user's real settings is worse than not saving. */}
+        {loadError && (
+          <div className="pt-2 border-t border-border">
+            <p className="text-sm text-destructive">{t("errorState.settingsBlocked")}</p>
+            <ErrorState onRetry={reload} className="py-6" />
+          </div>
+        )}
+        <Button onClick={save} disabled={saving || blocked}>
+          {saving ? "…" : t("common.save")}
+        </Button>
       </section>
 
       <button

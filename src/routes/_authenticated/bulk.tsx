@@ -399,7 +399,7 @@ function BulkPage() {
       setSavedCount(ok + failed);
     }
 
-    if (anyTasted) await recomputeTasteProfile(uid);
+    if (anyTasted) recomputeTasteProfileSafely(uid, "/bulk");
     clearProgress();
     toast.success(
       failed
