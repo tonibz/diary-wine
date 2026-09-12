@@ -22,6 +22,7 @@ import {
 import { format } from "date-fns";
 import { withTimeout } from "@/lib/with-timeout";
 import { checkAgainstReference } from "@/lib/appellation-check";
+import { captureClientError } from "@/lib/sentry-browser";
 
 export const BULK_STORAGE_KEY = "wine-diary:bulk-import:v1";
 
@@ -281,6 +282,7 @@ export async function recogniseItem(
     if (outcome) referenceValues = { ...outcome.fills };
   } catch (e) {
     console.error("appellation reference check failed", e);
+    captureClientError(e instanceof Error ? e : new Error(String(e)), { area: "bulk-import" });
   }
   return {
     ...base,

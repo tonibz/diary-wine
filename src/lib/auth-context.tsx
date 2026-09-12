@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { retryPendingTasteProfile } from "@/lib/taste-profile";
 
 type AuthCtx = { user: User | null; session: Session | null; loading: boolean };
 const Ctx = createContext<AuthCtx>({ user: null, session: null, loading: true });
@@ -30,20 +31,31 @@ export function cleanAuthTokensFromUrl() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const retried = useRef(false);
 
   useEffect(() => {
+    // A taste-profile recompute that failed in an earlier session is retried
+    // once here, quietly, so the profile stops drifting from the diary.
+    const onSession = (s: Session | null) => {
+      if (!s?.user || retried.current) return;
+      retried.current = true;
+      retryPendingTasteProfile(s.user.id);
+    };
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setLoading(false);
       if (s) cleanAuthTokensFromUrl();
+      onSession(s);
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
       if (data.session) cleanAuthTokensFromUrl();
+      onSession(data.session);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
 
   return (
     <Ctx.Provider value={{ user: session?.user ?? null, session, loading }}>

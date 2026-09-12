@@ -1,9 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
+import { captureClientError } from "@/lib/sentry-browser";
 import { withTimeout } from "@/lib/with-timeout";
 import { withValidSession } from "@/lib/session-guard";
 import { normalise, type DiaryWine, type MenuItemRow } from "@/lib/menu-match";
 import { i18next } from "@/i18n";
 import { wineTypeLabel } from "@/lib/wine-type";
+
+/**
+ * Recommendation and reference bookkeeping. Never shown to the user — the
+ * suggestions still render — but a gap in these tables has to reach Sentry.
+ */
+function reportQuiet(what: string, error: unknown) {
+  console.error(what, error);
+  captureClientError(error instanceof Error ? error : new Error(`${what}: ${JSON.stringify(error)}`), {
+    area: "menu-recommend",
+  });
+}
+
 
 
 /**
@@ -188,7 +201,7 @@ export async function fillFromAppellations(
   );
 
   if (error) {
-    console.error("lookup_appellations failed", error);
+    reportQuiet("lookup_appellations failed", error);
     return out;
   }
 
@@ -329,7 +342,7 @@ export async function recommendMenu(
     filled = await fillFromAppellations(items);
   } catch (err) {
     // The reference is a bonus, not a dependency.
-    console.error("Appellation fill failed", err);
+    reportQuiet("Appellation fill failed", err);
   }
   return items.map((item) => scoreItem(item, profile, filled.get(item.id)));
 }
@@ -359,7 +372,7 @@ export async function logRecommendations(args: {
   const { error } = await supabase
     .from("recommendations" as never)
     .upsert(rows as never, { onConflict: "menu_item_id" });
-  if (error) console.error("recommendations log failed", error);
+  if (error) reportQuiet("recommendations log failed", error);
 }
 
 /** The direct measure of whether a suggestion was any good. */
@@ -368,7 +381,7 @@ export async function markRecommendationActedOn(menuItemId: string): Promise<voi
     .from("recommendations" as never)
     .update({ acted_on: true } as never)
     .eq("menu_item_id", menuItemId);
-  if (error) console.error("recommendation acted_on failed", error);
+  if (error) reportQuiet("recommendation acted_on failed", error);
 }
 
 /**

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import { valuesEquivalent } from "@/lib/field-provenance";
+import { captureClientError } from "@/lib/sentry-browser";
 
 /** Reference row from the Wikipedia-derived appellations table. */
 export type AppellationRef = {
@@ -43,6 +44,17 @@ export type ModelSnapshot = {
 
 const MATCH_THRESHOLD = 0.8;
 
+/**
+ * Measurement plumbing: the user gains nothing from an alert here, but a table
+ * that silently stops being written must reach us, so it goes to Sentry.
+ */
+function reportQuiet(what: string, error: unknown) {
+  console.error(what, error);
+  captureClientError(error instanceof Error ? error : new Error(`${what}: ${JSON.stringify(error)}`), {
+    area: "appellation-check",
+  });
+}
+
 function toGrapeArray(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.map((x) => String(x).trim()).filter((s) => s !== "");
@@ -70,7 +82,7 @@ export async function lookupAppellation(appellation: string | null | undefined):
     "Appellation lookup timed out",
   );
   if (error) {
-    console.error("lookup_appellation failed", error);
+    reportQuiet("lookup_appellation failed", error);
     return null;
   }
   const row = (data as Array<Record<string, unknown>> | null)?.[0];
@@ -166,7 +178,7 @@ export async function checkAgainstReference(
 
   if (rows.length) {
     const { error } = await supabase.from("inference_checks").insert(rows as never);
-    if (error) console.error("inference_checks insert failed", error);
+    if (error) reportQuiet("inference_checks insert failed", error);
   }
 
   // Fill gaps only where the model said nothing
@@ -217,5 +229,5 @@ export async function recordUserResolution(
     .update({ user_resolved_to: value } as never)
     .eq("recognition_id", recognitionId)
     .eq("field", checkField);
-  if (error) console.error("inference_checks resolution failed", error);
+  if (error) reportQuiet("inference_checks resolution failed", error);
 }
