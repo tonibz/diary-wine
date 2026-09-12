@@ -68,9 +68,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       } catch {
         /* storage unavailable */
       }
+      // The language already applied locally, so a failed save is not worth an
+      // alert — but it must reach Sentry, or the choice silently won't stick.
       void supabase.auth.getUser().then(({ data }) => {
         if (!data.user) return;
-        void supabase.from("profiles").upsert({ id: data.user.id, language: code });
+        void supabase
+          .from("profiles")
+          .upsert({ id: data.user.id, language: code })
+          .then(({ error }) => {
+            if (error) {
+              captureClientError(new Error(`profile language save failed: ${error.message}`), {
+                area: "language",
+              });
+            }
+          });
       });
     },
     [apply],

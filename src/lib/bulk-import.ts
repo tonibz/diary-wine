@@ -281,6 +281,7 @@ export async function recogniseItem(
     if (outcome) referenceValues = { ...outcome.fills };
   } catch (e) {
     console.error("appellation reference check failed", e);
+    captureClientError(e instanceof Error ? e : new Error(String(e)), { area: "bulk-import" });
   }
   return {
     ...base,

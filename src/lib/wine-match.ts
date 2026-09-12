@@ -53,12 +53,18 @@ export async function findBestMatches(
   const out: Array<WineCandidate | null> = inputs.map(() => null);
   if (!inputs.length) return out;
 
-  const { data, error } = await withValidSession(async () =>
-    supabase.rpc("find_wine_matches", {
-      _names: inputs.map((i) => i.name ?? ""),
-      _producers: inputs.map((i) => i.producer ?? ""),
-    } as never),
+  // Same 15s ceiling as every other read: matching may fail, but it may not hang.
+  const { data, error } = await withTimeout(
+    withValidSession(async () =>
+      supabase.rpc("find_wine_matches", {
+        _names: inputs.map((i) => i.name ?? ""),
+        _producers: inputs.map((i) => i.producer ?? ""),
+      } as never),
+    ),
+    15_000,
+    i18next.t("dupe.matchFailed"),
   );
+
 
   if (error) {
     console.error("find_wine_matches failed", error);
