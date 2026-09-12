@@ -58,12 +58,46 @@ export async function recomputeTasteProfile(userId: string) {
   if (upsertError) throw upsertError;
 }
 
+const PENDING_KEY = "wine-diary:taste-profile-pending";
+
+function markPending(userId: string) {
+  try {
+    localStorage.setItem(PENDING_KEY, userId);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function clearPending() {
+  try {
+    localStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 /**
  * Secondary work: the wine is already saved, so a failure here must never change
- * what the user is told. It goes to Sentry and nowhere else.
+ * what the user is told. It goes to Sentry, and the profile is marked stale so
+ * the next app open recomputes it instead of leaving it wrong forever.
  */
 export function recomputeTasteProfileSafely(userId: string, route: string) {
-  void recomputeTasteProfile(userId).catch((e) => {
-    captureClientError(e instanceof Error ? e : new Error(String(e)), { route });
-  });
+  void recomputeTasteProfile(userId)
+    .then(clearPending)
+    .catch((e) => {
+      markPending(userId);
+      captureClientError(e instanceof Error ? e : new Error(String(e)), { route });
+    });
+}
+
+/** Called once per app start: retry a recompute that failed in an earlier session. */
+export function retryPendingTasteProfile(userId: string) {
+  let pending: string | null = null;
+  try {
+    pending = localStorage.getItem(PENDING_KEY);
+  } catch {
+    return;
+  }
+  if (pending !== userId) return;
+  recomputeTasteProfileSafely(userId, "startup-retry");
 }
