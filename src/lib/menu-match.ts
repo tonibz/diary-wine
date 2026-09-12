@@ -3,6 +3,7 @@ import { findBestMatches } from "@/lib/wine-match";
 import { withValidSession } from "@/lib/session-guard";
 import { withTimeout } from "@/lib/with-timeout";
 import { i18next } from "@/i18n";
+import { captureClientError } from "@/lib/sentry-browser";
 
 import type {
   MenuParsedItem,
@@ -244,12 +245,21 @@ export async function saveMenuScan(args: {
 
   if (args.supersedeScanId) {
     // Kept, not deleted: the earlier reading is still evidence of what was read.
-    // Fire and forget — bookkeeping must never delay the results screen.
+    // Fire and forget — bookkeeping must never delay the results screen — but a
+    // failure still has to reach Sentry, or old scans quietly stay current.
     void menuDb
       .from("menu_scans")
       .update({ superseded: true, superseded_by: (scan as { id: string }).id })
-      .eq("id", args.supersedeScanId);
+      .eq("id", args.supersedeScanId)
+      .then(({ error: supersedeError }: { error: unknown }) => {
+        if (supersedeError) {
+          captureClientError(new Error(`menu_scans supersede failed: ${JSON.stringify(supersedeError)}`), {
+            area: "menu-match",
+          });
+        }
+      });
   }
+
 
   const rows = args.items.map((it, i) => ({
     menu_scan_id: (scan as { id: string }).id,

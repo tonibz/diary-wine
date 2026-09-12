@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import { i18next } from "@/i18n";
+import { captureClientError } from "@/lib/sentry-browser";
 import type { LabelComparison } from "@/lib/compare-labels.functions";
 
 export type CompareFn = (args: {
@@ -69,6 +70,7 @@ export async function compareLabelsVisually(
     );
     if (!res.ok) {
       console.error("compare-labels failed", res.error);
+      captureClientError(new Error(`compare-labels failed: ${res.error}`), { area: "label-compare" });
       return null;
     }
     const c = res.data;
@@ -78,6 +80,7 @@ export async function compareLabelsVisually(
     return { comparison: c, outcome };
   } catch (e) {
     console.error("compare-labels error", e);
+    captureClientError(e instanceof Error ? e : new Error(String(e)), { area: "label-compare" });
     return null;
   }
 }
