@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { withValidSession } from "@/lib/session-guard";
 import { i18next } from "@/i18n";
 import type { FieldSources } from "@/lib/field-provenance";
+import { withTimeout } from "@/lib/with-timeout";
 
 
 export type WineCandidate = {

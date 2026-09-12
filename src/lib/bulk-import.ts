@@ -22,6 +22,7 @@ import {
 import { format } from "date-fns";
 import { withTimeout } from "@/lib/with-timeout";
 import { checkAgainstReference } from "@/lib/appellation-check";
+import { captureClientError } from "@/lib/sentry-browser";
 
 export const BULK_STORAGE_KEY = "wine-diary:bulk-import:v1";
 

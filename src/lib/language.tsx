@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { i18next, detectBrowserLanguage, LANGUAGE_STORAGE_KEY, type LanguageCode } from "@/i18n";
 import { FALLBACK_LANGUAGE, resolveLanguage } from "@/i18n/locales";
 import { supabase } from "@/integrations/supabase/client";
+import { captureClientError } from "@/lib/sentry-browser";
 
 type LanguageCtx = {
   language: LanguageCode;
