@@ -42,12 +42,24 @@ function TastePage() {
       .eq("user_id", userRes.user.id)
       .maybeSingle();
     if (profileErr) throw profileErr;
-    const { count, error: countErr } = await supabase
-      .from("entries")
-      .select("wine:wines!inner(wine_type)", { count: "exact", head: true })
-      .not("wine.wine_type", "in", "(red,white)");
-    if (countErr) throw countErr;
-    return { profile: (row as unknown as Taste | null) ?? null, otherCount: count ?? 0 };
+    // Secondary extra: entries join wines through wine_vintages since the
+    // wine/vintage split. A failure here must never hide the profile itself.
+    let otherCount = 0;
+    try {
+      const { count, error: countErr } = await supabase
+        .from("entries")
+        .select("vintage_row:wine_vintages!inner(wine:wines!inner(wine_type))", {
+          count: "exact",
+          head: true,
+        })
+        .eq("status", "tasted")
+        .not("vintage_row.wine.wine_type", "in", "(red,white)");
+      if (countErr) throw countErr;
+      otherCount = count ?? 0;
+    } catch (e) {
+      captureClientError(e instanceof Error ? e : new Error(String(e)), { route: "/taste" });
+    }
+    return { profile: (row as unknown as Taste | null) ?? null, otherCount };
   });
 
   if (loading) {
