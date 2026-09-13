@@ -789,6 +789,7 @@ export type Database = {
         | "auto_new"
         | "auto_merge_visual"
         | "auto_new_visual"
+        | "auto_new_no_photo"
       price_context_kind: "restaurant" | "shop" | "online" | "other"
       wine_data_source: "label" | "inferred" | "user"
       wine_type:
@@ -933,6 +934,7 @@ export const Constants = {
         "auto_new",
         "auto_merge_visual",
         "auto_new_visual",
+        "auto_new_no_photo",
       ],
       price_context_kind: ["restaurant", "shop", "online", "other"],
       wine_data_source: ["label", "inferred", "user"],
