@@ -875,6 +875,11 @@ function AddPage() {
                     ))}
                   </div>
                 )}
+                {mergePrompt && (mergePrompt.candidatePhotoUrl || mergePrompt.newPhotoUrl) && (
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    {t("add.merge.photoNote")}
+                  </p>
+                )}
                 {mergePrompt?.visual?.comparison.reason && (
                   <p className="text-xs text-foreground rounded-lg bg-primary/5 border border-primary/20 p-2">
                     {mergePrompt.visual.comparison.reason}
