@@ -33,7 +33,6 @@ type Item = {
       producer: string | null;
       region: string | null;
       country: string | null;
-      label_image_url: string | null;
     } | null;
   } | null;
   display_photo: string | null;
@@ -46,7 +45,7 @@ function WishlistPage() {
     const { data, error: readError } = await supabase
       .from("entries")
       .select(
-        "id, photo_url, notes, vintage_row:wine_vintages(vintage, wine:wines(name, producer, region, country, label_image_url))",
+        "id, photo_url, notes, vintage_row:wine_vintages(vintage, wine:wines(name, producer, region, country))",
       )
       .eq("status", "interested")
       .order("created_at", { ascending: false });

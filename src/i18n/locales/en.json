@@ -142,12 +142,13 @@
     },
     "merge": {
       "title": "Is this the same wine?",
-      "description": "We already have something very close. Different years of the same wine belong together, but two producers can make wines with the same name.",
-      "existing": "Already in your diary",
+      "description": "There's already a very close match in the catalogue. Different years of the same wine belong together, but two producers can make wines with the same name.",
+      "existing": "Already in the catalogue",
       "thisBottle": "The bottle you just scanned",
       "labelAlt": "{{label}} label",
       "noPhoto": "No photo saved for this one",
       "confidence": "Name and producer match {{pct}}%",
+      "photoNote": "Label photos are shown so you can compare. They may have been taken by someone else.",
       "yes": "Yes, same wine",
       "no": "No, different wine"
     },

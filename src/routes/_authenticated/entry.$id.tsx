@@ -56,7 +56,6 @@ type Entry = {
       id: string; name: string; producer: string | null; appellation: string | null;
       region: string | null; country: string | null;
       wine_type: string | null; grapes: string[] | null;
-      label_image_url: string | null;
     } | null;
   } | null;
 };
@@ -75,7 +74,7 @@ function useWineFields(): Array<{ key: keyof WineRow; label: string; options?: s
 }
 
 const SELECT =
-  "id, photo_url, back_photo_url, rating, tasted_on, place, company, notes, status, price_paid, price_currency, price_context, wine_vintage_id, vintage_row:wine_vintages(id, vintage, alcohol_percent, wine:wines(id, name, producer, appellation, region, country, wine_type, grapes, label_image_url))";
+  "id, photo_url, back_photo_url, rating, tasted_on, place, company, notes, status, price_paid, price_currency, price_context, wine_vintage_id, vintage_row:wine_vintages(id, vintage, alcohol_percent, wine:wines(id, name, producer, appellation, region, country, wine_type, grapes))";
 
 function EntryDetail() {
   const { t } = useTranslation();
@@ -121,7 +120,8 @@ function EntryDetail() {
       setPricePaid(e.price_paid != null ? String(e.price_paid) : "");
       if (e.price_currency) setPriceCurrency(e.price_currency);
       setPriceContext(e.price_context ?? "");
-      const ref = e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null;
+      // Only this user's own photo is shown outside the duplicate check.
+      const ref = e.photo_url ?? null;
       setPhotoUrl(await getSignedPhotoUrl(ref));
       setBackPhotoUrl(await getSignedPhotoUrl(e.back_photo_url));
     } catch (e) {
