@@ -336,7 +336,9 @@ function AddPage() {
       country: bottle.country.trim() || null,
       wine_type: bottle.wine_type || null,
       grapes: bottle.grapes,
-      label_image_url: null, // privacy: never contribute personal photos to shared catalogue
+      // The label photo identifies the wine, so it goes on the catalogue row.
+      // It is only ever displayed where a duplicate has to be decided.
+      label_image_url: isStoragePath(photoPath) ? photoPath : null,
       data_source: rowDataSource(sources),
       field_sources: sources,
       vintage: bottle.vintage ? Number(bottle.vintage) : null,
