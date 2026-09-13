@@ -235,6 +235,7 @@ function BulkPage() {
           out = {
             ...out,
             candidatePhotoUrl: candUrl,
+            noPhotoCompare: !candUrl || !out.photoPath,
             visual: verdict
               ? {
                   same_wine: verdict.comparison.same_wine,
@@ -663,7 +664,8 @@ function Row({
     item.candidate &&
     (item.candidateScore ?? 0) >= 0.6 &&
     (item.candidateScore ?? 0) < 0.85 &&
-    !item.visualResolved
+    !item.visualResolved &&
+    !item.noPhotoCompare
       ? item.candidate
       : null;
   const looseBacks = items.filter((i) => !i.discarded && isLooseBack(i) && i.id !== item.id);

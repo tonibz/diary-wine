@@ -10,7 +10,7 @@ import {
   type CompareFn,
   type VisualVerdict,
 } from "@/lib/label-compare";
-import { getSignedPhotoUrls } from "@/lib/wine-photo";
+import { getSignedPhotoUrls, isStoragePath } from "@/lib/wine-photo";
 import { compressImage } from "@/lib/image-compress";
 import { readPhotoMeta, reverseGeocode } from "@/lib/photo-meta";
 import { recomputeTasteProfileSafely } from "@/lib/taste-profile";
@@ -492,8 +492,21 @@ function AddPage() {
           return;
         }
 
+        // Without both labels there is nothing to compare: asking blind risks
+        // merging two different wines, which is far worse than a duplicate.
+        if (!candPath || !isStoragePath(photoPath)) {
+          const newId = await insertNewWine(draft, uid);
+          await finalizeSave(newId, draft, uid, "auto_new_no_photo", candidate, visual);
+          return;
+        }
+
         // Still unclear — ask, but show both labels.
         const [candidatePhotoUrl, newPhotoUrl] = await getSignedPhotoUrls([candPath, photoPath]);
+        if (!candidatePhotoUrl || !newPhotoUrl) {
+          const newId = await insertNewWine(draft, uid);
+          await finalizeSave(newId, draft, uid, "auto_new_no_photo", candidate, visual);
+          return;
+        }
         setMergePrompt({ candidate, draft, visual, candidatePhotoUrl, newPhotoUrl });
         return;
       }

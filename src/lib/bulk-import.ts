@@ -88,6 +88,8 @@ export type BulkItem = {
   visualResolved: boolean;
   /** signed URL of the candidate wine's label, shown when we still have to ask */
   candidatePhotoUrl: string | null;
+  /** true when one of the two labels has no photo: never ask blind, create a new wine */
+  noPhotoCompare: boolean;
   /** another item earlier in this same batch that looks like the same wine */
   dupOfId: string | null;
   dupOfScore: number | null;
@@ -129,6 +131,7 @@ export function newItem(id: string): BulkItem {
     visual: null,
     visualResolved: false,
     candidatePhotoUrl: null,
+    noPhotoCompare: false,
     dupOfId: null,
     dupOfScore: null,
     dupChoice: "different",
@@ -379,7 +382,8 @@ export function draftOf(item: BulkItem): WineDraft {
     country: f.country.trim() || null,
     wine_type: f.wine_type || null,
     grapes: f.grapes,
-    label_image_url: null, // privacy: personal photos stay out of the shared catalogue
+    // The label photo identifies the wine; shown only where a duplicate is decided.
+    label_image_url: item.photoPath && !/^https?:\/\//i.test(item.photoPath) ? item.photoPath : null,
     data_source: rowDataSource(sources),
     field_sources: sources,
     vintage: f.vintage ? Number(f.vintage) : null,
@@ -399,7 +403,7 @@ async function insertWine(draft: WineDraft, uid: string): Promise<string> {
       country: draft.country,
       wine_type: draft.wine_type as never,
       grapes: draft.grapes,
-      label_image_url: null,
+      label_image_url: draft.label_image_url,
       data_source: draft.data_source as never,
       field_sources: draft.field_sources as never,
       created_by: uid,
@@ -431,6 +435,10 @@ export async function saveItem(
       await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
       wineId = candidate.id;
       decision = "auto_merge";
+    } else if (candidate && candidate.score >= 0.6 && item.noPhotoCompare) {
+      // Nothing to compare, so nothing was asked: a new wine is the safe outcome.
+      wineId = await insertWine(draft, uid);
+      decision = "auto_new_no_photo";
     } else if (candidate && candidate.score >= 0.6 && item.mergeChoice === "same") {
       await fillEmptyWineFields(candidate.id, draft);
       await mergeFieldSources(candidate.id, draft.field_sources, { onlyMissing: true });
