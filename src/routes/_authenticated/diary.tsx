@@ -28,7 +28,6 @@ type Entry = {
       name: string;
       producer: string | null;
       wine_type: string | null;
-      label_image_url: string | null;
     } | null;
   } | null;
   display_photo: string | null;
@@ -59,13 +58,14 @@ function DiaryPage() {
     const { data, error: readError } = await supabase
       .from("entries")
       .select(
-        "id, photo_url, rating, tasted_on, place, company, vintage_row:wine_vintages(id, vintage, wine:wines(id, name, producer, wine_type, label_image_url))",
+        "id, photo_url, rating, tasted_on, place, company, vintage_row:wine_vintages(id, vintage, wine:wines(id, name, producer, wine_type))",
       )
       .eq("status", "tasted")
       .order("created_at", { ascending: false });
     if (readError) throw readError;
     const rows = (data ?? []) as unknown as Entry[];
-    const refs = rows.map((e) => e.photo_url ?? e.vintage_row?.wine?.label_image_url ?? null);
+    // Only the diarist's own photo: catalogue labels may belong to someone else.
+    const refs = rows.map((e) => e.photo_url ?? null);
     const signed = await getSignedPhotoUrls(refs);
     rows.forEach((e, i) => { e.display_photo = signed[i]; });
     return rows;
