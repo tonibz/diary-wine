@@ -142,12 +142,13 @@
     },
     "merge": {
       "title": "¿Es el mismo vino?",
-      "description": "Ya tenemos uno muy parecido. Dos añadas del mismo vino van juntas, pero dos bodegas pueden hacer vinos con el mismo nombre.",
-      "existing": "Ya en tu diario",
+      "description": "Ya hay uno muy parecido en el catálogo. Dos añadas del mismo vino van juntas, pero dos bodegas pueden hacer vinos que se llamen igual.",
+      "existing": "Ya está en el catálogo",
       "thisBottle": "La botella que acabas de escanear",
       "labelAlt": "Etiqueta: {{label}}",
-      "noPhoto": "No hay foto guardada de este",
+      "noPhoto": "De este no hay foto guardada",
       "confidence": "El nombre y la bodega coinciden un {{pct}}%",
+      "photoNote": "Las fotos de etiqueta se muestran para que puedas comparar. Puede que las haya hecho otra persona.",
       "yes": "Sí, es el mismo",
       "no": "No, es otro vino"
     },
