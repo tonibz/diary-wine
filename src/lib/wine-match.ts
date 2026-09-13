@@ -170,7 +170,9 @@ export type MatchDecision =
   | "user_rejected"
   | "auto_new"
   | "auto_merge_visual"
-  | "auto_new_visual";
+  | "auto_new_visual"
+  /** ambiguous match, but one of the two labels had no photo: never ask blind */
+  | "auto_new_no_photo";
 
 export async function logDecision(
   userId: string,
