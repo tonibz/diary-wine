@@ -141,7 +141,8 @@ export async function fillEmptyWineFields(existingId: string, draft: WineDraft):
   setIfEmpty("country", existing.country, draft.country);
   setIfEmpty("wine_type", existing.wine_type, draft.wine_type);
   setIfEmpty("grapes", existing.grapes, draft.grapes);
-  // label_image_url intentionally not filled: personal photos stay out of the shared catalogue.
+  // Label photos are shared now: fill an empty one, never overwrite an existing one.
+  setIfEmpty("label_image_url", existing.label_image_url, draft.label_image_url);
 
   if (Object.keys(patch).length > 0) {
     await supabase.from("wines").update(patch as never).eq("id", existingId);
