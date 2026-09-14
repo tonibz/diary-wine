@@ -489,5 +489,8 @@
     "retry": "Probar otra vez",
     "offline": "Parece que no tienes conexión. Compruébala y vuelve a intentarlo.",
     "settingsBlocked": "No he podido cargar tus ajustes, así que ahora mismo no se pueden cambiar."
+  },
+  "dupe": {
+    "matchFailed": "No he podido consultar el catálogo. Prueba otra vez o guárdalo como un vino nuevo."
   }
 }

@@ -283,7 +283,29 @@
     "gpsHint": "When on, we look up the place name from your photo's GPS so we can prefill where you tasted it. Off by default.",
     "saved": "Saved",
     "signOut": "Sign out",
-    "footer": "Wine Diary — kept just for you."
+    "footer": "Wine Diary — kept just for you.",
+    "exportTitle": "Download your diary",
+    "exportHint": "A spreadsheet file with every bottle you've noted down: wine, producer, appellation, region, country, vintage, type, grapes, your note and rating, the date, the place, who you were with and what you paid.",
+    "exportButton": "Download CSV",
+    "exportPreparing": "Preparing your file…",
+    "exportEmpty": "There's nothing to download yet.",
+    "exportDone": "Downloaded",
+    "exportFailed": "Couldn't prepare your file. Try again.",
+    "deleteTitle": "Delete your account",
+    "deleteHint": "This removes your account and everything in it, for good. Download your diary first if you want to keep it.",
+    "deleteButton": "Delete account",
+    "deleteDialogTitle": "Delete your account for good?",
+    "deleteDialogBody": "This cannot be undone. Your tastings, your menu scans, your photos, your taste profile and your login will all be deleted.",
+    "deleteKeeps": "Wines you added to the shared catalogue stay there, because other people have tastings linked to them. Your name is removed from them.",
+    "deletePhotos": "All your photos are deleted, including any that had become a wine's catalogue photo.",
+    "deleteTypePrompt": "Type {{word}} to confirm.",
+    "deleteConfirmWord": "DELETE",
+    "deletePlaceholder": "Type {{word}}",
+    "deleteCancel": "Keep my account",
+    "deleteConfirm": "Delete everything",
+    "deleteWorking": "Deleting…",
+    "deleteFailed": "Couldn't delete your account. Nothing was changed. Try again.",
+    "deleteDone": "Your account has been deleted."
   },
   "wishlist": {
     "metaTitle": "Wishlist — Wine Diary",
@@ -489,5 +511,8 @@
     "retry": "Try again",
     "offline": "You seem to be offline. Check your connection and try again.",
     "settingsBlocked": "Your settings couldn't be loaded, so they can't be changed right now."
+  },
+  "dupe": {
+    "matchFailed": "Couldn't check the catalogue. Try again, or save it as a new wine."
   }
 }
