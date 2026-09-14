@@ -115,7 +115,7 @@ export async function findOrCreateVintage(
 export async function fillEmptyWineFields(existingId: string, draft: WineDraft): Promise<void> {
   const { data: existing } = await supabase
     .from("wines")
-    .select("producer, appellation, region, country, wine_type, grapes")
+    .select("producer, appellation, region, country, wine_type, grapes, label_image_url")
     .eq("id", existingId)
     .single();
   if (!existing) return;
