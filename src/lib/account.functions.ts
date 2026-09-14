@@ -95,25 +95,25 @@ export const deleteAccount = createServerFn({ method: "POST" })
       const scanIds = (scanRows ?? []).map((r) => r.id);
 
       const steps: Array<{ table: string; run: () => Promise<{ error: unknown }> }> = [
-        { table: "recommendations", run: () => supabaseAdmin.from("recommendations").delete().eq("user_id", userId) },
-        { table: "recognitions", run: () => supabaseAdmin.from("recognitions").delete().eq("user_id", userId) },
-        { table: "entries", run: () => supabaseAdmin.from("entries").delete().eq("user_id", userId) },
-        { table: "match_decisions", run: () => supabaseAdmin.from("match_decisions").delete().eq("user_id", userId) },
-        { table: "taste_profiles", run: () => supabaseAdmin.from("taste_profiles").delete().eq("user_id", userId) },
+        { table: "recommendations", run: async () => supabaseAdmin.from("recommendations").delete().eq("user_id", userId) },
+        { table: "recognitions", run: async () => supabaseAdmin.from("recognitions").delete().eq("user_id", userId) },
+        { table: "entries", run: async () => supabaseAdmin.from("entries").delete().eq("user_id", userId) },
+        { table: "match_decisions", run: async () => supabaseAdmin.from("match_decisions").delete().eq("user_id", userId) },
+        { table: "taste_profiles", run: async () => supabaseAdmin.from("taste_profiles").delete().eq("user_id", userId) },
       ];
       if (scanIds.length) {
         steps.unshift({
           table: "menu_items",
-          run: () => supabaseAdmin.from("menu_items").delete().in("menu_scan_id", scanIds),
+          run: async () => supabaseAdmin.from("menu_items").delete().in("menu_scan_id", scanIds),
         });
       }
       steps.push({
         table: "menu_scans",
-        run: () => supabaseAdmin.from("menu_scans").delete().eq("user_id", userId),
+        run: async () => supabaseAdmin.from("menu_scans").delete().eq("user_id", userId),
       });
       steps.push({
         table: "profiles",
-        run: () => supabaseAdmin.from("profiles").delete().eq("id", userId),
+        run: async () => supabaseAdmin.from("profiles").delete().eq("id", userId),
       });
 
       for (const step of steps) {
