@@ -243,7 +243,9 @@ function lineText(item: MenuItemRow) {
 
 function monthOf(date: string) {
   const d = new Date(date);
-  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString("en-GB", { month: "long" });
+  return Number.isNaN(d.getTime())
+    ? null
+    : d.toLocaleDateString(i18next.language, { month: "long" });
 }
 
 function praise(e: DiaryWine) {

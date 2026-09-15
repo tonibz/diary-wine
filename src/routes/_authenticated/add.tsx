@@ -32,6 +32,7 @@ import {
   diffCorrections,
   mergeFieldSources,
 } from "@/lib/field-provenance";
+import { fieldLabelList } from "@/lib/field-label";
 import {
   checkAgainstReference,
   recordUserResolution,
@@ -678,7 +679,7 @@ function AddPage() {
           <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
             <Info size={14} className="mt-0.5 shrink-0" />
             <span>
-              {t("add.photo.inferredNote", { fields: inferredFields.join(", ") })}
+              {t("add.photo.inferredNote", { fields: fieldLabelList(inferredFields) })}
             </span>
           </p>
         )}
