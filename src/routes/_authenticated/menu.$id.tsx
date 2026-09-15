@@ -83,7 +83,7 @@ function MenuScanDetail() {
       } catch (err) {
         if (!active) return;
         console.error("Could not load menu scan", err);
-        setFailure(err instanceof Error ? err.message : "Could not load that scan");
+        setFailure(err instanceof Error ? err.message : t("menu.detail.loadFailed"));
       }
     })();
     return () => {
