@@ -32,6 +32,7 @@ import {
   diffCorrections,
   mergeFieldSources,
 } from "@/lib/field-provenance";
+import { fieldLabelList } from "@/lib/field-label";
 import {
   checkAgainstReference,
   recordUserResolution,
