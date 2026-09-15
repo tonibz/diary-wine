@@ -294,10 +294,13 @@ export function MenuResults({
         {item.price != null && (
           <p className="text-sm font-medium text-foreground">
             {formatMoney(item.price, item.currency)}
-            <span className="text-[11px] font-normal text-muted-foreground">
-              {" "}
-              / {servingLabel(item.serving_basis)}
-            </span>
+            {/* No serving established: show the price alone rather than a dangling slash. */}
+            {servingLabel(item.serving_basis) && (
+              <span className="text-[11px] font-normal text-muted-foreground">
+                {" "}
+                / {servingLabel(item.serving_basis)}
+              </span>
+            )}
           </p>
         )}
         {item.glass_price != null && (
