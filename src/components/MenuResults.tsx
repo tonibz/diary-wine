@@ -28,6 +28,7 @@ import { withTimeout } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
 import { SignedOutError } from "@/lib/session-guard";
 import { formatDate, formatMoney } from "@/lib/format";
+import { wineTypeLabel } from "@/lib/wine-type";
 
 
 
@@ -346,14 +347,14 @@ export function MenuResults({
             <p className="text-sm text-muted-foreground">{s.item.parsed_producer}</p>
           )}
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-            {s.wine_type && <span className="capitalize">{s.wine_type}</span>}
+            {s.wine_type && <span className="capitalize">{wineTypeLabel(s.wine_type)}</span>}
             {s.item.section_heading && <span>· {s.item.section_heading}</span>}
             {s.grapes.length ? <span>· {s.grapes.join(", ")}</span> : null}
             {Object.entries(s.item.attributes ?? {})
               .filter(([, v]) => v === true)
               .map(([k]) => (
                 <span key={k} className="capitalize text-primary/80">
-                  · {k}
+                  · {t(`menu.results.attribute.${k}`, { defaultValue: k })}
                 </span>
               ))}
             {s.item.truncated && (
