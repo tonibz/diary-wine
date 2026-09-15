@@ -49,7 +49,7 @@ function MenuScanDetail() {
     (async () => {
       try {
         mark("loading stored scan");
-        const res = await withTimeout(loadMenuScan(id), 20_000, "Loading that scan took too long");
+        const res = await withTimeout(loadMenuScan(id), 20_000, t("menu.detail.loadTimeout"));
         if (!active) return;
         if (!res) {
           setMissing(true);
@@ -98,11 +98,11 @@ function MenuScanDetail() {
     try {
       const updated = await withTimeout(rematchScan(id), 15_000, "Matching took too long");
       setItems(updated);
-      toast.success("Matched against your diary.");
+      toast.success(t("menu.detail.matchedAgainstDiary"));
     } catch (err) {
       console.error("Re-matching failed", err);
       setMatchFailed(true);
-      if (err instanceof SignedOutError) toast.error("Please sign in again");
+      if (err instanceof SignedOutError) toast.error(t("menu.detail.signInAgain"));
     } finally {
       setRematching(false);
     }
@@ -112,7 +112,7 @@ function MenuScanDetail() {
   return (
     <div className="px-5 pt-6 pb-8">
       <Link to="/menus" className="flex items-center gap-1 text-sm text-muted-foreground mb-5">
-        <ArrowLeft size={16} /> Past scans
+        <ArrowLeft size={16} /> {t("menu.detail.pastScans")}
       </Link>
 
       {failure ? (
@@ -124,15 +124,17 @@ function MenuScanDetail() {
             className="mt-3"
             onClick={() => window.location.reload()}
           >
-            Try again
+            {t("menu.detail.tryAgain")}
           </Button>
         </div>
       ) : missing ? (
         <p className="text-center text-sm text-muted-foreground py-16">
-          That scan is no longer here.
+          {t("menu.detail.scanGone")}
         </p>
       ) : !scan || !items || !user ? (
-        <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
+        <p className="text-center text-sm text-muted-foreground py-16">
+          {t("menu.detail.loading")}
+        </p>
       ) : (
         <>
           <ScanVenue
@@ -142,11 +144,10 @@ function MenuScanDetail() {
 
           <header className="mb-6">
             <h1 className="text-3xl font-serif text-primary">
-              {scan.restaurant_name ?? "Wine list"}
+              {scan.restaurant_name ?? t("menu.detail.title")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {format(new Date(scan.scanned_at), "d MMM yyyy")} · {items.length}{" "}
-              {items.length === 1 ? "wine" : "wines"} read
+              {formatDate(scan.scanned_at)} · {t("menu.detail.winesRead", { count: items.length })}
               {[scan.city, scan.country].filter(Boolean).length
                 ? ` · ${[scan.city, scan.country].filter(Boolean).join(", ")}`
                 : ""}
@@ -154,22 +155,25 @@ function MenuScanDetail() {
             </p>
             {scan.skipped_count > 0 && (
               <p className="text-xs text-muted-foreground mt-2">
-                Skipped {scan.skipped_count} non-wine item
-                {scan.skipped_count === 1 ? "" : "s"}
-                {scan.skipped_categories.length ? ` (${scan.skipped_categories.join(", ")})` : ""}
+                {scan.skipped_categories.length
+                  ? t("menu.detail.skippedWithList", {
+                      count: scan.skipped_count,
+                      list: scan.skipped_categories.join(", "),
+                    })
+                  : t("menu.detail.skipped", { count: scan.skipped_count })}
               </p>
             )}
             {/* Inline only: matching never covers or delays the wine list. */}
             {rematching && (
               <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Loader2 size={12} className="animate-spin" /> checking your diary…
+                <Loader2 size={12} className="animate-spin" /> {t("menu.detail.checkingDiary")}
               </p>
             )}
             {!rematching && matchFailed && (
               <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                Couldn't check your diary.
+                {t("menu.detail.couldntCheckDiary")}
                 <Button variant="outline" size="sm" onClick={onRematch}>
-                  <RotateCcw size={12} /> Retry
+                  <RotateCcw size={12} /> {t("menu.detail.retry")}
                 </Button>
               </p>
             )}
