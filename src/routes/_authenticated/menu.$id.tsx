@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
 import { ArrowLeft, RotateCcw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
 import { loadMenuScan, rematchScan, type MenuItemRow, type MenuScanRow } from "@/lib/menu-match";
 import { MenuResults } from "@/components/MenuResults";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/menu/$id")({
 
 function MenuScanDetail() {
   const { id } = Route.useParams();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [scan, setScan] = useState<MenuScanRow | null>(null);
   const [items, setItems] = useState<MenuItemRow[] | null>(null);
