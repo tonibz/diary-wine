@@ -405,7 +405,13 @@
       "fixed": "Fixed.",
       "couldNotSaveThat": "Couldn't save that.",
       "couldNotDiscardThat": "Couldn't discard that.",
-      "noWinesFound": "No wines found on that photo."
+      "noWinesFound": "No wines found on that photo.",
+      "attribute": {
+        "organic": "organic",
+        "biodynamic": "biodynamic",
+        "natural": "natural",
+        "vegan": "vegan"
+      }
     },
     "scan": {
       "metaTitle": "Scan a wine list — Wine Diary",
@@ -473,6 +479,26 @@
       "dismiss": "Dismiss",
       "prompt": "Where was this list from?",
       "promptHint": "Helps you find this scan later."
+    },
+    "detail": {
+      "pastScans": "Past scans",
+      "title": "Wine list",
+      "winesRead_one": "{{count}} wine read",
+      "winesRead_other": "{{count}} wines read",
+      "skipped_one": "Skipped {{count}} non-wine item",
+      "skipped_other": "Skipped {{count}} non-wine items",
+      "skippedWithList_one": "Skipped {{count}} non-wine item ({{list}})",
+      "skippedWithList_other": "Skipped {{count}} non-wine items ({{list}})",
+      "checkingDiary": "checking your diary…",
+      "couldntCheckDiary": "Couldn't check your diary.",
+      "retry": "Retry",
+      "matchedAgainstDiary": "Matched against your diary.",
+      "signInAgain": "Please sign in again",
+      "scanGone": "That scan is no longer here.",
+      "loading": "Loading…",
+      "tryAgain": "Try again",
+      "loadTimeout": "Loading that scan took too long",
+      "loadFailed": "Couldn't load that scan"
     }
   },
   "auth": {
@@ -514,5 +540,24 @@
   },
   "dupe": {
     "matchFailed": "Couldn't check the catalogue. Try again, or save it as a new wine."
+  },
+  "recommend": {
+    "reason": "{{head}}, like the {{name}} you {{praise}}.",
+    "headWithPlace": "{{what}} from {{where}}",
+    "wineTypeGeneric": "a {{type}}",
+    "wineGeneric": "a wine",
+    "praise": {
+      "rated_one": "gave 1 star",
+      "rated_other": "gave {{count}} stars",
+      "enjoyedInMonth": "enjoyed in {{month}}",
+      "enjoyed": "enjoyed"
+    },
+    "serving": {
+      "bottle": "the bottle",
+      "glass": "the glass",
+      "carafe": "the carafe",
+      "half_bottle": "the half bottle",
+      "unknown": ""
+    }
   }
 }
