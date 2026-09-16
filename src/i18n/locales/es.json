@@ -383,7 +383,13 @@
       "fixed": "Corregido.",
       "couldNotSaveThat": "No se pudo guardar.",
       "couldNotDiscardThat": "No se pudo descartar.",
-      "noWinesFound": "No se han encontrado vinos en esa foto."
+      "noWinesFound": "No se han encontrado vinos en esa foto.",
+      "attribute": {
+        "organic": "ecológico",
+        "biodynamic": "biodinámico",
+        "natural": "natural",
+        "vegan": "vegano"
+      }
     },
     "scan": {
       "metaTitle": "Escanear una carta de vinos — Wine Diary",
@@ -451,6 +457,26 @@
       "dismiss": "Descartar",
       "prompt": "¿De dónde era esta carta?",
       "promptHint": "Te ayuda a encontrar este escaneo más tarde."
+    },
+    "detail": {
+      "pastScans": "Cartas escaneadas",
+      "title": "Carta de vinos",
+      "winesRead_one": "{{count}} vino leído",
+      "winesRead_other": "{{count}} vinos leídos",
+      "skipped_one": "He saltado {{count}} bebida que no es vino",
+      "skipped_other": "He saltado {{count}} bebidas que no son vino",
+      "skippedWithList_one": "He saltado {{count}} bebida que no es vino ({{list}})",
+      "skippedWithList_other": "He saltado {{count}} bebidas que no son vino ({{list}})",
+      "checkingDiary": "consultando tu diario…",
+      "couldntCheckDiary": "No he podido consultar tu diario.",
+      "retry": "Reintentar",
+      "matchedAgainstDiary": "Comparado con tu diario.",
+      "signInAgain": "Vuelve a iniciar sesión",
+      "scanGone": "Esa carta ya no está.",
+      "loading": "Cargando…",
+      "tryAgain": "Probar otra vez",
+      "loadTimeout": "He tardado demasiado en cargar esa carta",
+      "loadFailed": "No he podido cargar esa carta"
     }
   },
   "auth": {
@@ -492,5 +518,24 @@
   },
   "dupe": {
     "matchFailed": "No he podido consultar el catálogo. Prueba otra vez o guárdalo como un vino nuevo."
+  },
+  "recommend": {
+    "reason": "{{head}}, como el {{name}} que {{praise}}.",
+    "headWithPlace": "{{what}} de {{where}}",
+    "wineTypeGeneric": "un {{type}}",
+    "wineGeneric": "un vino",
+    "praise": {
+      "rated_one": "puntuaste con 1 estrella",
+      "rated_other": "puntuaste con {{count}} estrellas",
+      "enjoyedInMonth": "disfrutaste en {{month}}",
+      "enjoyed": "disfrutaste"
+    },
+    "serving": {
+      "bottle": "la botella",
+      "glass": "la copa",
+      "carafe": "la jarra",
+      "half_bottle": "la media botella",
+      "unknown": ""
+    }
   }
 }
