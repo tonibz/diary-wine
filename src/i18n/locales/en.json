@@ -20,7 +20,12 @@
     "untitled": "Untitled",
     "wine": "wine",
     "wineCount_one": "{{count}} wine",
-    "wineCount_other": "{{count}} wines"
+    "wineCount_other": "{{count}} wines",
+    "oneMoment": "One moment…",
+    "takingYouToSignIn": "Taking you to sign in…",
+    "signInAgain": "Sign in again",
+    "tookTooLong": "That took too long. Try again.",
+    "unnamedWine": "Unnamed wine"
   },
   "nav": {
     "diary": "Diary",
@@ -54,7 +59,8 @@
   },
   "entry": {
     "starsCount_one": "{{count}} star",
-    "starsCount_other": "{{count}} stars"
+    "starsCount_other": "{{count}} stars",
+    "notFound": "I can't find that tasting"
   },
   "add": {
     "title": "Add a wine",
@@ -160,7 +166,9 @@
       "savedWishlist": "Added to your wishlist.",
       "nameRequired": "A name is needed, even a rough one.",
       "saveFailed": "Save failed"
-    }
+    },
+    "readingFailed": "Could not read the uploaded photo",
+    "serviceUnavailable": "The wine-reading service is not configured"
   },
   "bulk": {
     "meta": {
@@ -269,7 +277,9 @@
       "uploadFailed": "Couldn't upload this photo",
       "readFailed": "Couldn't read this photo",
       "sortTimeout": "Sorting front and back labels took too long"
-    }
+    },
+    "photoGone": "That photo is no longer available",
+    "photoTimeout": "Reading that photo took too long"
   },
   "settings": {
     "language": "Language",
@@ -411,7 +421,9 @@
         "biodynamic": "biodynamic",
         "natural": "natural",
         "vegan": "vegan"
-      }
+      },
+      "diaryTimeout": "Reading your diary took too long",
+      "scoringTimeout": "Working out suggestions took too long"
     },
     "scan": {
       "metaTitle": "Scan a wine list — Wine Diary",
@@ -460,7 +472,8 @@
       "toasts": {
         "salvagedPage_one": "Saved {{count}} wine — part of a page was cut off.",
         "salvagedPage_other": "Saved {{count}} wines — part of a page was cut off."
-      }
+      },
+      "serviceUnavailable": "The wine-reading service is not configured"
     },
     "venue": {
       "place": "Place",
@@ -559,5 +572,22 @@
       "half_bottle": "the half bottle",
       "unknown": ""
     }
+  },
+  "menus": {
+    "back": "Diary",
+    "title": "Wine lists",
+    "subtitle": "Places where you've scanned a wine list, newest first.",
+    "export": "Export prices (CSV)",
+    "exportPreparing": "Preparing…",
+    "exportFailed": "Couldn't build that export. Please try again.",
+    "emptyTitle": "No lists yet",
+    "emptyHint": "Next time you're handed a wine list, photograph it and I'll tell you what to order.",
+    "scanCta": "Scan a menu",
+    "unnamed": "Unnamed list",
+    "captured_one": "{{count}} wine captured",
+    "captured_other": "{{count}} wines captured",
+    "addPlace": "Add place",
+    "placePlaceholder": "Restaurant or wine bar",
+    "saveFailed": "Couldn't save the place"
   }
 }

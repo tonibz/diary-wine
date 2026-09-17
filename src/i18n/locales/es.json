@@ -20,7 +20,12 @@
     "untitled": "Sin nombre",
     "wine": "vino",
     "wineCount_one": "{{count}} vino",
-    "wineCount_other": "{{count}} vinos"
+    "wineCount_other": "{{count}} vinos",
+    "oneMoment": "Un momento…",
+    "takingYouToSignIn": "Te llevo a iniciar sesión…",
+    "signInAgain": "Vuelve a iniciar sesión",
+    "tookTooLong": "Ha tardado demasiado. Prueba otra vez.",
+    "unnamedWine": "Vino sin nombre"
   },
   "nav": {
     "diary": "Diario",
@@ -54,7 +59,8 @@
   },
   "entry": {
     "starsCount_one": "{{count}} estrella",
-    "starsCount_other": "{{count}} estrellas"
+    "starsCount_other": "{{count}} estrellas",
+    "notFound": "No encuentro esa cata"
   },
   "add": {
     "title": "Apuntar un vino",
@@ -160,7 +166,9 @@
       "savedWishlist": "Añadido a tu lista de por probar.",
       "nameRequired": "Hace falta un nombre, aunque sea aproximado.",
       "saveFailed": "No se pudo guardar"
-    }
+    },
+    "readingFailed": "No he podido leer la foto que has subido",
+    "serviceUnavailable": "El servicio de lectura de vinos no está configurado"
   },
   "bulk": {
     "meta": {
@@ -269,7 +277,9 @@
       "uploadFailed": "No he podido subir esta foto",
       "readFailed": "No he podido leer esta foto",
       "sortTimeout": "He tardado demasiado ordenando frontales y contraetiquetas"
-    }
+    },
+    "photoGone": "Esa foto ya no está disponible",
+    "photoTimeout": "He tardado demasiado en leer esa foto"
   },
   "settings": {
     "language": "Idioma",
@@ -283,7 +293,29 @@
     "gpsHint": "Si lo activas, miramos el GPS de tu foto para rellenar dónde lo probaste. Está desactivado por defecto.",
     "saved": "Guardado",
     "signOut": "Cerrar sesión",
-    "footer": "Wine Diary — solo para ti."
+    "footer": "Wine Diary — solo para ti.",
+    "exportTitle": "Download your diary",
+    "exportHint": "A spreadsheet file with every bottle you've noted down: wine, producer, appellation, region, country, vintage, type, grapes, your note and rating, the date, the place, who you were with and what you paid.",
+    "exportButton": "Download CSV",
+    "exportPreparing": "Preparing your file…",
+    "exportEmpty": "There's nothing to download yet.",
+    "exportDone": "Downloaded",
+    "exportFailed": "Couldn't prepare your file. Try again.",
+    "deleteTitle": "Delete your account",
+    "deleteHint": "This removes your account and everything in it, for good. Download your diary first if you want to keep it.",
+    "deleteButton": "Delete account",
+    "deleteDialogTitle": "Delete your account for good?",
+    "deleteDialogBody": "This cannot be undone. Your tastings, your menu scans, your photos, your taste profile and your login will all be deleted.",
+    "deleteKeeps": "Wines you added to the shared catalogue stay there, because other people have tastings linked to them. Your name is removed from them.",
+    "deletePhotos": "All your photos are deleted, including any that had become a wine's catalogue photo.",
+    "deleteTypePrompt": "Type {{word}} to confirm.",
+    "deleteConfirmWord": "DELETE",
+    "deletePlaceholder": "Type {{word}}",
+    "deleteCancel": "Keep my account",
+    "deleteConfirm": "Delete everything",
+    "deleteWorking": "Deleting…",
+    "deleteFailed": "Couldn't delete your account. Nothing was changed. Try again.",
+    "deleteDone": "Your account has been deleted."
   },
   "wishlist": {
     "metaTitle": "Por probar — Wine Diary",
@@ -389,7 +421,9 @@
         "biodynamic": "biodinámico",
         "natural": "natural",
         "vegan": "vegano"
-      }
+      },
+      "diaryTimeout": "He tardado demasiado en leer tu diario",
+      "scoringTimeout": "He tardado demasiado en calcular las sugerencias"
     },
     "scan": {
       "metaTitle": "Escanear una carta de vinos — Wine Diary",
@@ -438,7 +472,8 @@
       "toasts": {
         "salvagedPage_one": "Se guardó {{count}} vino: parte de una página quedó cortada.",
         "salvagedPage_other": "Se guardaron {{count}} vinos: parte de una página quedó cortada."
-      }
+      },
+      "serviceUnavailable": "El servicio de lectura de vinos no está configurado"
     },
     "venue": {
       "place": "Lugar",
@@ -537,5 +572,22 @@
       "half_bottle": "la media botella",
       "unknown": ""
     }
+  },
+  "menus": {
+    "back": "Diario",
+    "title": "Cartas de vinos",
+    "subtitle": "Sitios donde has escaneado una carta, los más recientes primero.",
+    "export": "Exportar precios (CSV)",
+    "exportPreparing": "Preparando…",
+    "exportFailed": "No he podido preparar la exportación. Prueba otra vez.",
+    "emptyTitle": "Todavía no hay cartas",
+    "emptyHint": "La próxima vez que te den una carta de vinos, hazle una foto y te digo qué pedir.",
+    "scanCta": "Escanear una carta",
+    "unnamed": "Carta sin nombre",
+    "captured_one": "{{count}} vino guardado",
+    "captured_other": "{{count}} vinos guardados",
+    "addPlace": "Añadir sitio",
+    "placePlaceholder": "Restaurante o bar de vinos",
+    "saveFailed": "No he podido guardar el sitio"
   }
 }
