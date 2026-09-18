@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAsyncData } from "@/lib/use-async-data";
 import { ErrorState } from "@/components/ErrorState";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/format";
+import { i18next } from "@/i18n";
 import { ArrowLeft, ScrollText, ChevronRight, Download, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,13 +20,13 @@ import {
 export const Route = createFileRoute("/_authenticated/menus")({
   head: () => ({
     meta: [
-      { title: "Wine lists you've scanned — Wine Diary" },
+      { title: `${i18next.t("menus.title")} — Wine Diary` },
       {
         name: "description",
-        content: "Every restaurant wine list you have scanned, newest first.",
+        content: i18next.t("menus.subtitle"),
       },
-      { property: "og:title", content: "Wine lists you've scanned" },
-      { property: "og:description", content: "Reopen a restaurant's wine list any time." },
+      { property: "og:title", content: i18next.t("menus.title") },
+      { property: "og:description", content: i18next.t("menus.subtitle") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -33,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/menus")({
 });
 
 function MenuHistoryPage() {
+  const { t } = useTranslation();
   const {
     data: scans,
     error,
@@ -50,7 +53,7 @@ function MenuHistoryPage() {
       downloadCsv(`wine-diary-menu-prices-${new Date().toISOString().slice(0, 10)}.csv`, csv);
     } catch (err) {
       console.error("Export failed", err);
-      toast.error("Couldn't build that export. Please try again.");
+      toast.error(t("menus.exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -60,23 +63,23 @@ function MenuHistoryPage() {
   return (
     <div className="px-5 pt-6 pb-8">
       <Link to="/diary" className="flex items-center gap-1 text-sm text-muted-foreground mb-5">
-        <ArrowLeft size={16} /> Diary
+        <ArrowLeft size={16} /> {t("menus.back")}
       </Link>
 
       <header className="mb-6">
-        <h1 className="text-3xl font-serif text-primary">Wine lists</h1>
+        <h1 className="text-3xl font-serif text-primary">{t("menus.title")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Places you've scanned, newest first.
+          {t("menus.subtitle")}
         </p>
         {!!scans?.length && (
           <Button variant="outline" size="sm" className="mt-4" disabled={exporting} onClick={onExport}>
-            <Download size={14} /> {exporting ? "Preparing…" : "Export prices (CSV)"}
+            <Download size={14} /> {exporting ? t("menus.exportPreparing") : t("menus.export")}
           </Button>
         )}
       </header>
 
       {loading ? (
-        <p className="text-center text-sm text-muted-foreground py-16">Loading…</p>
+        <p className="text-center text-sm text-muted-foreground py-16">{t("common.loading")}</p>
       ) : error || scans === null ? (
         // A failed read must not read as "no lists yet".
         <ErrorState onRetry={reload} />
@@ -85,12 +88,12 @@ function MenuHistoryPage() {
           <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
             <ScrollText size={28} />
           </div>
-          <h2 className="text-2xl font-serif text-foreground">No lists yet</h2>
+          <h2 className="text-2xl font-serif text-foreground">{t("menus.emptyTitle")}</h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
-            Next time you're handed a wine list, photograph it and I'll tell you what to order.
+            {t("menus.emptyHint")}
           </p>
           <Button asChild className="mt-5">
-            <Link to="/menu">Scan a menu</Link>
+            <Link to="/menu">{t("menus.scanCta")}</Link>
           </Button>
         </div>
       ) : (
@@ -104,11 +107,11 @@ function MenuHistoryPage() {
               >
                 <div className="min-w-0">
                   <h3 className="font-serif text-lg text-foreground truncate">
-                    {s.restaurant_name ?? "Unnamed list"}
+                    {s.restaurant_name ?? t("menus.unnamed")}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {format(new Date(s.scanned_at), "d MMM yyyy")} · {s.item_count}{" "}
-                    {s.item_count === 1 ? "wine" : "wines"} captured
+                    {formatDate(s.scanned_at, { day: "numeric", month: "short", year: "numeric" })} ·{" "}
+                    {t("menus.captured", { count: s.item_count })}
                     {s.city ? ` · ${s.city}` : ""}
                   </p>
                 </div>
@@ -136,6 +139,7 @@ function MenuHistoryPage() {
 
 /** A quiet chip: the place can be added straight from the list, inline. */
 function AddPlace({ scanId, onSaved }: { scanId: string; onSaved: (name: string) => void }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -147,7 +151,7 @@ function AddPlace({ scanId, onSaved }: { scanId: string; onSaved: (name: string)
       await updateMenuScanContext(scanId, { restaurant_name: name.trim() });
       onSaved(name.trim());
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't save the place");
+      toast.error(t("menus.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -161,7 +165,7 @@ function AddPlace({ scanId, onSaved }: { scanId: string; onSaved: (name: string)
           onClick={() => setOpen(true)}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-parchment/60 px-3 py-1 text-xs text-muted-foreground"
         >
-          <MapPin size={11} /> Add place
+          <MapPin size={11} /> {t("menus.addPlace")}
         </button>
       </div>
     );
@@ -173,11 +177,11 @@ function AddPlace({ scanId, onSaved }: { scanId: string; onSaved: (name: string)
         value={name}
         autoFocus
         onChange={(e) => setName(e.target.value)}
-        placeholder="Restaurant or wine bar"
+        placeholder={t("menus.placePlaceholder")}
         className="bg-background h-9"
       />
       <Button size="sm" disabled={saving || !name.trim()} onClick={() => void save()}>
-        Save
+        {t("common.save")}
       </Button>
     </div>
   );
