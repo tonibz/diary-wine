@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AuthLoading } from "@/components/AuthLoading";
 
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -32,5 +34,5 @@ function Landing() {
     navigate({ to: user ? "/diary" : "/auth", replace: true });
   }, [loading, user, navigate]);
 
-  return <AuthLoading label="One moment…" />;
+  return <AuthLoading label={t("common.oneMoment")} />;
 }

@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { BottomTabs } from "@/components/BottomTabs";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AuthLoading } from "@/components/AuthLoading";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_authenticated")({
  * bounced to /auth when the tokens in the URL had not been read yet).
  */
 function Gate({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -23,8 +25,8 @@ function Gate({ children }: { children: React.ReactNode }) {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
   }, [loading, user, navigate]);
 
-  if (loading) return <AuthLoading label="One moment…" />;
-  if (!user) return <AuthLoading label="Taking you to sign in…" />;
+  if (loading) return <AuthLoading label={t("common.oneMoment")} />;
+  if (!user) return <AuthLoading label={t("common.takingYouToSignIn")} />;
   return <>{children}</>;
 }
 
