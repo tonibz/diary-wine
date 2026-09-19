@@ -28,9 +28,9 @@
     "unnamedWine": "Vino sin nombre"
   },
   "notFound": {
-    "title": "Page not found",
-    "message": "The page you're looking for doesn't exist or has been moved.",
-    "home": "Go home"
+    "title": "Esta página no existe",
+    "message": "La página que buscas no existe o la hemos movido.",
+    "home": "Ir al inicio"
   },
   "nav": {
     "diary": "Diario",
