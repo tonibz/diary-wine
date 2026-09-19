@@ -39,8 +39,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const apply = useCallback((code: LanguageCode) => {
     setLanguageState(code);
     if (i18next.language !== code) void i18next.changeLanguage(code);
-    if (typeof document !== "undefined") document.documentElement.lang = code;
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   // After hydration: saved choice wins, then the browser's language.
   useEffect(() => {

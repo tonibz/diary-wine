@@ -27,6 +27,11 @@
     "tookTooLong": "Ha tardado demasiado. Prueba otra vez.",
     "unnamedWine": "Vino sin nombre"
   },
+  "notFound": {
+    "title": "Page not found",
+    "message": "The page you're looking for doesn't exist or has been moved.",
+    "home": "Go home"
+  },
   "nav": {
     "diary": "Diario",
     "wishlist": "Por probar",
