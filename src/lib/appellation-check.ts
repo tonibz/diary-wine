@@ -2,6 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import { valuesEquivalent } from "@/lib/field-provenance";
 import { captureClientError } from "@/lib/sentry-browser";
+import { canonicalCountry } from "@/lib/country-alias";
+
+/** Same country, allowing for alias spellings ("USA" vs "United States"). */
+function countriesEquivalent(a: string, b: string): boolean {
+  return canonicalCountry(a) === canonicalCountry(b);
+}
 
 /** Reference row from the Wikipedia-derived appellations table. */
 export type AppellationRef = {
