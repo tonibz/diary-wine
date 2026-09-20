@@ -28,6 +28,31 @@ export type RecognitionResult =
   | { ok: true; data: RecognitionData; recognition_id: string }
   | { ok: false; error: string; recognition_id?: string };
 
+/** Web Crypto only — this runs on the Cloudflare Workers runtime, not Node. */
+async function sha256Hex(bytes: ArrayBuffer | Uint8Array | string): Promise<string> {
+  const data =
+    typeof bytes === "string" ? new TextEncoder().encode(bytes) : bytes;
+  const digest = await crypto.subtle.digest("SHA-256", data as BufferSource);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function isValidRecognition(v: unknown): v is RecognitionData {
+  if (!v || typeof v !== "object") return false;
+  const d = v as Record<string, unknown>;
+  const hasAnyField =
+    typeof d.name === "string" ||
+    typeof d.producer === "string" ||
+    typeof d.appellation === "string" ||
+    typeof d.region === "string" ||
+    typeof d.country === "string" ||
+    typeof d.vintage === "number" ||
+    typeof d.wine_type === "string" ||
+    Array.isArray(d.grapes);
+  return hasAnyField;
+}
+
 export const recogniseLabel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => Input.parse(v))
