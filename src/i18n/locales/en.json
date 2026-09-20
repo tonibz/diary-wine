@@ -320,7 +320,8 @@
     "deleteConfirm": "Delete everything",
     "deleteWorking": "Deleting…",
     "deleteFailed": "Couldn't delete your account. Nothing was changed. Try again.",
-    "deleteDone": "Your account has been deleted."
+    "deleteDone": "Your account has been deleted.",
+    "privacyLink": "Privacy policy"
   },
   "wishlist": {
     "metaTitle": "Wishlist — Wine Diary",
@@ -547,7 +548,8 @@
       "couldNotSendLink": "Couldn't send the link.",
       "signInFailed": "Couldn't sign you in.",
       "somethingWrong": "Something went wrong."
-    }
+    },
+    "privacyLink": "Privacy policy"
   },
   "errorState": {
     "title": "Couldn't load this",
