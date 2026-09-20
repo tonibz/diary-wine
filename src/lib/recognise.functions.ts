@@ -82,35 +82,73 @@ export const recogniseLabel = createServerFn({ method: "POST" })
       }
     }
 
-    const modelName = "claude-sonnet-5";
-    const prompt = `You are reading a photograph of a wine bottle label. Return ONLY a JSON object, with no prose and no markdown code fences.
+    const modelName = MODEL_NAME;
+    const prompt = RECOGNISE_PROMPT;
 
-You may be given two photographs: the front label and the back label. Read both. Back labels often carry the alcohol percentage, the grape varieties, and importer or bottling details that the front label omits. Combine what you find. If the two disagree, prefer the back label for technical details such as alcohol percentage and grape varieties, and the front label for the wine name and producer.
+    // Cache key: bytes of the photos + model + prompt. A cache failure must never
+    // break recognition, so every step below is best-effort.
+    let imageHash: string | null = null;
+    let backImageHash: string | null = null;
+    let promptHash: string | null = null;
+    try {
+      imageHash = await sha256Hex(arrayBuf);
+      if (backArrayBuf) backImageHash = await sha256Hex(backArrayBuf);
+      promptHash = (await sha256Hex(prompt)).slice(0, 16);
+    } catch {
+      imageHash = null;
+    }
 
-Fields:
-- name: the wine's name as printed
-- producer: the winery or estate
-- appellation: the denomination of origin, for example Corton-Charlemagne, Rioja, Chianti Classico
-- classification: the ageing or quality classification, or null
-- region: the wider wine region
-- country
-- vintage: integer year, or null
-- wine_type: one of red, white, rose, sparkling, dessert, fortified
-- grapes: array of grape varieties
-- alcohol_percent: number or null
-- confidence: number from 0 to 1
-- inferred_fields: array naming any field you filled in from knowledge of the appellation rather than reading it off the label
+    if (imageHash && promptHash) {
+      try {
+        const { data: cached } = await supabase
+          .from("recognition_cache")
+          .select("id, result, hit_count")
+          .eq("image_hash", imageHash)
+          .eq("model_name", modelName)
+          .eq("prompt_hash", promptHash)
+          .is("back_image_hash", backImageHash === null ? (null as never) : (undefined as never))
+          .maybeSingle();
+        void cached;
+      } catch {
+        // ignore — handled by the explicit lookup below
+      }
+    }
 
-The appellation is the legally defined origin printed on the label, such as Chianti Classico, Rioja, Chablis, Brunello di Montalcino, Napa Valley. It is not the producer's slogan, not a marketing phrase, and not a range name.
+    const cachedResult =
+      imageHash && promptHash
+        ? await lookupCache(supabase, imageHash, backImageHash, modelName, promptHash)
+        : null;
 
-Do not include ageing or quality classifications in the appellation. Riserva, Reserva, Gran Reserva, Grand Cru, Premier Cru, Superiore and Classico Riserva are separate from the appellation name. Return 'Chianti Classico', not 'Chianti Classico Riserva'.
+    if (cachedResult) {
+      // Bump the shared counter with server credentials; never block on it.
+      void (async () => {
+        try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin
+            .from("recognition_cache")
+            .update({ hit_count: cachedResult.hit_count + 1 })
+            .eq("id", cachedResult.id);
+        } catch (e) {
+          await captureServerError(e, { where: "recognition_cache.hit_count" });
+        }
+      })();
 
-Return the classification separately in the field 'classification', for example 'Riserva', 'Grand Cru', 'Gran Reserva', or null.
+      const { data: hitRow } = await supabase
+        .from("recognitions")
+        .insert({
+          user_id: userId,
+          photo_path: data.photoPath,
+          model_name: modelName,
+          raw_response: null,
+          cache_hit: true,
+          inferred_fields: (cachedResult.result.inferred_fields ?? null) as never,
+          confidence: cachedResult.result.confidence ?? null,
+        })
+        .select("id")
+        .single();
 
-If no appellation is printed, return null rather than substituting a region or a phrase from the label.
-
-Rules. If something is not legible on the label, return null instead of guessing. Many European labels never print the colour or the grape, so you may infer those from the appellation, but you must list every field you inferred in inferred_fields. Set confidence low when the photo is blurred, badly lit, cropped, or the label is at a steep angle.`;
-
+      return { ok: true, data: cachedResult.result, recognition_id: hitRow?.id ?? "" };
+    }
 
     const content: Array<Record<string, unknown>> = [
       { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
