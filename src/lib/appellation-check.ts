@@ -2,6 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import { valuesEquivalent } from "@/lib/field-provenance";
 import { captureClientError } from "@/lib/sentry-browser";
+import { canonicalCountry } from "@/lib/country-alias";
+
+/** Same country, allowing for alias spellings ("USA" vs "United States"). */
+function countriesEquivalent(a: string, b: string): boolean {
+  return canonicalCountry(a) === canonicalCountry(b);
+}
 
 /** Reference row from the Wikipedia-derived appellations table. */
 export type AppellationRef = {
@@ -157,9 +163,10 @@ export async function checkAgainstReference(
     });
   };
 
-  // country / region: plain value comparison
+  // country / region: plain value comparison (country via alias-aware match;
+  // stored model_value/reference_value stay the originals)
   if (model.country && ref.country) {
-    push("country", model.country, ref.country, valuesEquivalent(model.country, ref.country));
+    push("country", model.country, ref.country, countriesEquivalent(model.country, ref.country));
   }
   if (model.region && ref.region) {
     push("region", model.region, ref.region, valuesEquivalent(model.region, ref.region));
@@ -204,7 +211,7 @@ export async function checkAgainstReference(
       note: `The label reading says ${COLOUR_LABEL[model.wine_type] ?? model.wine_type}, but Wikipedia lists ${ref.name} as ${COLOUR_LABEL[ref.typical_colour] ?? ref.typical_colour}. Worth checking.`,
     });
   }
-  if (model.country && ref.country && !valuesEquivalent(model.country, ref.country)) {
+  if (model.country && ref.country && !countriesEquivalent(model.country, ref.country)) {
     disagreements.push({
       field: "country",
       modelValue: model.country,
