@@ -9,6 +9,7 @@ function strip(value: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
+    .replace(/\./g, "") // "U.S.A." -> "usa", not "u s a"
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
