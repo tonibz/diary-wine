@@ -418,8 +418,42 @@ export type Database = {
         }
         Relationships: []
       }
+      recognition_cache: {
+        Row: {
+          back_image_hash: string | null
+          created_at: string
+          hit_count: number
+          id: string
+          image_hash: string
+          model_name: string
+          prompt_hash: string
+          result: Json
+        }
+        Insert: {
+          back_image_hash?: string | null
+          created_at?: string
+          hit_count?: number
+          id?: string
+          image_hash: string
+          model_name: string
+          prompt_hash: string
+          result: Json
+        }
+        Update: {
+          back_image_hash?: string | null
+          created_at?: string
+          hit_count?: number
+          id?: string
+          image_hash?: string
+          model_name?: string
+          prompt_hash?: string
+          result?: Json
+        }
+        Relationships: []
+      }
       recognitions: {
         Row: {
+          cache_hit: boolean
           confidence: number | null
           corrected_fields: Json | null
           created_at: string
@@ -432,6 +466,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cache_hit?: boolean
           confidence?: number | null
           corrected_fields?: Json | null
           created_at?: string
@@ -444,6 +479,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cache_hit?: boolean
           confidence?: number | null
           corrected_fields?: Json | null
           created_at?: string
