@@ -252,7 +252,12 @@ function SettingsPage() {
         <LogOut size={18} /> {t("settings.signOut")}
       </button>
 
-      <p className="text-center text-xs text-muted-foreground mt-8 font-serif">{t("settings.footer")}</p>
+      <p className="text-center text-xs text-muted-foreground mt-8 font-serif">
+        {t("settings.footer")}{" "}
+        <Link to="/privacy" className="underline underline-offset-4 hover:text-foreground">
+          {t("settings.privacyLink")}
+        </Link>
+      </p>
     </div>
   );
 }

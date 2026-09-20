@@ -240,6 +240,12 @@ function AuthPage() {
             </button>
           ))}
         </div>
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          <Link to="/privacy" className="underline underline-offset-4 hover:text-foreground">
+            {t("auth.privacyLink")}
+          </Link>
+        </p>
       </div>
     </div>
   );
