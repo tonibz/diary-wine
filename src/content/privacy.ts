@@ -1,7 +1,6 @@
 import type { LanguageCode } from "@/i18n/locales";
 
-// TODO: sustituir por el correo real de contacto antes de publicar.
-export const PRIVACY_CONTACT_EMAIL = "PENDIENTE@diary.wine";
+export const PRIVACY_CONTACT_EMAIL = "tonibove2000@gmail.com";
 export const PRIVACY_UPDATED = "2026-09-20";
 
 export const PRIVACY: Record<
