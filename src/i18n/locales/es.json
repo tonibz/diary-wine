@@ -320,7 +320,8 @@
     "deleteConfirm": "Borrar todo",
     "deleteWorking": "Borrando…",
     "deleteFailed": "No he podido borrar tu cuenta. No se ha cambiado nada. Prueba otra vez.",
-    "deleteDone": "Tu cuenta se ha borrado."
+    "deleteDone": "Tu cuenta se ha borrado.",
+    "privacyLink": "Política de privacidad"
   },
   "wishlist": {
     "metaTitle": "Por probar — Wine Diary",
@@ -547,7 +548,8 @@
       "couldNotSendLink": "No se pudo enviar el enlace.",
       "signInFailed": "No se pudo entrar.",
       "somethingWrong": "Algo ha salido mal."
-    }
+    },
+    "privacyLink": "Política de privacidad"
   },
   "errorState": {
     "title": "No he podido cargar esto",

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -240,6 +240,12 @@ function AuthPage() {
             </button>
           ))}
         </div>
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          <Link to="/privacy" className="underline underline-offset-4 hover:text-foreground">
+            {t("auth.privacyLink")}
+          </Link>
+        </p>
       </div>
     </div>
   );
