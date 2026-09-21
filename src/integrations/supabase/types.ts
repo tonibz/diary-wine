@@ -56,6 +56,48 @@ export type Database = {
         }
         Relationships: []
       }
+      appellations_backup_20260921: {
+        Row: {
+          country: string | null
+          grape_count: number | null
+          grapes: Json | null
+          id: string | null
+          name: string | null
+          norm_name: string | null
+          region: string | null
+          source: string | null
+          typical_colour: string | null
+          wikipedia_langs: string | null
+          wikipedia_title: string | null
+        }
+        Insert: {
+          country?: string | null
+          grape_count?: number | null
+          grapes?: Json | null
+          id?: string | null
+          name?: string | null
+          norm_name?: string | null
+          region?: string | null
+          source?: string | null
+          typical_colour?: string | null
+          wikipedia_langs?: string | null
+          wikipedia_title?: string | null
+        }
+        Update: {
+          country?: string | null
+          grape_count?: number | null
+          grapes?: Json | null
+          id?: string | null
+          name?: string | null
+          norm_name?: string | null
+          region?: string | null
+          source?: string | null
+          typical_colour?: string | null
+          wikipedia_langs?: string | null
+          wikipedia_title?: string | null
+        }
+        Relationships: []
+      }
       entries: {
         Row: {
           back_photo_url: string | null

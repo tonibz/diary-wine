@@ -107,6 +107,9 @@ export async function lookupAppellation(appellation: string | null | undefined):
   };
 }
 
+/** wine_type values that are actual colours — only those compare against the reference's typical_colour. */
+const COLOUR_TYPES = new Set(["red", "white", "rose"]);
+
 const COLOUR_LABEL: Record<string, string> = {
   red: "red",
   white: "white",
@@ -171,8 +174,10 @@ export async function checkAgainstReference(
   if (model.region && ref.region) {
     push("region", model.region, ref.region, valuesEquivalent(model.region, ref.region));
   }
-  // colour: the model's wine_type against the reference's typical colour
-  if (model.wine_type && ref.typical_colour) {
+  // colour: the model's wine_type against the reference's typical colour —
+  // only when the model named a colour; a style (sparkling, fortified, dessert)
+  // can't be compared against a colour, so the row is simply not recorded
+  if (model.wine_type && ref.typical_colour && COLOUR_TYPES.has(model.wine_type)) {
     push("typical_colour", model.wine_type, ref.typical_colour, valuesEquivalent(model.wine_type, ref.typical_colour));
   }
   // grapes: any overlap counts as agreement, the model may name a subset
@@ -199,9 +204,12 @@ export async function checkAgainstReference(
   const grapeSuggestions = modelGrapes.length === 0 ? ref.grapes : [];
 
   const disagreements: Disagreement[] = [];
+  // only a colour reading can disagree with the reference's typical colour —
+  // a style like "fortified" for Porto is compatible with "red", not a conflict
   if (
     model.wine_type &&
     ref.typical_colour &&
+    COLOUR_TYPES.has(model.wine_type) &&
     !valuesEquivalent(model.wine_type, ref.typical_colour)
   ) {
     disagreements.push({
