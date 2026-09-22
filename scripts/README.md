@@ -69,10 +69,10 @@ defects in the build. Each is covered by a test in
 3. **Shared EU labels were mapped to one country.** When an article has no
    country field, the country was inferred from the appellation type, and
    DOC was mapped to Italy. DOC is also Portugal's Denominação de Origem
-   Controlada, so every Portuguese appellation on French Wikipedia, Douro,
-   Porto, Madeira and Vinho Verde, was filed under Italy. DOP, IGP and AOP
-   had the same problem. Ambiguous labels now leave the country empty, which
-   is the rule the table already applied to colour.
+   Controlada, so every Portuguese appellation on French Wikipedia — Douro,
+   Porto, Madeira, Vinho Verde — was filed under Italy. DOP, IGP and AOP had
+   the same problem. Ambiguous labels now leave the country empty, which is
+   the rule the table already applied to colour.
 
 4. **Legal category suffixes split appellations in two.** Title cleaning
    removed AOC, DOC, DOCG and AVA but not DOCa, DOP, DOQ or "(DO)", so
