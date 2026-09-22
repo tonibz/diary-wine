@@ -30,8 +30,41 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function humanizeAuthError(raw: string): string {
-  const lower = raw.toLowerCase();
+// Supabase returns auth errors in English no matter which language the app runs
+// in, so every message a user can actually trigger has to be mapped to a
+// translation key here; anything unmapped falls back to the raw message.
+function humanizeAuthError(err: unknown, fallback: string): string {
+  const message = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  const lower = message.toLowerCase();
+
+  // Supabase's JS client throws AuthWeakPasswordError carrying
+  // code: "weak_password" and a reasons array such as ["pwned"], ["length"] or
+  // ["characters"]. Read those defensively — if the fields are absent, fall
+  // through to the message checks.
+  let code: string | undefined;
+  let reasons: string[] | undefined;
+  if (typeof err === "object" && err !== null) {
+    const fields = err as Record<string, unknown>;
+    if (typeof fields.code === "string") code = fields.code;
+    if (Array.isArray(fields.reasons)) {
+      reasons = fields.reasons.filter((r): r is string => typeof r === "string");
+    }
+  }
+
+  if (
+    code === "weak_password" ||
+    lower.includes("weak and easy to guess") ||
+    lower.includes("password is known to be weak")
+  ) {
+    if (reasons?.includes("pwned")) return i18next.t("auth.toast.leakedPassword");
+    if (reasons?.includes("length") || lower.includes("should be at least")) {
+      return i18next.t("auth.toast.passwordTooShort");
+    }
+    return i18next.t("auth.toast.weakPassword");
+  }
+  if (lower.includes("password should be at least")) {
+    return i18next.t("auth.toast.passwordTooShort");
+  }
   if (lower.includes("email not confirmed")) {
     return i18next.t("auth.toast.emailNotConfirmed");
   }
@@ -41,7 +74,7 @@ function humanizeAuthError(raw: string): string {
   if (lower.includes("user already registered")) {
     return i18next.t("auth.toast.userAlreadyRegistered");
   }
-  return raw;
+  return message || fallback;
 }
 
 function AuthPage() {
@@ -75,7 +108,7 @@ function AuthPage() {
       if (result.redirected) return;
       goAfterAuth();
     } catch (err) {
-      toast.error(humanizeAuthError(err instanceof Error ? err.message : t("auth.toast.signInFailed")));
+      toast.error(humanizeAuthError(err, t("auth.toast.signInFailed")));
     } finally {
       setBusy(null);
     }
@@ -102,7 +135,7 @@ function AuthPage() {
       }
       goAfterAuth();
     } catch (err) {
-      toast.error(humanizeAuthError(err instanceof Error ? err.message : t("auth.toast.somethingWrong")));
+      toast.error(humanizeAuthError(err, t("auth.toast.somethingWrong")));
     } finally {
       setBusy(null);
     }
@@ -122,7 +155,7 @@ function AuthPage() {
       if (error) throw error;
       toast.success(t("auth.toast.checkInbox"));
     } catch (err) {
-      toast.error(humanizeAuthError(err instanceof Error ? err.message : t("auth.toast.couldNotSendLink")));
+      toast.error(humanizeAuthError(err, t("auth.toast.couldNotSendLink")));
     } finally {
       setBusy(null);
     }
