@@ -602,7 +602,10 @@
       "checkInbox": "Link sent. Check your inbox.",
       "couldNotSendLink": "Couldn't send the link.",
       "signInFailed": "Couldn't sign you in.",
-      "somethingWrong": "Something went wrong."
+      "somethingWrong": "Something went wrong.",
+      "weakPassword": "That password is too easy to guess. Pick a different one.",
+      "leakedPassword": "That password has appeared in a known data breach. Pick a different one.",
+      "passwordTooShort": "That password is too short."
     },
     "privacyLink": "Privacy policy"
   },

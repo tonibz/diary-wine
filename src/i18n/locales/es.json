@@ -602,7 +602,10 @@
       "checkInbox": "Enlace enviado. Mira tu bandeja.",
       "couldNotSendLink": "No se pudo enviar el enlace.",
       "signInFailed": "No se pudo entrar.",
-      "somethingWrong": "Algo ha salido mal."
+      "somethingWrong": "Algo ha salido mal.",
+      "weakPassword": "Esa contraseña es demasiado fácil de adivinar. Elige otra.",
+      "leakedPassword": "Esa contraseña aparece en filtraciones conocidas. Elige otra.",
+      "passwordTooShort": "Esa contraseña es demasiado corta."
     },
     "privacyLink": "Política de privacidad"
   },
