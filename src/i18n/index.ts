@@ -3,6 +3,8 @@ import { initReactI18next } from "react-i18next";
 
 import { FALLBACK_LANGUAGE, resources, resolveLanguage, type LanguageCode } from "./locales";
 
+const warnedMissingKeys = new Set<string>();
+
 if (!i18next.isInitialized) {
   i18next.use(initReactI18next).init({
     resources,
