@@ -63,9 +63,64 @@
     "emptyFilteredHint": "Prueba a quitar los filtros."
   },
   "entry": {
+    "metaTitle": "Esta botella — Wine Diary",
+    "metaDescription": "Todo lo que apuntaste sobre esta botella.",
     "starsCount_one": "{{count}} estrella",
     "starsCount_other": "{{count}} estrellas",
-    "notFound": "No encuentro esa cata"
+    "notFound": "No encuentro esa cata",
+    "wineAltFallback": "vino",
+    "onWishlist": "Por probar",
+    "bottle": {
+      "title": "La botella"
+    },
+    "fields": {
+      "producer": "Bodega",
+      "appellation": "Denominación",
+      "region": "Región",
+      "country": "País",
+      "type": "Tipo",
+      "vintage": "Añada",
+      "alcohol": "Alcohol %",
+      "grapes": "Uvas",
+      "add": "Añadir"
+    },
+    "backLabel": {
+      "title": "Contraetiqueta",
+      "alt": "La contraetiqueta",
+      "takePhoto": "Hacer una foto",
+      "chooseFromLibrary": "Elegir de la galería",
+      "added": "Contraetiqueta añadida."
+    },
+    "tasting": {
+      "title": "Tu cata",
+      "rating": "¿Qué tal estaba?",
+      "date": "Cuándo",
+      "place": "Dónde",
+      "with": "Con quién",
+      "notes": "Notas",
+      "tastedOn": "Catado el"
+    },
+    "wishlistSection": {
+      "howWasIt": "¿Qué tal estaba?",
+      "saveToDiary": "Guardar en mi diario",
+      "cancel": "Cancelar",
+      "triedItNow": "Ya lo he probado"
+    },
+    "price": {
+      "hint": "Opcional. Ayuda a saber si una botella está bien de precio.",
+      "placeholder": "Precio",
+      "wherePlaceholder": "¿Dónde fue?",
+      "restaurant": "Un restaurante",
+      "shop": "Una tienda",
+      "online": "Por internet",
+      "other": "En otro sitio"
+    },
+    "toast": {
+      "updated": "Guardado.",
+      "convertedToTasting": "Pasado a tu diario.",
+      "uploadFailed": "No se pudo subir la foto",
+      "deleteConfirm": "¿Borrar este apunte? No se puede deshacer."
+    }
   },
   "add": {
     "title": "Apuntar un vino",
@@ -559,7 +614,8 @@
     "settingsBlocked": "No he podido cargar tus ajustes, así que ahora mismo no se pueden cambiar."
   },
   "dupe": {
-    "matchFailed": "No he podido consultar el catálogo. Prueba otra vez o guárdalo como un vino nuevo."
+    "matchFailed": "No he podido consultar el catálogo. Prueba otra vez o guárdalo como un vino nuevo.",
+    "compareTimeout": "He tardado demasiado comparando las etiquetas"
   },
   "recommend": {
     "reason": "{{head}}, como el {{name}} que {{praise}}.",

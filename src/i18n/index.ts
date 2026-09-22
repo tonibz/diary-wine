@@ -20,6 +20,14 @@ if (!i18next.isInitialized) {
     parseMissingKeyHandler: (key: string) => {
       const en = i18next.getResource(FALLBACK_LANGUAGE, "translation", key);
       if (typeof en === "string" && en) return en;
+      // This handler humanises the key leaf, which makes missing keys look
+      // plausible in English ("entry.bottle.title" -> "Title") and pass
+      // unnoticed. Warn in development so we notice; users never see the raw
+      // key and production stays silent.
+      if (import.meta.env.DEV && !warnedMissingKeys.has(key)) {
+        warnedMissingKeys.add(key);
+        console.warn(`[i18n] missing translation key: ${key}`);
+      }
       const leaf = key.split(".").pop() ?? key;
       const words = leaf.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2");
       return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
