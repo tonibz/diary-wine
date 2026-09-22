@@ -63,9 +63,64 @@
     "emptyFilteredHint": "Try clearing your filters."
   },
   "entry": {
+    "metaTitle": "This bottle — Wine Diary",
+    "metaDescription": "Everything you noted down about this bottle.",
     "starsCount_one": "{{count}} star",
     "starsCount_other": "{{count}} stars",
-    "notFound": "I can't find that tasting"
+    "notFound": "I can't find that tasting",
+    "wineAltFallback": "wine",
+    "onWishlist": "On your wishlist",
+    "bottle": {
+      "title": "The bottle"
+    },
+    "fields": {
+      "producer": "Producer",
+      "appellation": "Appellation",
+      "region": "Region",
+      "country": "Country",
+      "type": "Type",
+      "vintage": "Vintage",
+      "alcohol": "Alcohol %",
+      "grapes": "Grapes",
+      "add": "Add"
+    },
+    "backLabel": {
+      "title": "Back label",
+      "alt": "The back label",
+      "takePhoto": "Take a photo",
+      "chooseFromLibrary": "Choose from library",
+      "added": "Back label added."
+    },
+    "tasting": {
+      "title": "Your tasting",
+      "rating": "How was it?",
+      "date": "When",
+      "place": "Where",
+      "with": "Who with",
+      "notes": "Notes",
+      "tastedOn": "Tasted on"
+    },
+    "wishlistSection": {
+      "howWasIt": "How was it?",
+      "saveToDiary": "Save to my diary",
+      "cancel": "Cancel",
+      "triedItNow": "I've tried this now"
+    },
+    "price": {
+      "hint": "Optional. Helps work out whether a bottle is well priced.",
+      "placeholder": "Price",
+      "wherePlaceholder": "Where was this?",
+      "restaurant": "A restaurant",
+      "shop": "A shop",
+      "online": "Online",
+      "other": "Somewhere else"
+    },
+    "toast": {
+      "updated": "Saved.",
+      "convertedToTasting": "Moved to your diary.",
+      "uploadFailed": "Upload failed",
+      "deleteConfirm": "Delete this entry? This cannot be undone."
+    }
   },
   "add": {
     "title": "Add a wine",
@@ -559,7 +614,8 @@
     "settingsBlocked": "Your settings couldn't be loaded, so they can't be changed right now."
   },
   "dupe": {
-    "matchFailed": "Couldn't check the catalogue. Try again, or save it as a new wine."
+    "matchFailed": "Couldn't check the catalogue. Try again, or save it as a new wine.",
+    "compareTimeout": "Comparing the labels took too long"
   },
   "recommend": {
     "reason": "{{head}}, like the {{name}} you {{praise}}.",
