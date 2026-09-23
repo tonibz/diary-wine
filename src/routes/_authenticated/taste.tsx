@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAsyncData } from "@/lib/use-async-data";
 import { captureClientError } from "@/lib/sentry-browser";
+import { errorFields, toError } from "@/lib/to-error";
 import { ErrorState } from "@/components/ErrorState";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
@@ -58,7 +59,7 @@ function TastePage() {
       if (countErr) throw countErr;
       otherCount = count ?? 0;
     } catch (e) {
-      captureClientError(e instanceof Error ? e : new Error(String(e)), { route: "/taste" });
+      captureClientError(toError(e), { route: "/taste", ...errorFields(e) });
     }
     return { profile: (row as unknown as Taste | null) ?? null, otherCount };
   });

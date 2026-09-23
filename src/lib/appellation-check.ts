@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import { valuesEquivalent } from "@/lib/field-provenance";
 import { captureClientError } from "@/lib/sentry-browser";
+import { errorFields, toError } from "@/lib/to-error";
 import { canonicalCountry } from "@/lib/country-alias";
 
 /** Same country, allowing for alias spellings ("USA" vs "United States"). */
@@ -56,8 +57,10 @@ const MATCH_THRESHOLD = 0.8;
  */
 function reportQuiet(what: string, error: unknown) {
   console.error(what, error);
-  captureClientError(error instanceof Error ? error : new Error(`${what}: ${JSON.stringify(error)}`), {
+  captureClientError(toError(error), {
     area: "appellation-check",
+    what,
+    ...errorFields(error),
   });
 }
 

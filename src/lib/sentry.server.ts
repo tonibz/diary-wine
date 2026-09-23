@@ -6,6 +6,8 @@
  * Reads SENTRY_DSN from the environment at call time (never at module scope).
  */
 
+import { errorFields, toError } from "./to-error";
+
 type Dsn = { host: string; projectId: string; publicKey: string };
 
 function parseDsn(dsn: string): Dsn | null {
@@ -25,9 +27,13 @@ function messageOf(error: unknown): string {
 }
 
 export async function captureServerError(
-  error: unknown,
+  thrown: unknown,
   context?: Record<string, unknown>,
 ): Promise<void> {
+  // Supabase rejects with plain { message, details, hint, code } objects, so
+  // normalise first and keep the diagnostic fields as extra context.
+  const error: unknown = toError(thrown);
+  context = { ...context, ...errorFields(thrown) };
   const raw = process.env['SENTRY_DSN'];
   if (!raw) return;
   const dsn = parseDsn(raw);

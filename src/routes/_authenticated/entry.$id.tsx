@@ -22,6 +22,7 @@ import { wineTypeLabel } from "@/lib/wine-type";
 import { withTimeout } from "@/lib/with-timeout";
 import { READ_TIMEOUT_MS } from "@/lib/use-async-data";
 import { captureClientError } from "@/lib/sentry-browser";
+import { errorFields, toError } from "@/lib/to-error";
 import { ErrorState } from "@/components/ErrorState";
 
 export const Route = createFileRoute("/_authenticated/entry/$id")({
@@ -125,9 +126,9 @@ function EntryDetail() {
       setPhotoUrl(await getSignedPhotoUrl(ref));
       setBackPhotoUrl(await getSignedPhotoUrl(e.back_photo_url));
     } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
+      const err = toError(e);
       setLoadError(err);
-      captureClientError(err, { route: "/entry/$id" });
+      captureClientError(err, { route: "/entry/$id", ...errorFields(e) });
     } finally {
       setLoading(false);
     }

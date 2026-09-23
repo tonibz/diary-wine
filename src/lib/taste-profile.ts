@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { captureClientError } from "@/lib/sentry-browser";
+import { errorFields, toError } from "@/lib/to-error";
 
 type EntryRow = {
   rating: number | null;
@@ -86,7 +87,7 @@ export function recomputeTasteProfileSafely(userId: string, route: string) {
     .then(clearPending)
     .catch((e) => {
       markPending(userId);
-      captureClientError(e instanceof Error ? e : new Error(String(e)), { route });
+      captureClientError(toError(e), { route, ...errorFields(e) });
     });
 }
 

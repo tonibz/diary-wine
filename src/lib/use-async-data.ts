@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { captureClientError } from "./sentry-browser";
+import { errorFields, toError } from "./to-error";
 import { withTimeout } from "./with-timeout";
 
 /** Every screen read gets the same ceiling, so nothing can spin forever. */
@@ -36,10 +37,10 @@ export function useAsyncData<T>(
       })
       .catch((e) => {
         if (!alive) return;
-        const err = e instanceof Error ? e : new Error(String(e));
+        const err = toError(e);
         setData(null);
         setError(err);
-        captureClientError(err, { route });
+        captureClientError(err, { route, ...errorFields(e) });
       })
       .finally(() => {
         // Always: a failure must never leave the spinner running.

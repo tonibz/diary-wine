@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import { i18next } from "@/i18n";
 import { captureClientError } from "@/lib/sentry-browser";
+import { errorFields, toError } from "@/lib/to-error";
 import type { LabelComparison } from "@/lib/compare-labels.functions";
 
 export type CompareFn = (args: {
@@ -80,7 +81,7 @@ export async function compareLabelsVisually(
     return { comparison: c, outcome };
   } catch (e) {
     console.error("compare-labels error", e);
-    captureClientError(e instanceof Error ? e : new Error(String(e)), { area: "label-compare" });
+    captureClientError(toError(e), { area: "label-compare", ...errorFields(e) });
     return null;
   }
 }
