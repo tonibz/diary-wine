@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { captureClientError } from "@/lib/sentry-browser";
+import { errorFields, toError } from "@/lib/to-error";
 import { withTimeout } from "@/lib/with-timeout";
 import { withValidSession } from "@/lib/session-guard";
 import { normalise, type DiaryWine, type MenuItemRow } from "@/lib/menu-match";
@@ -12,8 +13,10 @@ import { wineTypeLabel } from "@/lib/wine-type";
  */
 function reportQuiet(what: string, error: unknown) {
   console.error(what, error);
-  captureClientError(error instanceof Error ? error : new Error(`${what}: ${JSON.stringify(error)}`), {
+  captureClientError(toError(error), {
     area: "menu-recommend",
+    what,
+    ...errorFields(error),
   });
 }
 
