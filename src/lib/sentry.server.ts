@@ -21,10 +21,6 @@ function parseDsn(dsn: string): Dsn | null {
   }
 }
 
-function messageOf(error: unknown): string {
-  if (error instanceof Error) return `${error.name}: ${error.message}`;
-  return typeof error === "string" ? error : JSON.stringify(error);
-}
 
 export async function captureServerError(
   thrown: unknown,
@@ -32,7 +28,7 @@ export async function captureServerError(
 ): Promise<void> {
   // Supabase rejects with plain { message, details, hint, code } objects, so
   // normalise first and keep the diagnostic fields as extra context.
-  const error: unknown = toError(thrown);
+  const error = toError(thrown);
   context = { ...context, ...errorFields(thrown) };
   const raw = process.env['SENTRY_DSN'];
   if (!raw) return;
