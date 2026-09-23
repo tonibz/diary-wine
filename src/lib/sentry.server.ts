@@ -49,18 +49,17 @@ export async function captureServerError(
     exception: {
       values: [
         {
-          type: error instanceof Error ? error.name : "Error",
-          value: error instanceof Error ? error.message : messageOf(error),
+          type: error.name,
+          value: error.message,
           stacktrace: undefined,
           mechanism: { type: "generic", handled: false },
         },
       ],
     },
-    message: error instanceof Error ? undefined : { formatted: messageOf(error) },
     breadcrumbs: undefined,
     logentry: undefined,
     // Keep the raw stack readable in the issue body.
-    contexts: { stack: { value: error instanceof Error ? error.stack : undefined } },
+    contexts: { stack: { value: error.stack } },
   };
 
   const envelope =
