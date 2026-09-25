@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.appellations_norm_name_idx;
