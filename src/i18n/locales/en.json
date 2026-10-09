@@ -500,6 +500,7 @@
       "removePage": "Remove page {{number}}",
       "readList": "Read list",
       "readListPages": "Read {{count}} pages",
+      "startOver": "Scan a different list",
       "startAnyway": "Read all {{count}} pages anyway",
       "longScanWarning": "{{count}} pages will take a while to read.",
       "longScanHint": "Keep this screen open — pages are saved as they're read.",

@@ -1,3 +1,8 @@
+/** Rejection used when a guarded promise runs out of time. */
+export class TimeoutError extends Error {
+  override name = "TimeoutError";
+}
+
 /**
  * Guard any promise so a hanging request can never leave a spinner running
  * forever. Rejects with a plain, user-showable message on timeout.
@@ -5,14 +10,14 @@
 export async function withTimeout<T>(
   promise: Promise<T>,
   ms = 30_000,
-  message = "That took too long — please try again",
+  message = "That took too long. Try again.",
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(message)), ms);
+        timer = setTimeout(() => reject(new TimeoutError(message)), ms);
       }),
     ]);
   } finally {

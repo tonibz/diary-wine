@@ -500,6 +500,7 @@
       "removePage": "Quitar la página {{number}}",
       "readList": "Leer la carta",
       "readListPages": "Leer {{count}} páginas",
+      "startOver": "Escanear otra carta",
       "startAnyway": "Leer las {{count}} páginas de todos modos",
       "longScanWarning": "{{count}} páginas tardarán un rato en leerse.",
       "longScanHint": "Mantén esta pantalla abierta: las páginas se guardan a medida que se leen.",
