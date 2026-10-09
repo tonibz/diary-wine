@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "wine_edits readable to signed-in" ON public.wine_edits;
+CREATE POLICY "wine_edits readable by author" ON public.wine_edits FOR SELECT TO authenticated USING (user_id = auth.uid());
