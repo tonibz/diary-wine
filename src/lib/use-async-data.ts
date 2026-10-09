@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { captureClientError } from "./sentry-browser";
 import { errorFields, toError } from "./to-error";
 import { withTimeout } from "./with-timeout";
+import { i18next } from "@/i18n";
 
 /** Every screen read gets the same ceiling, so nothing can spin forever. */
 export const READ_TIMEOUT_MS = 15_000;
@@ -29,7 +30,7 @@ export function useAsyncData<T>(
     let alive = true;
     setLoading(true);
     setError(null);
-    withTimeout(loadRef.current(), READ_TIMEOUT_MS)
+    withTimeout(loadRef.current(), READ_TIMEOUT_MS, i18next.t("common.tookTooLong"))
       .then((value) => {
         if (!alive) return;
         setData(value);

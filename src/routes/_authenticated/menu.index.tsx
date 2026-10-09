@@ -20,7 +20,7 @@ import type { JsonValue } from "@/lib/read-menu.functions";
 import { saveMenuScan, appendMenuItems, updateMenuScanContext } from "@/lib/menu-match";
 import { readPhotoMeta, reverseGeocodeCity } from "@/lib/photo-meta";
 import { Button } from "@/components/ui/button";
-import { withTimeout } from "@/lib/with-timeout";
+import { withTimeout, TimeoutError } from "@/lib/with-timeout";
 import { createStageTimer } from "@/lib/stage-timer";
 import { i18next } from "@/i18n";
 import { useTranslation } from "react-i18next";
@@ -266,10 +266,6 @@ function MenuScanPage() {
     setReading(false);
     setProgress(null);
 
-    if (!stored && failures.length) {
-      setFailure(failures[0]!.error);
-      return;
-    }
     if (!failures.length) goToResults(id, mark);
   }
 
@@ -316,7 +312,7 @@ function MenuScanPage() {
       return {
         ok: false as const,
         error:
-          e instanceof Error && /abort|timeout|network|fetch/i.test(e.message)
+          e instanceof TimeoutError || (e as { name?: string } | null)?.name === "TimeoutError"
             ? t("menu.scan.errors.pageTimeout", { number: pageNumber })
             : e instanceof Error
               ? t("menu.scan.errors.pageError", { number: pageNumber, message: e.message })
@@ -326,7 +322,19 @@ function MenuScanPage() {
     }
   }
 
+  /** Clear everything so a new list can be scanned; the old scan stays as it is. */
+  function startOver() {
+    for (const p of pages) URL.revokeObjectURL(p.preview);
+    setPages([]);
+    setScanId(null);
+    setFailedPages([]);
+    setPagesRead(null);
+    setSavedCount(0);
+    setFailure(null);
+  }
+
   const busy = reading;
+  const finishedWithFailures = !!pagesRead && failedPages.length > 0;
 
   return (
     <div className="px-5 pt-6 pb-8">
@@ -416,7 +424,7 @@ function MenuScanPage() {
             variant="outline"
             size="sm"
             className="mt-3"
-            onClick={() => (failedPages.length ? void retryFailedPages() : void onRead())}
+            onClick={() => void onRead()}
           >
             <RotateCcw size={14} /> {t("common.retry")}
           </Button>
@@ -432,6 +440,11 @@ function MenuScanPage() {
           <p className="text-xs text-muted-foreground mt-1">
             {t("menu.scan.partial.hint", { count: failedPages.length })}
           </p>
+          {[...new Set(failedPages.map((f) => f.error))].map((reason) => (
+            <p key={reason} className="text-xs text-muted-foreground mt-1">
+              {reason}
+            </p>
+          ))}
           <div className="mt-3 flex flex-wrap gap-2">
             <Button size="sm" onClick={() => void retryFailedPages()}>
               <RotateCcw size={14} /> {t("menu.scan.partial.retryFailed", { count: failedPages.length })}
@@ -449,6 +462,11 @@ function MenuScanPage() {
         </div>
       )}
 
+      {finishedWithFailures && !busy ? (
+        <Button variant="ghost" className="w-full mt-6" onClick={startOver}>
+          {t("menu.scan.startOver")}
+        </Button>
+      ) : (
       <Button className="w-full mt-6" disabled={!pages.length || busy} onClick={onRead}>
         {reading ? (
           <>
@@ -466,6 +484,7 @@ function MenuScanPage() {
           </>
         )}
       </Button>
+      )}
 
       {reading && pages.length > 1 && (
         <p className="text-xs text-muted-foreground mt-3 text-center">
