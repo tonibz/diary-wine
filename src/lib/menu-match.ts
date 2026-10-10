@@ -64,6 +64,8 @@ export type MenuScanRow = {
   currency: string | null;
   city: string | null;
   country: string | null;
+  /** ISO code from the photo's GPS; null on scans made before it was stored */
+  country_code: string | null;
   venue_note: string | null;
   /** replaced by a later scan of the same list; excluded from prices and export */
   superseded: boolean;
@@ -177,7 +179,7 @@ export async function loadTasteContext(userId: string): Promise<TasteContext> {
 }
 
 const SCAN_COLS =
-  "id, restaurant_name, restaurant_unknown, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, venue_note, superseded";
+  "id, restaurant_name, restaurant_unknown, photo_path, scanned_at, skipped_count, skipped_categories, currency, city, country, country_code, venue_note, superseded";
 const ITEM_COLS =
   "id, menu_scan_id, raw_text, parsed_name, parsed_producer, parsed_vintage, price, glass_price, prices, rejected, currency, by_the_glass, section_heading, page_heading, serving_basis, attributes, wine_type, grapes, item_confidence, truncated, matched_wine_id, match_score, position";
 
@@ -193,6 +195,7 @@ function asScan(row: Record<string, unknown>): MenuScanRow {
     currency: (row.currency as string) ?? null,
     city: (row.city as string) ?? null,
     country: (row.country as string) ?? null,
+    country_code: (row.country_code as string) ?? null,
     venue_note: (row.venue_note as string) ?? null,
     superseded: row.superseded === true,
   };
@@ -213,6 +216,7 @@ export async function saveMenuScan(args: {
   currency: string | null;
   city?: string | null;
   country?: string | null;
+  countryCode?: string | null;
   venueNote?: string | null;
   skippedCount?: number;
   skippedCategories?: string[];
@@ -234,6 +238,7 @@ export async function saveMenuScan(args: {
       currency: args.currency,
       city: args.city ?? null,
       country: args.country ?? null,
+      country_code: args.countryCode ?? null,
       venue_note: args.venueNote ?? null,
       skipped_count: args.skippedCount ?? 0,
       skipped_categories: args.skippedCategories ?? [],
@@ -495,6 +500,17 @@ export async function setScanServingBasis(
   }
   const byId = new Map(changed.map((c) => [c.id, c]));
   return items.map((i) => byId.get(i.id) ?? i);
+}
+
+/**
+ * The user's currency for a whole scan. Stored on the scan and on every line,
+ * so it replaces both the model's answer and any country-derived guess.
+ */
+export async function setScanCurrency(scanId: string, currency: string): Promise<void> {
+  const scan = await menuDb.from("menu_scans").update({ currency }).eq("id", scanId);
+  if (scan.error) throw scan.error;
+  const items = await menuDb.from("menu_items").update({ currency }).eq("menu_scan_id", scanId);
+  if (items.error) throw items.error;
 }
 
 /** What a line's single price buys, in words, e.g. "glass". */

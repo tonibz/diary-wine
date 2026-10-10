@@ -65,9 +65,10 @@ function MenuScanPage() {
   const uidRef = useRef<string | null>(null);
 
   // Read from the photo's GPS in the background: never asked for, never blocking.
-  const placeRef = useRef<{ city: string | null; country: string | null }>({
+  const placeRef = useRef<{ city: string | null; country: string | null; countryCode: string | null }>({
     city: null,
     country: null,
+    countryCode: null,
   });
   const [pages, setPages] = useState<Page[]>([]);
   const [reading, setReading] = useState(false);
@@ -105,7 +106,11 @@ function MenuScanPage() {
       const meta = await readPhotoMeta(file);
       if (!meta.gps) return;
       const place = await reverseGeocodeCity(meta.gps.lat, meta.gps.lon);
-      placeRef.current = { city: place.city ?? null, country: place.country ?? null };
+      placeRef.current = {
+        city: place.city ?? null,
+        country: place.country ?? null,
+        countryCode: place.countryCode ?? null,
+      };
     } catch {
       // A missing location is never a reason to block a scan.
     }
@@ -163,6 +168,7 @@ function MenuScanPage() {
           currency: null,
           city: placeRef.current.city,
           country: placeRef.current.country,
+          countryCode: placeRef.current.countryCode,
           onStage: mark,
         }),
         20_000,
