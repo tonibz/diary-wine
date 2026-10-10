@@ -50,7 +50,11 @@ export function formatMoney(
 ): string {
   const n = typeof value === "string" ? Number(value) : value;
   if (n === null || n === undefined || Number.isNaN(n)) return "";
-  const cur = (currency || "EUR").toUpperCase();
+  // No currency is an honest "I don't know": show the number alone, never a guessed symbol.
+  if (!currency || !currency.trim()) {
+    return formatNumber(n, { maximumFractionDigits: Number.isInteger(n) ? 0 : 2 });
+  }
+  const cur = currency.toUpperCase();
   try {
     return new Intl.NumberFormat(activeLocale(), {
       style: "currency",

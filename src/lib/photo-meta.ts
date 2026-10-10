@@ -74,18 +74,20 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string |
 export async function reverseGeocodeCity(
   lat: number,
   lon: number,
-): Promise<{ city: string | null; country: string | null }> {
+): Promise<{ city: string | null; country: string | null; countryCode: string | null }> {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12&addressdetails=1`;
     const res = await fetch(url, { headers: { "Accept-Language": "en" } });
-    if (!res.ok) return { city: null, country: null };
+    if (!res.ok) return { city: null, country: null, countryCode: null };
     const json = (await res.json()) as { address?: Record<string, string> };
     const a = json.address ?? {};
     return {
       city: a.city || a.town || a.village || a.municipality || a.county || null,
       country: a.country || null,
+      // Nominatim returns the ISO 3166-1 alpha-2 code, lowercase.
+      countryCode: a.country_code ? a.country_code.toUpperCase() : null,
     };
   } catch {
-    return { city: null, country: null };
+    return { city: null, country: null, countryCode: null };
   }
 }

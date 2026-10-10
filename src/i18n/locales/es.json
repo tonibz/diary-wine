@@ -429,6 +429,11 @@
   },
   "menu": {
     "results": {
+      "currencyLabel": "Precios en",
+      "currencyUnknown": "La carta no indica la moneda",
+      "currencyFromCountry": "Moneda deducida de {{country}}, no leída en la carta.",
+      "currencyChanged": "Ahora los precios se muestran en {{code}}.",
+      "currencyChangeFailed": "No se ha podido cambiar la moneda.",
       "workingOut": "Mirando qué te gustaría…",
       "couldntScore": "No he podido calcularlo; abajo tienes la carta entera.",
       "signInAgain": "Vuelve a iniciar sesión para ver las sugerencias.",

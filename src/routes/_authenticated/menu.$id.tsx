@@ -185,6 +185,9 @@ function MenuScanDetail() {
             restaurantName={scan.restaurant_name}
             userId={user.id}
             scanId={scan.id}
+            scanCurrency={scan.currency}
+            country={scan.country}
+            countryCode={scan.country_code}
           />
         </>
       )}

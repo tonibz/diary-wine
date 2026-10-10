@@ -11,6 +11,7 @@ import {
   deleteMenuItem,
   loadTasteContext,
   servingLabel,
+  setScanCurrency,
   setScanServingBasis,
   updateMenuItem,
   type MenuItemRow,
@@ -29,6 +30,7 @@ import { createStageTimer } from "@/lib/stage-timer";
 import { SignedOutError } from "@/lib/session-guard";
 import { formatDate, formatMoney } from "@/lib/format";
 import { wineTypeLabel } from "@/lib/wine-type";
+import { CURRENCY_OPTIONS, currencyForCountry } from "@/lib/currency";
 
 
 
@@ -40,11 +42,17 @@ export function MenuResults({
   restaurantName,
   userId,
   scanId,
+  scanCurrency = null,
+  country = null,
+  countryCode = null,
 }: {
   items: MenuItemRow[];
   restaurantName: string | null;
   userId: string;
   scanId: string;
+  scanCurrency?: string | null;
+  country?: string | null;
+  countryCode?: string | null;
 }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -64,6 +72,27 @@ export function MenuResults({
   // A whole page corrected in one tap, e.g. glass prices read as bottle prices.
   const [servingFix, setServingFix] = useState<Record<string, MenuItemRow>>({});
   const [servingBusy, setServingBusy] = useState(false);
+  // The user's choice wins over the model's answer and over the country guess.
+  const [chosenCurrency, setChosenCurrency] = useState<string | null>(null);
+  const [currencyBusy, setCurrencyBusy] = useState(false);
+  const readCurrency = scanCurrency ?? items.find((i) => i.currency)?.currency ?? null;
+  const derivedCurrency = readCurrency ? null : currencyForCountry(country, countryCode);
+  const shownCurrency = chosenCurrency ?? readCurrency ?? derivedCurrency;
+  const currencyOf = (item: MenuItemRow) =>
+    chosenCurrency ?? item.currency ?? readCurrency ?? derivedCurrency;
+
+  async function onChangeCurrency(code: string) {
+    try {
+      setCurrencyBusy(true);
+      await setScanCurrency(scanId, code);
+      setChosenCurrency(code);
+      toast.success(t("menu.results.currencyChanged", { code }));
+    } catch {
+      toast.error(t("menu.results.currencyChangeFailed"));
+    } finally {
+      setCurrencyBusy(false);
+    }
+  }
 
   const visible = useMemo(
     () =>
@@ -294,7 +323,7 @@ export function MenuResults({
       <div className="text-right flex-shrink-0">
         {item.price != null && (
           <p className="text-sm font-medium text-foreground">
-            {formatMoney(item.price, item.currency)}
+            {formatMoney(item.price, currencyOf(item))}
             {/* No serving established: show the price alone rather than a dangling slash. */}
             {servingLabel(item.serving_basis) && (
               <span className="text-[11px] font-normal text-muted-foreground">
@@ -311,7 +340,7 @@ export function MenuResults({
               item.price == null ? "text-sm font-medium text-foreground" : "text-[11px]",
             )}
           >
-            <GlassWater size={11} /> {formatMoney(item.glass_price, item.currency)}{" "}
+            <GlassWater size={11} /> {formatMoney(item.glass_price, currencyOf(item))}{" "}
             {t("menu.results.perGlass")}
           </p>
         )}
@@ -441,6 +470,33 @@ export function MenuResults({
         </div>
       )}
 
+      <div className="rounded-2xl border border-border bg-parchment/60 px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor="scan-currency" className="text-sm text-foreground">
+            {shownCurrency ? t("menu.results.currencyLabel") : t("menu.results.currencyUnknown")}
+          </label>
+          <select
+            id="scan-currency"
+            value={shownCurrency ?? ""}
+            disabled={currencyBusy}
+            onChange={(e) => e.target.value && void onChangeCurrency(e.target.value)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+          >
+            {!shownCurrency && <option value="">—</option>}
+            {[...new Set([...(shownCurrency ? [shownCurrency] : []), ...CURRENCY_OPTIONS])].map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        {!chosenCurrency && !readCurrency && derivedCurrency && country && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("menu.results.currencyFromCountry", { country })}
+          </p>
+        )}
+      </div>
+
       {scoring && (
         <p className="text-xs text-muted-foreground">{t("menu.results.workingOut")}</p>
       )}
@@ -532,7 +588,7 @@ export function MenuResults({
                 >
                   <p className="text-xs text-muted-foreground mb-2">
                     {t("menu.results.readAs", { text: item.parsed_name ?? item.raw_text ?? "—" })}
-                    {item.price != null ? ` · ${formatMoney(item.price, item.currency)}` : ""}
+                    {item.price != null ? ` · ${formatMoney(item.price, currencyOf(item))}` : ""}
                   </p>
                   <div className="space-y-2">
                     <Input

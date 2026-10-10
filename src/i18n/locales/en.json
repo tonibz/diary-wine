@@ -429,6 +429,11 @@
   },
   "menu": {
     "results": {
+      "currencyLabel": "Prices in",
+      "currencyUnknown": "The list doesn't show a currency",
+      "currencyFromCountry": "Currency taken from {{country}}, not read off the list.",
+      "currencyChanged": "Prices now shown in {{code}}.",
+      "currencyChangeFailed": "Couldn't change the currency.",
       "workingOut": "Working out what you'd like…",
       "couldntScore": "Couldn't work out what you'd like — the full list is below.",
       "signInAgain": "Please sign in again to see suggestions.",

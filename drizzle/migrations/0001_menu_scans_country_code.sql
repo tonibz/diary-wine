@@ -1,0 +1,1 @@
+ALTER TABLE public.menu_scans ADD COLUMN IF NOT EXISTS country_code text;
