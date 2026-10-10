@@ -8,6 +8,13 @@
       "when": 1791565061802,
       "tag": "0000_restrict_wine_edits_read",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791673601613,
+      "tag": "0001_menu_scans_country_code",
+      "breakpoints": true
     }
   ]
 }
