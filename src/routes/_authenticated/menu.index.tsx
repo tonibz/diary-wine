@@ -426,14 +426,6 @@ function MenuScanPage() {
             <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-destructive" />
             <span>{failure}</span>
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => void onRead()}
-          >
-            <RotateCcw size={14} /> {t("common.retry")}
-          </Button>
         </div>
       )}
 
