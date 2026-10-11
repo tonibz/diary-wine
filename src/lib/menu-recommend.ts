@@ -190,12 +190,25 @@ export async function fillFromAppellations(
   }
   if (!probes.length) return out;
 
+  // Identical probe texts are sent once; every item sharing a text still
+  // receives that text's result through `itemsByText`.
+  const uniqueTexts: string[] = [];
+  const itemsByText = new Map<string, string[]>();
+  for (const p of probes) {
+    const ids = itemsByText.get(p.text);
+    if (ids) ids.push(p.itemId);
+    else {
+      itemsByText.set(p.text, [p.itemId]);
+      uniqueTexts.push(p.text);
+    }
+  }
+
   const { data, error } = await withTimeout(
     withValidSession(async () =>
       supabase.rpc(
         "lookup_appellations" as never,
         {
-          _names: probes.map((p) => p.text),
+          _names: uniqueTexts,
         } as never,
       ),
     ),
@@ -210,11 +223,13 @@ export async function fillFromAppellations(
 
   const best = new Map<string, AppellationRefRow>();
   for (const row of (data ?? []) as unknown as AppellationRefRow[]) {
-    const probe = probes[row.idx - 1];
-    if (!probe) continue;
+    const text = uniqueTexts[row.idx - 1];
+    if (text === undefined) continue;
     if (Number(row.score) < REF_THRESHOLD) continue;
-    const prev = best.get(probe.itemId);
-    if (!prev || Number(row.score) > Number(prev.score)) best.set(probe.itemId, row);
+    for (const itemId of itemsByText.get(text) ?? []) {
+      const prev = best.get(itemId);
+      if (!prev || Number(row.score) > Number(prev.score)) best.set(itemId, row);
+    }
   }
 
   for (const item of needs) {
