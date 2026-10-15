@@ -333,7 +333,7 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
     price = null;
   }
 
-  const servingBasis: ServingBasis =
+  let servingBasis: ServingBasis =
     headingBasis !== "unknown"
       ? headingBasis
       : bottle !== null
@@ -347,8 +347,9 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
   // decides which column holds the money.
   if (servingBasis === "glass") {
     if (glass === null) glass = price;
-    // Only a separately printed bottle price survives on a by-the-glass page.
-    price = bottle !== null && bottle !== glass ? bottle : null;
+    // A second, different price printed on the line is its bottle price.
+    const second = bottle ?? price;
+    price = second !== null && second !== glass ? second : null;
   } else if (price === null && glass !== null && glassSized === null) {
     // A lone amount on a bottle/half-bottle/magnum or unlabelled page is not a
     // glass price; it belongs in `price`.
@@ -359,6 +360,9 @@ export function normaliseMenuItem(it: Record<string, unknown>): MenuParsedItem {
     if (servingBasis === "glass") price = null;
     else glass = null;
   }
+  // A line printing both a glass and a bottle price states its own servings:
+  // `price` is the bottle, whatever the page heading says.
+  if (price !== null && glass !== null) servingBasis = "bottle";
 
 
 
