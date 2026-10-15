@@ -22,6 +22,13 @@
       "when": 1791744344779,
       "tag": "0002_lookup_appellations_lateral_trgm",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792090326273,
+      "tag": "0003_backfill_two_priced_serving_basis_bottle",
+      "breakpoints": true
     }
   ]
 }
