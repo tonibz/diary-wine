@@ -71,4 +71,4 @@ export function currencyForCountry(
 }
 
 export const CURRENCY_OPTIONS = ["EUR", "GBP", "USD", "CHF", "SEK", "AUD", "CAD", "JPY"];
-const codeForName = (c: string) => countryCode(c);
+const codeForName = (c: string | null | undefined) => countryCode(c);
