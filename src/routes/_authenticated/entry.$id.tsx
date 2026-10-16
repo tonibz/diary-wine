@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { canonicalCountry, countryName } from "@/lib/country-name";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
 import { formatDate } from "@/lib/format";
@@ -180,7 +181,9 @@ function EntryDetail() {
   async function saveWineField(key: string, value: string) {
     const w = entry?.vintage_row?.wine;
     if (!w) return;
-    const payload: Record<string, unknown> = { [key]: value.trim() || null };
+    const payload: Record<string, unknown> = {
+      [key]: key === "country" ? canonicalCountry(value) : value.trim() || null,
+    };
     const { error } = await supabase.from("wines").update(payload as never).eq("id", w.id);
     if (error) return toast.error(error.message);
     await markFieldsAsUser(w.id, [key]);
@@ -310,7 +313,7 @@ function EntryDetail() {
             {wineFields.map((f) => {
               const val = (w?.[f.key] ?? null) as string | number | null;
               return (
-                <FieldRow key={f.key} label={f.label} value={val} options={f.options} onSave={(v) => saveWineField(f.key, v)} />
+                <FieldRow key={f.key} label={f.label} value={val} display={f.key === "country" && typeof val === "string" ? countryName(val, t) : undefined} options={f.options} onSave={(v) => saveWineField(f.key, v)} />
               );
             })}
             <FieldRow
@@ -509,10 +512,12 @@ function FieldRowAddButton({ label, onClick }: { label: string; onClick: () => v
 }
 
 function FieldRow({
-  label, value, type, options, onSave,
+  label, value, display, type, options, onSave,
 }: {
   label: string;
   value: string | number | null;
+  /** Read-only text shown in place of value; editing still uses the stored value. */
+  display?: string;
   type?: string;
   options?: string[];
   onSave: (v: string) => void;
@@ -551,7 +556,7 @@ function FieldRow({
   return (
     <button onClick={() => setEditing(true)} className="flex justify-between w-full text-left group">
       <span className="text-muted-foreground">{label}</span>
-      <span className="group-hover:text-primary">{options ? wineTypeLabel(String(value)) : String(value)}</span>
+      <span className="group-hover:text-primary">{display ?? (options ? wineTypeLabel(String(value)) : String(value))}</span>
     </button>
   );
 }

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAsyncData } from "@/lib/use-async-data";
+import { countryName } from "@/lib/country-name";
 import { ErrorState } from "@/components/ErrorState";
 import { useTranslation } from "react-i18next";
 import { i18next } from "@/i18n";
@@ -101,7 +102,7 @@ function WishlistPage() {
                     {w?.producer && <p className="text-sm text-muted-foreground truncate">{w.producer}</p>}
                     {(w?.region || w?.country) && (
                       <p className="text-xs text-muted-foreground truncate">
-                        {[w?.region, w?.country].filter(Boolean).join(", ")}
+                        {[w?.region, countryName(w?.country, t)].filter(Boolean).join(", ")}
                       </p>
                     )}
                     {it.notes && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{it.notes}</p>}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { countryName } from "@/lib/country-name";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Bookmark, Wine, Sparkles, GlassWater, ScanLine, Trash2 } from "lucide-react";
@@ -492,7 +493,7 @@ export function MenuResults({
         </div>
         {!chosenCurrency && !readCurrency && derivedCurrency && country && (
           <p className="text-xs text-muted-foreground mt-1">
-            {t("menu.results.currencyFromCountry", { country })}
+            {t("menu.results.currencyFromCountry", { country: countryName(country, t) })}
           </p>
         )}
       </div>
