@@ -66,8 +66,9 @@ export function currencyForCountry(
 ): string | null {
   const code = countryCode?.trim().toUpperCase();
   if (code && REGION_CURRENCY[code]) return REGION_CURRENCY[code];
-  const fromName = countryCode(country);
+  const fromName = codeForName(country);
   return (fromName && REGION_CURRENCY[fromName]) || null;
 }
 
 export const CURRENCY_OPTIONS = ["EUR", "GBP", "USD", "CHF", "SEK", "AUD", "CAD", "JPY"];
+const codeForName = (c: string) => countryCode(c);
