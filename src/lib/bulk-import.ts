@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import {
 import { canonicalCountry } from "@/lib/country-name";
+import {
   buildFieldSources,
   rowDataSource,
   diffCorrections,
