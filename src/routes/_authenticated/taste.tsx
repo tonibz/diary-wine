@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAsyncData } from "@/lib/use-async-data";
+import { countryName } from "@/lib/country-name";
 import { captureClientError } from "@/lib/sentry-browser";
 import { errorFields, toError } from "@/lib/to-error";
 import { ErrorState } from "@/components/ErrorState";
@@ -145,7 +146,7 @@ function TastePage() {
               return (
                 <li key={c.key}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>{c.key}</span>
+                    <span>{countryName(c.key, tr)}</span>
                     <span className="text-muted-foreground">{c.count}</span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -202,7 +203,8 @@ function buildSummary(t: Taste, red: number, white: number): string {
   const bias =
     red > white * 1.3 ? "leanRed" : white > red * 1.3 ? "leanWhite" : "even";
   const grape = t.top_grapes[0]?.key;
-  const country = t.top_countries[0]?.key;
+  const topCountry = t.top_countries[0]?.key;
+  const country = topCountry ? countryName(topCountry, i18next.t) : undefined;
   const variant = grape && country ? "grapeCountry" : grape ? "grape" : country ? "country" : "plain";
   return i18next.t(`taste.summary.${bias}.${variant}`, { grape, country });
 }

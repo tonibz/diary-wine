@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
+import { canonicalCountry } from "@/lib/country-name";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { recogniseLabel, type RecognitionData } from "@/lib/recognise.functions";
@@ -316,7 +317,7 @@ function AddPage() {
       producer: bottle.producer.trim(),
       appellation: bottle.appellation.trim(),
       region: bottle.region.trim(),
-      country: bottle.country.trim(),
+      country: canonicalCountry(bottle.country) ?? "",
       vintage: bottle.vintage ? Number(bottle.vintage) : null,
       wine_type: bottle.wine_type,
       grapes: bottle.grapes,
@@ -334,7 +335,7 @@ function AddPage() {
       appellation: bottle.appellation.trim() || null,
       classification: (modelData?.classification ?? null) || null,
       region: bottle.region.trim() || null,
-      country: bottle.country.trim() || null,
+      country: canonicalCountry(bottle.country),
       wine_type: bottle.wine_type || null,
       grapes: bottle.grapes,
       // The label photo identifies the wine, so it goes on the catalogue row.

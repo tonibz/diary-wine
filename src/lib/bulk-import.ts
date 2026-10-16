@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
+import { canonicalCountry } from "@/lib/country-name";
   buildFieldSources,
   rowDataSource,
   diffCorrections,
@@ -362,7 +363,7 @@ export function draftOf(item: BulkItem): WineDraft {
     producer: f.producer.trim(),
     appellation: f.appellation.trim(),
     region: f.region.trim(),
-    country: f.country.trim(),
+    country: canonicalCountry(f.country) ?? "",
     vintage: f.vintage ? Number(f.vintage) : null,
     wine_type: f.wine_type,
     grapes: f.grapes,
@@ -380,7 +381,7 @@ export function draftOf(item: BulkItem): WineDraft {
     appellation: f.appellation.trim() || null,
     classification: (item.modelData?.classification ?? null) || null,
     region: f.region.trim() || null,
-    country: f.country.trim() || null,
+    country: canonicalCountry(f.country),
     wine_type: f.wine_type || null,
     grapes: f.grapes,
     // The label photo identifies the wine; shown only where a duplicate is decided.
