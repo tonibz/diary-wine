@@ -39,7 +39,22 @@ const COUNTRY_NAME_CODE: Record<string, string> = {
   mexico: "MX", argentina: "AR", chile: "CL", turkey: "TR", turkiye: "TR", turquia: "TR",
   israel: "IL", "south korea": "KR", "corea del sur": "KR", "united arab emirates": "AE",
   "emiratos arabes unidos": "AE",
+  armenia: "AM", azerbaijan: "AZ", azerbaiyan: "AZ", bolivia: "BO", bulgaria: "BG",
+  georgia: "GE", lebanon: "LB", libano: "LB", moldova: "MD", moldavia: "MD",
+  morocco: "MA", marruecos: "MA", "north macedonia": "MK", "macedonia del norte": "MK",
+  peru: "PE", serbia: "RS", ukraine: "UA", ucrania: "UA", uruguay: "UY",
 };
+
+/** ISO 3166-1 alpha-2 code for a country name (English or Spanish), or null. */
+export function countryCode(country: string | null | undefined): string | null {
+  if (!country) return null;
+  const key = country
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  return COUNTRY_NAME_CODE[key] ?? null;
+}
 
 /**
  * Currency for a country, from its ISO code (preferred) or its name.
@@ -51,13 +66,7 @@ export function currencyForCountry(
 ): string | null {
   const code = countryCode?.trim().toUpperCase();
   if (code && REGION_CURRENCY[code]) return REGION_CURRENCY[code];
-  if (!country) return null;
-  const key = country
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-  const fromName = COUNTRY_NAME_CODE[key];
+  const fromName = countryCode(country);
   return (fromName && REGION_CURRENCY[fromName]) || null;
 }
 
