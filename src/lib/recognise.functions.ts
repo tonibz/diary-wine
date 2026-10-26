@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { captureServerError } from "@/lib/sentry.server";
+import { promptHash as hashPrompt } from "./eval-utils";
 
 const Input = z.object({
   photoPath: z.string().min(1),
@@ -116,6 +117,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
 
     const modelName = MODEL_NAME;
     const prompt = RECOGNISE_PROMPT;
+    const productionPromptHash = await hashPrompt(prompt);
 
     // Cache key = photo bytes + model + prompt. Every cache step is best-effort:
     // a cache problem must never surface as an error to the user.
@@ -125,7 +127,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
     try {
       imageHash = await sha256Hex(arrayBuf);
       if (backArrayBuf) backImageHash = await sha256Hex(backArrayBuf);
-      promptHash = (await sha256Hex(prompt)).slice(0, 16);
+      promptHash = productionPromptHash;
     } catch {
       imageHash = null;
       promptHash = null;
@@ -164,7 +166,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
               user_id: userId,
               photo_path: data.photoPath,
               model_name: modelName,
-              prompt_hash: promptHash,
+              prompt_hash: productionPromptHash,
               raw_response: null,
               cache_hit: true,
               inferred_fields: (result.inferred_fields ?? null) as never,
@@ -247,7 +249,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
         user_id: userId,
         photo_path: data.photoPath,
         model_name: modelName,
-        prompt_hash: promptHash,
+        prompt_hash: productionPromptHash,
         raw_response: raw as never,
         cache_hit: false,
         inferred_fields: (parsed?.inferred_fields ?? null) as never,
