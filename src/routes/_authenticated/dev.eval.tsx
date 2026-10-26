@@ -93,6 +93,12 @@ function EvalPage() {
           </section>;
         })}
       </div>
+      <details className="border-t border-border pt-4">
+        <summary className="cursor-pointer text-sm font-medium">Eligible recognitions ({data.recognitions.length})</summary>
+        <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
+          {data.recognitions.map((r) => <li key={r.id} className="break-all font-mono">{r.id} · {r.hasBack ? "front + back" : "front only"}</li>)}
+        </ul>
+      </details>
     </>}
     {(running || progress.total > 0) && <section className="space-y-3 border-t border-border pt-4" aria-live="polite">
       <h2 className="font-medium">{running ? labels[running] : "Run finished"}</h2>

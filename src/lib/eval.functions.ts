@@ -56,7 +56,9 @@ async function callModel(client: Client, paths: string[], prompt: string, model:
     for (const path of paths) {
       const { data, error } = await client.storage.from("wine-photos").download(path);
       if (error || !data) throw new Error("Could not read the evaluation photo");
-      content.push({ type: "image", source: { type: "base64", media_type: (data.type || "image/jpeg") as "image/jpeg", data: Buffer.from(await data.arrayBuffer()).toString("base64") } });
+      const mediaType = data.type || "image/jpeg";
+      if (mediaType !== "image/jpeg" && mediaType !== "image/png" && mediaType !== "image/gif" && mediaType !== "image/webp") throw new Error("Unsupported evaluation photo format");
+      content.push({ type: "image", source: { type: "base64", media_type: mediaType, data: Buffer.from(await data.arrayBuffer()).toString("base64") } });
     }
     content.push({ type: "text", text: prompt });
     const gateway = createLovableAiGatewayRunIdFetch();
@@ -71,8 +73,12 @@ async function callModel(client: Client, paths: string[], prompt: string, model:
       outcome.halt = true;
       return outcome;
     }
-    outcome.parsed = parseRecognitionResponse(raw);
-    if (!outcome.parsed) outcome.error = "Model response was not a JSON object";
+    try {
+      outcome.parsed = parseRecognitionResponse(raw);
+    } catch {
+      outcome.error = "Model response was not valid JSON";
+    }
+    if (!outcome.parsed && !outcome.error) outcome.error = "Model response was not a JSON object";
   } catch (error) {
     const details = objectValue(error);
     const status = details?.status;
