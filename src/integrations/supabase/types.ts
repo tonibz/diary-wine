@@ -166,6 +166,106 @@ export type Database = {
           },
         ]
       }
+      eval_judgements: {
+        Row: {
+          back: Json | null
+          created_at: string | null
+          error: string | null
+          front: Json | null
+          id: string
+          input_tokens: number | null
+          judge_model: string
+          output_tokens: number | null
+          prompt_hash: string
+          raw_response: Json | null
+          recognition_id: string
+        }
+        Insert: {
+          back?: Json | null
+          created_at?: string | null
+          error?: string | null
+          front?: Json | null
+          id?: string
+          input_tokens?: number | null
+          judge_model: string
+          output_tokens?: number | null
+          prompt_hash: string
+          raw_response?: Json | null
+          recognition_id: string
+        }
+        Update: {
+          back?: Json | null
+          created_at?: string | null
+          error?: string | null
+          front?: Json | null
+          id?: string
+          input_tokens?: number | null
+          judge_model?: string
+          output_tokens?: number | null
+          prompt_hash?: string
+          raw_response?: Json | null
+          recognition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eval_judgements_recognition_id_fkey"
+            columns: ["recognition_id"]
+            isOneToOne: false
+            referencedRelation: "recognitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eval_runs: {
+        Row: {
+          condition: string
+          created_at: string | null
+          error: string | null
+          id: string
+          input_tokens: number | null
+          model_name: string
+          output_tokens: number | null
+          parsed: Json | null
+          prompt_hash: string
+          raw_response: Json | null
+          recognition_id: string
+        }
+        Insert: {
+          condition: string
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          input_tokens?: number | null
+          model_name: string
+          output_tokens?: number | null
+          parsed?: Json | null
+          prompt_hash: string
+          raw_response?: Json | null
+          recognition_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          input_tokens?: number | null
+          model_name?: string
+          output_tokens?: number | null
+          parsed?: Json | null
+          prompt_hash?: string
+          raw_response?: Json | null
+          recognition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eval_runs_recognition_id_fkey"
+            columns: ["recognition_id"]
+            isOneToOne: false
+            referencedRelation: "recognitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inference_checks: {
         Row: {
           agrees: boolean | null
@@ -507,6 +607,7 @@ export type Database = {
           inferred_fields: Json | null
           model_name: string | null
           photo_path: string
+          prompt_hash: string | null
           raw_response: Json | null
           user_id: string
         }
@@ -520,6 +621,7 @@ export type Database = {
           inferred_fields?: Json | null
           model_name?: string | null
           photo_path: string
+          prompt_hash?: string | null
           raw_response?: Json | null
           user_id: string
         }
@@ -533,6 +635,7 @@ export type Database = {
           inferred_fields?: Json | null
           model_name?: string | null
           photo_path?: string
+          prompt_hash?: string | null
           raw_response?: Json | null
           user_id?: string
         }

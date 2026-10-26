@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { captureServerError } from "@/lib/sentry.server";
+import { promptHash as hashPrompt } from "./eval-utils";
 
 const Input = z.object({
   photoPath: z.string().min(1),
@@ -29,9 +30,9 @@ export type RecognitionResult =
   | { ok: true; data: RecognitionData; recognition_id: string }
   | { ok: false; error: string; recognition_id?: string };
 
-const MODEL_NAME = "claude-sonnet-5";
+export const MODEL_NAME = "claude-sonnet-5";
 
-const RECOGNISE_PROMPT = `You are reading a photograph of a wine bottle label. Return ONLY a JSON object, with no prose and no markdown code fences.
+export const RECOGNISE_PROMPT = `You are reading a photograph of a wine bottle label. Return ONLY a JSON object, with no prose and no markdown code fences.
 
 You may be given two photographs: the front label and the back label. Read both. Back labels often carry the alcohol percentage, the grape varieties, and importer or bottling details that the front label omits. Combine what you find. If the two disagree, prefer the back label for technical details such as alcohol percentage and grape varieties, and the front label for the wine name and producer.
 
@@ -116,6 +117,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
 
     const modelName = MODEL_NAME;
     const prompt = RECOGNISE_PROMPT;
+    const productionPromptHash = await hashPrompt(prompt);
 
     // Cache key = photo bytes + model + prompt. Every cache step is best-effort:
     // a cache problem must never surface as an error to the user.
@@ -125,7 +127,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
     try {
       imageHash = await sha256Hex(arrayBuf);
       if (backArrayBuf) backImageHash = await sha256Hex(backArrayBuf);
-      promptHash = (await sha256Hex(prompt)).slice(0, 16);
+      promptHash = productionPromptHash;
     } catch {
       imageHash = null;
       promptHash = null;
@@ -164,6 +166,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
               user_id: userId,
               photo_path: data.photoPath,
               model_name: modelName,
+              prompt_hash: productionPromptHash,
               raw_response: null,
               cache_hit: true,
               inferred_fields: (result.inferred_fields ?? null) as never,
@@ -246,6 +249,7 @@ export const recogniseLabel = createServerFn({ method: "POST" })
         user_id: userId,
         photo_path: data.photoPath,
         model_name: modelName,
+        prompt_hash: productionPromptHash,
         raw_response: raw as never,
         cache_hit: false,
         inferred_fields: (parsed?.inferred_fields ?? null) as never,

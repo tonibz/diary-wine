@@ -25,6 +25,7 @@ import { Route as AuthenticatedTasteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedWishlistRouteImport } from './routes/_authenticated/wishlist'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedDevEvalRouteImport } from './routes/_authenticated/dev.eval'
 import { Route as AuthenticatedEntryIdRouteImport } from './routes/_authenticated/entry.$id'
 import { Route as AuthenticatedMenuIndexRouteImport } from './routes/_authenticated/menu.index'
 import { Route as AuthenticatedMenuIdRouteImport } from './routes/_authenticated/menu.$id'
@@ -111,6 +112,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedDevEvalRoute = AuthenticatedDevEvalRouteImport.update({
+  id: '/dev/eval',
+  path: '/dev/eval',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedEntryIdRoute = AuthenticatedEntryIdRouteImport.update({
   id: '/entry/$id',
   path: '/entry/$id',
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/wishlist': typeof AuthenticatedWishlistRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/dev/eval': typeof AuthenticatedDevEvalRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
   '/menu/': typeof AuthenticatedMenuIndexRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/wishlist': typeof AuthenticatedWishlistRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/dev/eval': typeof AuthenticatedDevEvalRoute
   '/entry/$id': typeof AuthenticatedEntryIdRoute
   '/menu/$id': typeof AuthenticatedMenuIdRoute
   '/menu': typeof AuthenticatedMenuIndexRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/_authenticated/wishlist': typeof AuthenticatedWishlistRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/dev/eval': typeof AuthenticatedDevEvalRoute
   '/_authenticated/entry/$id': typeof AuthenticatedEntryIdRoute
   '/_authenticated/menu/$id': typeof AuthenticatedMenuIdRoute
   '/_authenticated/menu/': typeof AuthenticatedMenuIndexRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/wishlist'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/dev/eval'
     | '/entry/$id'
     | '/menu/$id'
     | '/menu/'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/wishlist'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/dev/eval'
     | '/entry/$id'
     | '/menu/$id'
     | '/menu'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/_authenticated/wishlist'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/dev/eval'
     | '/_authenticated/entry/$id'
     | '/_authenticated/menu/$id'
     | '/_authenticated/menu/'
@@ -379,6 +391,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/dev/eval': {
+      id: '/_authenticated/dev/eval'
+      path: '/dev/eval'
+      fullPath: '/dev/eval'
+      preLoaderRoute: typeof AuthenticatedDevEvalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/entry/$id': {
       id: '/_authenticated/entry/$id'
       path: '/entry/$id'
@@ -411,6 +430,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTasteRoute: typeof AuthenticatedTasteRoute
   AuthenticatedWishlistRoute: typeof AuthenticatedWishlistRoute
+  AuthenticatedDevEvalRoute: typeof AuthenticatedDevEvalRoute
   AuthenticatedEntryIdRoute: typeof AuthenticatedEntryIdRoute
   AuthenticatedMenuIdRoute: typeof AuthenticatedMenuIdRoute
   AuthenticatedMenuIndexRoute: typeof AuthenticatedMenuIndexRoute
@@ -424,6 +444,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTasteRoute: AuthenticatedTasteRoute,
   AuthenticatedWishlistRoute: AuthenticatedWishlistRoute,
+  AuthenticatedDevEvalRoute: AuthenticatedDevEvalRoute,
   AuthenticatedEntryIdRoute: AuthenticatedEntryIdRoute,
   AuthenticatedMenuIdRoute: AuthenticatedMenuIdRoute,
   AuthenticatedMenuIndexRoute: AuthenticatedMenuIndexRoute,
