@@ -29,6 +29,13 @@
       "when": 1792090326273,
       "tag": "0003_backfill_two_priced_serving_basis_bottle",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793058395557,
+      "tag": "0004_create_recognition_evaluation",
+      "breakpoints": true
     }
   ]
 }
