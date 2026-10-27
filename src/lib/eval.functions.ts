@@ -48,11 +48,9 @@ async function loadPhotos(client: Client, userId: string, recognitionId: string)
 async function callModel(client: Client, paths: string[], prompt: string, model: string, maxTokens: number): Promise<Outcome> {
   const outcome: Outcome = { raw: null, parsed: null, error: null, input_tokens: null, output_tokens: null, halt: false };
   try {
-    const apiKey = process.env['LOVABLE_API_KEY'];
-    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const { createLovableAiGatewayRunIdFetch } = await import("./eval-run-id.server");
-    const content: import("@anthropic-ai/sdk/resources/messages").ContentBlockParam[] = [];
+    const apiKey = process.env['ANTHROPIC_API_KEY'];
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
+    const content: Array<Record<string, unknown>> = [];
     for (const path of paths) {
       const { data, error } = await client.storage.from("wine-photos").download(path);
       if (error || !data) throw new Error("Could not read the evaluation photo");
@@ -61,14 +59,34 @@ async function callModel(client: Client, paths: string[], prompt: string, model:
       content.push({ type: "image", source: { type: "base64", media_type: mediaType, data: Buffer.from(await data.arrayBuffer()).toString("base64") } });
     }
     content.push({ type: "text", text: prompt });
-    const gateway = createLovableAiGatewayRunIdFetch();
-    const anthropic = new Anthropic({ apiKey, baseURL: "https://ai.gateway.lovable.dev", maxRetries: 0,
-      defaultHeaders: { "X-Lovable-AIG-SDK": "anthropic-sdk" }, fetch: gateway.fetch });
-    const raw = await anthropic.messages.stream({ model: `anthropic/${model}`, max_tokens: maxTokens, messages: [{ role: "user", content }] }).finalMessage();
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content }],
+      }),
+    });
+    const raw: unknown = await res.json();
     outcome.raw = JSON.parse(JSON.stringify(raw)) as Json;
-    outcome.input_tokens = raw.usage.input_tokens;
-    outcome.output_tokens = raw.usage.output_tokens;
-    if (raw.stop_reason === "refusal") {
+    if (!res.ok) {
+      const body = objectValue(raw);
+      const safeMessage = objectValue(body?.error)?.message ?? body?.message;
+      outcome.error = typeof safeMessage === "string" ? safeMessage : `Anthropic returned ${res.status}`;
+      // No automatic retries or continuation after provider/configuration failures.
+      outcome.halt = true;
+      if (res.status === 401 || res.status === 402 || res.status === 403) outcome.error = `[ACCESS_PAUSED] ${outcome.error}`;
+      return outcome;
+    }
+    const usage = objectValue(objectValue(raw)?.usage);
+    outcome.input_tokens = typeof usage?.input_tokens === "number" ? usage.input_tokens : null;
+    outcome.output_tokens = typeof usage?.output_tokens === "number" ? usage.output_tokens : null;
+    if (objectValue(raw)?.stop_reason === "refusal") {
       outcome.error = "The model refused this request.";
       outcome.halt = true;
       return outcome;
@@ -80,15 +98,9 @@ async function callModel(client: Client, paths: string[], prompt: string, model:
     }
     if (!outcome.parsed && !outcome.error) outcome.error = "Model response was not a JSON object";
   } catch (error) {
-    const details = objectValue(error);
-    const status = details?.status;
-    const body = objectValue(details?.error);
-    const safeMessage = objectValue(body?.error)?.message ?? body?.message;
-    outcome.error = typeof safeMessage === "string" ? safeMessage : toError(error).message;
-    if (body) outcome.raw = JSON.parse(JSON.stringify(body)) as Json;
+    outcome.error = toError(error).message;
     // No automatic retries or continuation after provider/configuration failures.
-    outcome.halt = typeof status === "number" || outcome.error.includes("not configured");
-    if (status === 402 || status === 403) outcome.error = `[ACCESS_PAUSED] ${outcome.error}`;
+    outcome.halt = outcome.error.includes("not configured");
   }
   return outcome;
 }
