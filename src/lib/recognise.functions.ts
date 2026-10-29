@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { captureServerError } from "@/lib/sentry.server";
-import { promptHash as hashPrompt } from "./eval-utils";
+import { promptHash as hashPrompt, strictPrompt } from "./eval-utils";
 
 const Input = z.object({
   photoPath: z.string().min(1),
@@ -32,7 +32,7 @@ export type RecognitionResult =
 
 export const MODEL_NAME = "claude-sonnet-5";
 
-export const RECOGNISE_PROMPT = `You are reading a photograph of a wine bottle label. Return ONLY a JSON object, with no prose and no markdown code fences.
+export const BASELINE_PROMPT = `You are reading a photograph of a wine bottle label. Return ONLY a JSON object, with no prose and no markdown code fences.
 
 You may be given two photographs: the front label and the back label. Read both. Back labels often carry the alcohol percentage, the grape varieties, and importer or bottling details that the front label omits. Combine what you find. If the two disagree, prefer the back label for technical details such as alcohol percentage and grape varieties, and the front label for the wine name and producer.
 
@@ -59,6 +59,9 @@ Return the classification separately in the field 'classification', for example 
 If no appellation is printed, return null rather than substituting a region or a phrase from the label.
 
 Rules. If something is not legible on the label, return null instead of guessing. Many European labels never print the colour or the grape, so you may infer those from the appellation, but you must list every field you inferred in inferred_fields. Set confidence low when the photo is blurred, badly lit, cropped, or the label is at a steep angle.`;
+
+/** Production now runs the strict prompt; BASELINE_PROMPT keeps the original text for the eval harness. */
+export const RECOGNISE_PROMPT = strictPrompt(BASELINE_PROMPT);
 
 /** Web Crypto only — this runs on the Cloudflare Workers runtime, not Node. */
 async function sha256Hex(input: ArrayBuffer | Uint8Array | string): Promise<string> {

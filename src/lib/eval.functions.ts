@@ -1,13 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { MODEL_NAME, RECOGNISE_PROMPT } from "./recognise.functions";
+import { MODEL_NAME, BASELINE_PROMPT } from "./recognise.functions";
 import { EVAL_CONDITIONS, objectValue, parseRecognitionResponse, promptHash, storagePhotoPath, strictPrompt } from "./eval-utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { toError } from "./to-error";
 
-export const STRICT_PROMPT = strictPrompt(RECOGNISE_PROMPT);
+export const STRICT_PROMPT = strictPrompt(BASELINE_PROMPT);
 export const JUDGE_MODEL = "claude-opus-5";
 export const JUDGE_PROMPT = `You are auditing photographs of wine bottle labels. You will receive one photo of the front label and, possibly, a second photo of the back label. Your job is only to report what is literally printed and legible in each photo. Do not use any knowledge about wine to fill gaps. Do not guess.
 
@@ -120,7 +120,7 @@ export const runEvalRecognition = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ recognitionId: z.uuid(), condition: z.enum(EVAL_CONDITIONS) }).parse(input))
   .handler(async ({ data, context }): Promise<EvalResult> => {
     const { supabase, userId } = context;
-    const prompt = data.condition === "C_strict_front" ? STRICT_PROMPT : RECOGNISE_PROMPT;
+    const prompt = data.condition === "C_strict_front" ? STRICT_PROMPT : BASELINE_PROMPT;
     const hash = await promptHash(prompt);
     const { data: existing, error } = await supabase.from("eval_runs").select("id").eq("recognition_id", data.recognitionId).eq("condition", data.condition).eq("prompt_hash", hash).maybeSingle();
     if (error) throw toError(error);
@@ -170,7 +170,7 @@ export const getEvalOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const [currentHash, strictHash, judgeHash] = await Promise.all([promptHash(RECOGNISE_PROMPT), promptHash(STRICT_PROMPT), promptHash(JUDGE_PROMPT)]);
+    const [currentHash, strictHash, judgeHash] = await Promise.all([promptHash(BASELINE_PROMPT), promptHash(STRICT_PROMPT), promptHash(JUDGE_PROMPT)]);
     const recognitions = [];
     // Page explicitly to avoid silently truncating the corpus at the Data API limit.
     for (let offset = 0; ; offset += 500) {
