@@ -1,13 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { MODEL_NAME, RECOGNISE_PROMPT } from "./recognise.functions";
+import { MODEL_NAME, BASELINE_PROMPT } from "./recognise.functions";
 import { EVAL_CONDITIONS, objectValue, parseRecognitionResponse, promptHash, storagePhotoPath, strictPrompt } from "./eval-utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { toError } from "./to-error";
 
-export const STRICT_PROMPT = strictPrompt(RECOGNISE_PROMPT);
+export const STRICT_PROMPT = strictPrompt(BASELINE_PROMPT);
 export const JUDGE_MODEL = "claude-opus-5";
 export const JUDGE_PROMPT = `You are auditing photographs of wine bottle labels. You will receive one photo of the front label and, possibly, a second photo of the back label. Your job is only to report what is literally printed and legible in each photo. Do not use any knowledge about wine to fill gaps. Do not guess.
 
