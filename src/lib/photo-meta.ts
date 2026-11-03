@@ -30,12 +30,6 @@ export async function readPhotoMeta(file: File): Promise<PhotoMeta> {
           ? new Date(rawDate)
           : null;
 
-    // exifr.gps applies the GPS hemisphere refs (N/S, E/W) correctly; picked
-    // coordinates without the refs come out positive for every western/southern location.
-    const pos = await exifr.gps(file).catch(() => null);
-    const lat = pos && typeof pos.latitude === "number" && Number.isFinite(pos.latitude) ? pos.latitude : null;
-    const lon = pos && typeof pos.longitude === "number" && Number.isFinite(pos.longitude) ? pos.longitude : null;
-
     return {
       takenAt: takenAt && !isNaN(takenAt.getTime()) ? takenAt : null,
       gps: lat != null && lon != null ? { lat, lon } : null,
