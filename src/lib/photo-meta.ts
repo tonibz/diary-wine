@@ -11,10 +11,16 @@ export type PhotoMeta = {
  */
 export async function readPhotoMeta(file: File): Promise<PhotoMeta> {
   try {
+    // exifr.gps applies the GPS hemisphere refs (N/S, E/W) correctly; picked
+    // coordinates without the refs come out positive for every western/southern location.
+    const pos = await exifr.gps(file).catch(() => null);
+    const lat = pos && typeof pos.latitude === "number" && Number.isFinite(pos.latitude) ? pos.latitude : null;
+    const lon = pos && typeof pos.longitude === "number" && Number.isFinite(pos.longitude) ? pos.longitude : null;
+
     const data = await exifr.parse(file, {
-      pick: ["DateTimeOriginal", "CreateDate", "GPSLatitude", "GPSLongitude", "latitude", "longitude"],
+      pick: ["DateTimeOriginal", "CreateDate"],
     });
-    if (!data) return { takenAt: null, gps: null };
+    if (!data) return { takenAt: null, gps: lat != null && lon != null ? { lat, lon } : null };
 
     const rawDate = data.DateTimeOriginal ?? data.CreateDate ?? null;
     const takenAt =
@@ -23,9 +29,6 @@ export async function readPhotoMeta(file: File): Promise<PhotoMeta> {
         : rawDate
           ? new Date(rawDate)
           : null;
-
-    const lat = typeof data.latitude === "number" ? data.latitude : null;
-    const lon = typeof data.longitude === "number" ? data.longitude : null;
 
     return {
       takenAt: takenAt && !isNaN(takenAt.getTime()) ? takenAt : null,
