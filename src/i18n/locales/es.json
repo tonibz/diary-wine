@@ -303,12 +303,15 @@
       "noPhoto": "Sin foto guardada",
       "sameWine": "El mismo",
       "differentWine": "Otro vino",
-      "maybeDup": "Puede que sea el mismo que otra foto de esta tanda:",
       "unnamed": "sin nombre",
-      "sharedEntry": "Se guarda como un solo vino junto con la otra foto.",
       "notTriedYet": "Aún no probado",
       "tasted": "Probado",
-      "wantToTry": "Por probar"
+      "wantToTry": "Por probar",
+      "maybeDupNumbered": "Puede que sea el mismo vino que la #{{n}}",
+      "thisPhoto": "Esta foto",
+      "sharedEntryNumbered": "Se guardará como el mismo vino que la #{{n}}",
+      "notSame": "No es el mismo",
+      "mergedFrom": "Mismo vino que {{list}}"
     },
     "fields": {
       "name": "Nombre",
