@@ -303,12 +303,15 @@
       "noPhoto": "No photo saved",
       "sameWine": "Same wine",
       "differentWine": "Different wine",
-      "maybeDup": "This might be the same as another photo in this batch:",
       "unnamed": "unnamed",
-      "sharedEntry": "Saved as one wine with the other photo.",
       "notTriedYet": "Not tried yet",
       "tasted": "Tasted",
-      "wantToTry": "Want to try"
+      "wantToTry": "Want to try",
+      "maybeDupNumbered": "This might be the same wine as #{{n}}",
+      "thisPhoto": "This photo",
+      "sharedEntryNumbered": "Saved as the same wine as #{{n}}",
+      "notSame": "Not the same",
+      "mergedFrom": "Same wine as {{list}}"
     },
     "fields": {
       "name": "Name",

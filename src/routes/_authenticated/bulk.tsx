@@ -126,7 +126,10 @@ function BulkPage() {
       it.thumbUrl = URL.createObjectURL(f);
       next.push(it);
     });
-    setItems((prev) => [...prev, ...next]);
+    setItems((prev) => {
+      const start = prev.reduce((m, p, i) => Math.max(m, seqOf(p, i)), 0);
+      return [...prev, ...next.map((it, i) => Object.assign(it, { seq: start + i + 1 } satisfies BulkExtra))];
+    });
   }
 
   function removePicked(id: string) {
@@ -250,6 +253,8 @@ function BulkPage() {
       }
     } catch { /* matching is best-effort */ }
 
+    let best: BulkItem | null = null;
+    let bestScore = 0;
     for (const other of all) {
       if (other.id === out.id) continue;
       if (other.status !== "done" || !other.fields.name.trim() || other.dupOfId || other.pairedIntoId) continue;
@@ -257,10 +262,22 @@ function BulkPage() {
         out.fields.name, out.fields.producer,
         other.fields.name, other.fields.producer,
       );
-      if (s >= 0.6) {
-        out = { ...out, dupOfId: other.id, dupOfScore: s, dupChoice: s >= 0.85 ? "same" : "different" };
-        break;
+      if (s >= 0.6 && s > bestScore) { best = other; bestScore = s; }
+    }
+    if (best) {
+      let dupChoice: "same" | "different" = bestScore >= 0.85 ? "same" : "different";
+      let dupReason: string | null = null;
+      if (bestScore < 0.85) {
+        try {
+          const verdict = await compareLabelsVisually(compare, best.photoPath, out.photoPath);
+          if (verdict) {
+            dupChoice = verdict.outcome === "merge" ? "same" : "different";
+            dupReason = verdict.comparison.reason ?? null;
+          }
+        } catch { /* keep the default and still ask */ }
       }
+      const extra: BulkExtra = { dupReason };
+      out = Object.assign({}, out, { dupOfId: best.id, dupOfScore: bestScore, dupChoice }, extra);
     }
     return out;
   }
@@ -641,6 +658,14 @@ function Section({
   );
 }
 
+/** Extra per-photo fields kept through saveProgress/loadProgress (they serialise the whole item). */
+type BulkExtra = { seq?: number; dupReason?: string | null };
+
+/** Stable 1-based photo number; restored batches without one fall back to their position. */
+function seqOf(item: BulkItem, index: number): number {
+  return (item as BulkItem & BulkExtra).seq ?? index + 1;
+}
+
 function Row({
   item, items, frontRows, busyRows, expanded, onExpand, patchItem, patchFields, pairRows, unpairRow,
 }: {
@@ -660,6 +685,16 @@ function Row({
   const busy = !!busyRows[item.id];
   const looseBack = isLooseBack(item);
   const dupOf = item.dupOfId ? items.find((i) => i.id === item.dupOfId) : null;
+  const seqById = (id: string) => {
+    const idx = items.findIndex((i) => i.id === id);
+    return idx < 0 ? 0 : seqOf(items[idx], idx);
+  };
+  const mySeq = seqById(item.id);
+  const dupSeq = dupOf ? seqById(dupOf.id) : 0;
+  const dupReason = (item as BulkItem & BulkExtra).dupReason ?? null;
+  const mergedFrom = items
+    .filter((i) => !i.discarded && i.dupOfId === item.id && i.dupChoice === "same")
+    .map((i) => `#${seqById(i.id)}`);
   const ambiguousCandidate =
     item.candidate &&
     (item.candidateScore ?? 0) >= 0.6 &&
@@ -673,7 +708,10 @@ function Row({
   return (
     <div className="rounded-2xl border border-border bg-card p-3 shadow-notebook">
       <div className="flex gap-3">
-        <div className="flex shrink-0 gap-1">
+        <div className="relative flex shrink-0 gap-1">
+          <span className="absolute left-1 top-1 z-10 rounded bg-background/85 px-1 text-[10px] font-medium leading-4 text-foreground shadow-sm">
+            #{mySeq}
+          </span>
           {item.thumbUrl ? (
             <img src={item.thumbUrl} alt={t("bulk.row.labelAlt")} className="h-16 w-16 rounded-lg object-cover" />
           ) : (
@@ -832,10 +870,34 @@ function Row({
 
       {dupOf && (item.dupOfScore ?? 0) < 0.85 && (
         <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
-          <p className="mb-2">
-            {t("bulk.row.maybeDup")}{" "}
-            <span className="font-medium">{dupOf.fields.name || t("bulk.row.unnamed")}</span>
+          <p className="mb-2">{t("bulk.row.maybeDupNumbered", { n: dupSeq })}</p>
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            {[
+              { label: `#${dupSeq}`, url: dupOf.thumbUrl },
+              { label: t("bulk.row.thisPhoto"), url: item.thumbUrl },
+            ].map((p) => (
+              <div key={p.label} className="space-y-1">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{p.label}</p>
+                {p.url ? (
+                  <img
+                    src={p.url}
+                    alt={t("bulk.row.labelPhotoAlt", { label: p.label })}
+                    className="h-44 w-full rounded-lg border border-border object-cover"
+                  />
+                ) : (
+                  <div className="flex h-44 w-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                    {t("bulk.row.noPhoto")}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mb-2 truncate text-xs text-muted-foreground">
+            {[dupOf.fields.name || t("bulk.row.unnamed"), dupOf.fields.producer, dupOf.fields.vintage].filter(Boolean).join(" · ")}
           </p>
+          {dupReason && (
+            <p className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-2 text-xs">{dupReason}</p>
+          )}
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -855,10 +917,22 @@ function Row({
         </div>
       )}
 
-      {dupOf && (item.dupOfScore ?? 0) >= 0.85 && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Info size={13} /> {t("bulk.row.sharedEntry")}
-        </p>
+      {dupOf && (item.dupOfScore ?? 0) >= 0.85 && item.dupChoice === "same" && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          {dupOf.thumbUrl ? (
+            <img src={dupOf.thumbUrl} alt={`#${dupSeq}`} className="h-10 w-10 shrink-0 rounded-md object-cover" />
+          ) : (
+            <Info size={13} />
+          )}
+          <span className="flex-1">{t("bulk.row.sharedEntryNumbered", { n: dupSeq })}</span>
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => patchItem(item.id, { dupChoice: "different" })}>
+            {t("bulk.row.notSame")}
+          </Button>
+        </div>
+      )}
+
+      {mergedFrom.length > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">{t("bulk.row.mergedFrom", { list: mergedFrom.join(", ") })}</p>
       )}
 
       {/* inline rating + status, no editor needed */}
