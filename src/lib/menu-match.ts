@@ -352,21 +352,33 @@ export async function matchStoredItems(items: MenuItemRow[]): Promise<MenuItemRo
   candidates.forEach((item, i) => {
     const m = results[i];
     patched.set(item.id, {
-      matched_wine_id: m && m.score >= CONFIDENT_MATCH ? m.id : null,
+      // Without a producer the score is name-only: never link to one producer's wine.
+      matched_wine_id:
+        m && m.score >= CONFIDENT_MATCH && (item.parsed_producer ?? "").trim() ? m.id : null,
       match_score: m ? m.score : null,
     });
   });
 
+  const changed: MenuItemRow[] = [];
   const updatedItems = items.map((item) => {
     const patch = patched.get(item.id);
-    return patch ? { ...item, ...patch } : item;
+    if (!patch) return item;
+    const scoreSame =
+      patch.match_score == null
+        ? item.match_score == null
+        : item.match_score != null && Math.abs(item.match_score - patch.match_score) < 0.001;
+    if (patch.matched_wine_id === item.matched_wine_id && scoreSame) return item;
+    const next = { ...item, ...patch };
+    changed.push(next);
+    return next;
   });
+  if (!changed.length) return updatedItems;
 
   // Persist the enrichment in one authenticated request. The old per-item
   // Promise.all made a long list issue dozens of writes after matching and
   // could outlive the token that had just been refreshed for the RPC.
   const { error } = await withValidSession(async () =>
-    menuDb.from("menu_items").upsert(updatedItems, { onConflict: "id" }),
+    menuDb.from("menu_items").upsert(changed, { onConflict: "id" }),
   );
   if (error) throw error;
 

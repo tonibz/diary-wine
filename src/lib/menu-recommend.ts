@@ -422,7 +422,11 @@ export function attachDiary(scored: ScoredItem[], entries: DiaryWine[]): ScoredI
       const t = lineText(s.item);
       for (const e of entries) {
         const n = normalise(e.name);
-        if (n.length >= 6 && t.includes(n)) {
+        const p = normalise(e.producer);
+        // Name alone flags every "Cabernet Sauvignon" on every list; require the
+        // producer too. A name that is just the producer says nothing about the cuvée.
+        if (n.length < 6 || p.length < 4 || p.includes(n)) continue;
+        if (t.includes(n) && t.includes(p)) {
           if (!diary || (e.rating ?? 0) > (diary.rating ?? 0)) diary = e;
         }
       }

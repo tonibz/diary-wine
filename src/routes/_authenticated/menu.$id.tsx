@@ -61,9 +61,14 @@ function MenuScanDetail() {
 
         // The scan and every price are already persisted and now on screen.
         // Matching is enrichment: it can fail without touching the list.
-        if (res.items.length > 0 && res.items.every((item) => item.match_score == null)) {
-          setRematching(true);
-          setMatchFailed(false);
+        // Re-run on every open so wines added to the diary later get linked.
+        // Already-matched scans refresh silently; a first match shows progress.
+        if (res.items.length > 0) {
+          const silent = res.items.some((item) => item.match_score != null);
+          if (!silent) {
+            setRematching(true);
+            setMatchFailed(false);
+          }
           mark("matching started");
           void withTimeout(rematchScan(id), 15_000, "Matching took too long")
             .then((updated) => {
@@ -73,10 +78,10 @@ function MenuScanDetail() {
             .catch((err) => {
               mark("matching failed");
               console.error("Menu matching failed", err);
-              if (active) setMatchFailed(true);
+              if (active && !silent) setMatchFailed(true);
             })
             .finally(() => {
-              if (active) setRematching(false);
+              if (active && !silent) setRematching(false);
             });
         }
 
