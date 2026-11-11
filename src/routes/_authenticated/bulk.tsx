@@ -317,6 +317,37 @@ function BulkPage() {
     }
   }
 
+  /** A row the user says is really a front label: flip it and read it now. */
+  async function markAsFront(id: string) {
+    const current = items.find((i) => i.id === id);
+    if (!current) return;
+    const flipped = { ...current, side: "front" as const, sideReason: null, status: "processing" as const } as BulkItem;
+    const others = items.filter((i) => i.id !== id);
+    setItems((prev) => prev.map((p) => (p.id === id ? flipped : p)));
+    setBusyRows((b) => ({ ...b, [id]: true }));
+    let merged: BulkItem;
+    try {
+      merged = { ...flipped, ...(await recogniseItem(flipped, recognise)) } as BulkItem;
+    } catch (e) {
+      merged = {
+        ...flipped,
+        status: "failed",
+        error: e instanceof Error ? e.message : t("bulk.errors.readFailed"),
+      } as BulkItem;
+    }
+    try {
+      merged = await withMatches(merged, [...others, merged]);
+    } catch {
+      // Match checks are a bonus; keep the read result.
+    }
+    setItems((prev) => {
+      const next = prev.map((p) => (p.id === id ? merged : p));
+      saveProgress(next, "review");
+      return next;
+    });
+    setBusyRows((b) => ({ ...b, [id]: false }));
+  }
+
   /** Attach a back-label row to a front row and read them together. */
   async function pairRows(frontId: string, backId: string) {
     const back = items.find((i) => i.id === backId);
@@ -380,7 +411,11 @@ function BulkPage() {
       bad: visible
         .filter(
           (i) =>
-            isLooseBack(i) || i.status === "failed" || (i.status === "done" && (i.confidence ?? 0) < 0.6),
+            isLooseBack(i) ||
+            i.status === "failed" ||
+            i.status === "pending" ||
+            i.status === "processing" ||
+            (i.status === "done" && (i.confidence ?? 0) < 0.6),
         )
         .sort(byConf),
     };
@@ -476,6 +511,7 @@ function BulkPage() {
       patchFields,
       pairRows,
       unpairRow,
+      markAsFront,
     };
     return (
       <div className="px-5 pt-6 pb-36">
@@ -667,7 +703,7 @@ function seqOf(item: BulkItem, index: number): number {
 }
 
 function Row({
-  item, items, frontRows, busyRows, expanded, onExpand, patchItem, patchFields, pairRows, unpairRow,
+  item, items, frontRows, busyRows, expanded, onExpand, patchItem, patchFields, pairRows, unpairRow, markAsFront,
 }: {
   item: BulkItem;
   items: BulkItem[];
@@ -679,6 +715,7 @@ function Row({
   patchFields: (id: string, patch: Partial<BulkFields>) => void;
   pairRows: (frontId: string, backId: string) => void;
   unpairRow: (frontId: string) => void;
+  markAsFront: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const f = item.fields;
@@ -807,7 +844,8 @@ function Row({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => patchItem(item.id, { side: "front", sideReason: null })}
+            disabled={busy}
+            onClick={() => markAsFront(item.id)}
           >
             {t("bulk.row.actuallyFront")}
           </Button>
