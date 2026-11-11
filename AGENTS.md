@@ -10,4 +10,5 @@
 <!-- LOVABLE:END -->
 
 - Keep the hidden evaluation harness owner-scoped and isolated from production writes and cache; only explicit Run actions may invoke models.
+- The hidden photo manifest export must authorize the authenticated owner before loading the privileged client; signed photo URLs must never be logged.
 - Evaluation calls use native streaming Messages through Lovable AI Gateway, while existing production recognition transport and parsing stay unchanged to preserve user behavior.
