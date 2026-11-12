@@ -60,8 +60,8 @@ interface Cv {
   COLOR_RGBA2GRAY: number; NORM_HAMMING: number; CV_32FC2: number; RANSAC: number;
 }
 declare global { interface Window { cv?: Cv } }
-let cvPromise: Promise<Cv> | undefined;
-export function loadOpenCv(): Promise<Cv> {
+let cvPromise: Promise<{ cv: Cv }> | undefined;
+export function loadOpenCv(): Promise<{ cv: Cv }> {
   if (typeof window === "undefined") return Promise.reject(new Error("OpenCV requires a browser"));
   if (cvPromise) return cvPromise;
   cvPromise = new Promise((resolve, reject) => {
@@ -70,7 +70,8 @@ export function loadOpenCv(): Promise<Cv> {
       clearInterval(poll);
       clearTimeout(timeout);
       if (error) reject(error);
-      else if (window.cv?.Mat) resolve(window.cv);
+      // Emscripten's cv object is thenable; resolving it directly loops forever.
+      else if (window.cv?.Mat) resolve({ cv: window.cv });
     };
     const timeout = setTimeout(() => finish(new Error("OpenCV load timeout")), 25_000);
     poll = setInterval(() => { if (window.cv?.Mat) finish(); }, 100);
