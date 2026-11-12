@@ -238,6 +238,11 @@ function BulkPage() {
           out = {
             ...out,
             candidatePhotoUrl: candUrl,
+            shadowPair: candPath && out.photoPath ? {
+              newPath: out.photoPath, candidatePath: candPath,
+              newName: out.fields.name, newProducer: out.fields.producer,
+              candName: cand.name, candProducer: cand.producer,
+            } : null,
             noPhotoCompare: !candUrl || !out.photoPath,
             visual: verdict
               ? {
@@ -270,6 +275,14 @@ function BulkPage() {
       if (bestScore < 0.85) {
         try {
           const verdict = await compareLabelsVisually(compare, best.photoPath, out.photoPath);
+          out = { ...out,
+            dupShadowPair: best.photoPath && out.photoPath ? {
+              newPath: out.photoPath, candidatePath: best.photoPath,
+              newName: out.fields.name, newProducer: out.fields.producer,
+              candName: best.fields.name, candProducer: best.fields.producer,
+            } : null,
+            dupVisual: verdict?.comparison ?? null,
+          };
           if (verdict) {
             dupChoice = verdict.outcome === "merge" ? "same" : "different";
             dupReason = verdict.comparison.reason ?? null;

@@ -11,4 +11,5 @@
 
 - Keep the hidden evaluation harness owner-scoped and isolated from production writes and cache; only explicit Run actions may invoke models.
 - The hidden photo manifest export must authorize the authenticated owner before loading the privileged client; signed photo URLs must never be logged.
+- Label similarity is shadow-only: score after decision insertion in a detached task, run ORB in a terminable Worker, and never feed results into duplicate decisions or production UI.
 - Evaluation calls use native streaming Messages through Lovable AI Gateway, while existing production recognition transport and parsing stay unchanged to preserve user behavior.

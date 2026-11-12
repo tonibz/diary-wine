@@ -3,6 +3,7 @@ import { withValidSession } from "@/lib/session-guard";
 import { i18next } from "@/i18n";
 import type { FieldSources } from "@/lib/field-provenance";
 import { withTimeout } from "@/lib/with-timeout";
+import { startShadowScore, type LabelPairInput } from "./label-similarity";
 
 
 export type WineCandidate = {
@@ -183,8 +184,9 @@ export async function logDecision(
   candidate: { id: string | null; score: number | null },
   decision: MatchDecision,
   visual?: { same_wine: boolean | null; confidence: number | null; reason: string | null } | null,
+  shadow?: LabelPairInput | null,
 ) {
-  await supabase.from("match_decisions").insert({
+  const { data } = await supabase.from("match_decisions").insert({
     visual_same_wine: visual?.same_wine ?? null,
     visual_confidence: visual?.confidence ?? null,
     visual_reason: visual?.reason ?? null,
@@ -195,5 +197,7 @@ export async function logDecision(
     candidate_wine_id: candidate.id,
     similarity_score: candidate.score,
     decision: decision as never,
-  } as never);
+  } as never).select("id").maybeSingle();
+  if (data?.id && shadow) startShadowScore(data.id, { ...shadow, newName, newProducer });
+  return data?.id ?? null;
 }
