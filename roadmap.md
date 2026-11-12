@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Add owner-scoped shadow similarity columns and background-only comparison scoring.
+- [ ] Add hidden Spanish similarity diagnostics and local two-label testing.
+- [ ] Validate model rules, background isolation, owner access, and typecheck.
+
 - [x] Add isolated recognition evaluation tables and production prompt hashes.
 - [x] Add authenticated fresh evaluation and blind judge functions.
 - [x] Validate prompt/path/parser helpers and the hidden page's signed-out access boundary without running experiments.
