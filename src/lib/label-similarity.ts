@@ -179,7 +179,7 @@ async function score(input: TextInput, blobs: (signal: AbortSignal) => Promise<[
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => { controller.abort(); reject(new Error("Label similarity timeout")); }, 30_000);
     });
-    return await Promise.race([timeout, (async () => {
+    return await Promise.race([timeout, (async (): Promise<LabelSimilarity> => {
       await loadOpenCv();
       controller.signal.throwIfAborted();
       const [a, b] = await blobs(controller.signal);
@@ -200,7 +200,9 @@ export function scoreLabelBlobs(input: TextInput & { newBlob: Blob; candidateBlo
 export function scoreLabelPair(input: LabelPairInput) {
   return score(input, async (signal) => {
     const download = async (path: string) => {
-      const { data, error } = await supabase.storage.from("wine-photos").download(path, { signal });
+      signal.throwIfAborted();
+      const { data, error } = await supabase.storage.from("wine-photos").download(path);
+      signal.throwIfAborted();
       if (error) throw error;
       if (!data) throw new Error("Label photo is unavailable");
       return data;
