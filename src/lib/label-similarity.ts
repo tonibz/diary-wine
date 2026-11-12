@@ -220,7 +220,7 @@ export function startShadowScore(id: string, input: LabelPairInput, candidateWin
       let pair = input;
       if (candidateWineId) {
         const { data, error } = await supabase.from("wines").select("name, producer")
-          .eq("id", candidateWineId).maybeSingle().abortSignal(AbortSignal.timeout(15_000));
+          .eq("id", candidateWineId).abortSignal(AbortSignal.timeout(15_000)).maybeSingle();
         if (error) throw error;
         if (!data) return null;
         pair = { ...input, candName: data.name, candProducer: data.producer };
