@@ -328,6 +328,12 @@ export type Database = {
           new_name: string
           new_producer: string | null
           new_vintage: number | null
+          sim_model_prob: number | null
+          sim_model_version: string | null
+          sim_ms: number | null
+          sim_orb_inliers: number | null
+          sim_text_name: number | null
+          sim_text_producer: number | null
           similarity_score: number | null
           user_id: string
           visual_confidence: number | null
@@ -342,6 +348,12 @@ export type Database = {
           new_name: string
           new_producer?: string | null
           new_vintage?: number | null
+          sim_model_prob?: number | null
+          sim_model_version?: string | null
+          sim_ms?: number | null
+          sim_orb_inliers?: number | null
+          sim_text_name?: number | null
+          sim_text_producer?: number | null
           similarity_score?: number | null
           user_id: string
           visual_confidence?: number | null
@@ -356,6 +368,12 @@ export type Database = {
           new_name?: string
           new_producer?: string | null
           new_vintage?: number | null
+          sim_model_prob?: number | null
+          sim_model_version?: string | null
+          sim_ms?: number | null
+          sim_orb_inliers?: number | null
+          sim_text_name?: number | null
+          sim_text_producer?: number | null
           similarity_score?: number | null
           user_id?: string
           visual_confidence?: number | null
