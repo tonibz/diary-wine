@@ -25,6 +25,7 @@ import { withTimeout } from "@/lib/with-timeout";
 import { checkAgainstReference } from "@/lib/appellation-check";
 import { captureClientError } from "@/lib/sentry-browser";
 import { errorFields, toError } from "@/lib/to-error";
+import type { LabelPairInput } from "./label-similarity";
 
 export const BULK_STORAGE_KEY = "wine-diary:bulk-import:v1";
 
@@ -96,6 +97,9 @@ export type BulkItem = {
   dupOfId: string | null;
   dupOfScore: number | null;
   dupChoice: "same" | "different";
+  shadowPair?: LabelPairInput | null;
+  dupShadowPair?: LabelPairInput | null;
+  dupVisual?: BulkItem["visual"];
 };
 
 export function newItem(id: string): BulkItem {
@@ -465,7 +469,8 @@ export async function saveItem(
     draft.vintage,
     { id: candidate?.id ?? reuseWineId ?? null, score: candidate?.score ?? item.dupOfScore ?? null },
     decision,
-    item.visual,
+    reuseWineId ? item.dupVisual ?? null : item.visual,
+    reuseWineId ? item.dupShadowPair : candidate?.id === item.candidate?.id ? item.shadowPair : null,
   );
 
   const vintageId = await findOrCreateVintage(wineId, draft.vintage, draft.alcohol_percent);
