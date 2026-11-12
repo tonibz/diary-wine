@@ -198,6 +198,6 @@ export async function logDecision(
     similarity_score: candidate.score,
     decision: decision as never,
   } as never).select("id").maybeSingle();
-  if (data?.id && shadow) startShadowScore(data.id, { ...shadow, newName, newProducer });
+  if (data?.id && shadow) startShadowScore(data.id, { ...shadow, newName, newProducer }, candidate.id);
   return data?.id ?? null;
 }

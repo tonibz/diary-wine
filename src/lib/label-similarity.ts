@@ -212,11 +212,21 @@ export function scoreLabelPair(input: LabelPairInput) {
   });
 }
 
-export function startShadowScore(id: string, input: LabelPairInput): void {
+export function startShadowScore(id: string, input: LabelPairInput, candidateWineId?: string | null): void {
   if (typeof window === "undefined") return;
   // A later task, never awaited by the save path. Heavy computation uses a Worker.
   setTimeout(() => {
-    void scoreLabelPair(input).then(async (result) => {
+    void (async () => {
+      let pair = input;
+      if (candidateWineId) {
+        const { data, error } = await supabase.from("wines").select("name, producer")
+          .eq("id", candidateWineId).maybeSingle().abortSignal(AbortSignal.timeout(15_000));
+        if (error) throw error;
+        if (!data) return null;
+        pair = { ...input, candName: data.name, candProducer: data.producer };
+      }
+      return scoreLabelPair(pair);
+    })().then(async (result) => {
       if (!result) return;
       const { error } = await supabase.from("match_decisions").update({
         sim_model_version: result.version, sim_model_prob: result.prob,
